@@ -9,7 +9,7 @@ final class DerivedSessionStateTests: XCTestCase {
         older.lastActivity = Date(timeIntervalSince1970: 100)
 
         var newer = SessionSnapshot()
-        newer.source = "codex"
+        newer.source = "claude"
         newer.status = .idle
         newer.lastActivity = Date(timeIntervalSince1970: 200)
 
@@ -18,7 +18,7 @@ final class DerivedSessionStateTests: XCTestCase {
             "newer": newer,
         ])
 
-        XCTAssertEqual(summary.primarySource, "codex")
+        XCTAssertEqual(summary.primarySource, "claude")
         XCTAssertEqual(summary.activeSessionCount, 0)
         XCTAssertEqual(summary.totalSessionCount, 2)
     }

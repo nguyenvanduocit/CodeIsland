@@ -460,7 +460,7 @@ class PanelWindowController {
             return
         }
 
-        if settings.hideWhenNoSession && appState.activeSessionCount == 0 {
+        if settings.hideWhenNoSession && appState.sessions.isEmpty {
             panel.orderOut(nil)
             return
         }

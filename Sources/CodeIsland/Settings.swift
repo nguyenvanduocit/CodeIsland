@@ -14,8 +14,6 @@ enum SettingsKey {
     static let hideWhenNoSession = "hideWhenNoSession"
     static let smartSuppress = "smartSuppress"
     static let collapseOnMouseLeave = "collapseOnMouseLeave"
-    static let sessionTimeout = "sessionTimeout"
-
     // Display
     static let maxPanelHeight = "maxPanelHeight"
     static let maxVisibleSessions = "maxVisibleSessions"
@@ -39,9 +37,6 @@ enum SettingsKey {
     // Mascot
     static let mascotSpeed = "mascotSpeed"
 
-    // Session grouping
-    static let sessionGroupingMode = "sessionGroupingMode"
-
 }
 
 struct SettingsDefaults {
@@ -50,8 +45,6 @@ struct SettingsDefaults {
     static let hideWhenNoSession = false
     static let smartSuppress = true
     static let collapseOnMouseLeave = true
-    static let sessionTimeout = 30
-
     static let maxPanelHeight = 560
     static let maxVisibleSessions = 5
     static let contentFontSize = 11
@@ -71,7 +64,6 @@ struct SettingsDefaults {
 
     static let mascotSpeed = 100  // percentage: 0–300, 0 = silent
 
-    static let sessionGroupingMode = "all"
 }
 
 @MainActor
@@ -87,7 +79,6 @@ class SettingsManager {
             SettingsKey.hideWhenNoSession: SettingsDefaults.hideWhenNoSession,
             SettingsKey.smartSuppress: SettingsDefaults.smartSuppress,
             SettingsKey.collapseOnMouseLeave: SettingsDefaults.collapseOnMouseLeave,
-            SettingsKey.sessionTimeout: SettingsDefaults.sessionTimeout,
             SettingsKey.maxPanelHeight: SettingsDefaults.maxPanelHeight,
             SettingsKey.maxVisibleSessions: SettingsDefaults.maxVisibleSessions,
             SettingsKey.contentFontSize: SettingsDefaults.contentFontSize,
@@ -103,7 +94,6 @@ class SettingsManager {
             SettingsKey.soundBoot: SettingsDefaults.soundBoot,
             SettingsKey.maxToolHistory: SettingsDefaults.maxToolHistory,
             SettingsKey.mascotSpeed: SettingsDefaults.mascotSpeed,
-            SettingsKey.sessionGroupingMode: SettingsDefaults.sessionGroupingMode,
         ])
     }
 
@@ -144,11 +134,6 @@ class SettingsManager {
         set { defaults.set(newValue, forKey: SettingsKey.collapseOnMouseLeave) }
     }
 
-    var sessionTimeout: Int {
-        get { defaults.integer(forKey: SettingsKey.sessionTimeout) }
-        set { defaults.set(newValue, forKey: SettingsKey.sessionTimeout) }
-    }
-
     var maxPanelHeight: Int {
         get { defaults.integer(forKey: SettingsKey.maxPanelHeight) }
         set { defaults.set(newValue, forKey: SettingsKey.maxPanelHeight) }
@@ -169,8 +154,4 @@ class SettingsManager {
         set { defaults.set(newValue, forKey: SettingsKey.maxToolHistory) }
     }
 
-    var sessionGroupingMode: String {
-        get { defaults.string(forKey: SettingsKey.sessionGroupingMode) ?? SettingsDefaults.sessionGroupingMode }
-        set { defaults.set(newValue, forKey: SettingsKey.sessionGroupingMode) }
-    }
 }

@@ -21,17 +21,10 @@ struct TerminalActivator {
     /// Most sources should use nativeAppBundles instead (by bundle ID).
     private static let appSources: [String: String] = [:]
 
-    /// Bundle IDs of apps that have both APP and CLI modes.
+    /// Bundle IDs of apps that have native app modes.
     /// When termBundleId matches, bring that app to front;
     /// otherwise fall through to terminal tab-matching.
-    private static let nativeAppBundles: [String: String] = [
-        "com.openai.codex": "Codex",
-        "com.todesktop.230313mzl4w4u92": "Cursor",
-        "com.qoder.ide": "Qoder",
-        "com.factory.app": "Factory",
-        "com.tencent.codebuddy": "CodeBuddy",
-        "ai.opencode.desktop": "OpenCode",
-    ]
+    private static let nativeAppBundles: [String: String] = [:]
 
     static func activate(session: SessionSnapshot, sessionId: String? = nil) {
         // Native app by bundle ID (e.g. Codex APP vs Codex CLI)
@@ -41,7 +34,7 @@ struct TerminalActivator {
                 $0.bundleIdentifier == bundleId
             }) {
                 if app.isHidden { app.unhide() }
-                app.activate(options: .activateIgnoringOtherApps)
+                app.activate()
             } else {
                 bringToFront(appName)
             }
@@ -55,7 +48,7 @@ struct TerminalActivator {
                 $0.bundleIdentifier == bundleId
             }) {
                 if app.isHidden { app.unhide() }
-                app.activate(options: .activateIgnoringOtherApps)
+                app.activate()
             }
             return
         }
@@ -66,7 +59,7 @@ struct TerminalActivator {
                 $0.localizedName == appName
             }) {
                 if app.isHidden { app.unhide() }
-                app.activate(options: .activateIgnoringOtherApps)
+                app.activate()
             } else {
                 bringToFront(appName)
             }
@@ -143,7 +136,7 @@ struct TerminalActivator {
         // Ensure app is unhidden and brought to front (Space switching)
         if let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.mitchellh.ghostty" }) {
             if app.isHidden { app.unhide() }
-            app.activate(options: .activateIgnoringOtherApps)
+            app.activate()
         }
         let escaped = escapeAppleScript(cwd)
         // Match by session ID in title first (disambiguates same-CWD sessions),
@@ -190,7 +183,7 @@ struct TerminalActivator {
     private static func activateITerm(sessionId: String) {
         if let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) {
             if app.isHidden { app.unhide() }
-            app.activate(options: .activateIgnoringOtherApps)
+            app.activate()
         }
         let script = """
         try
@@ -321,7 +314,7 @@ struct TerminalActivator {
             $0.localizedName == name || ($0.bundleIdentifier ?? "").localizedCaseInsensitiveContains(name)
         }) {
             if app.isHidden { app.unhide() }
-            app.activate(options: .activateIgnoringOtherApps)
+            app.activate()
             return
         }
         // Fallback: open -a (app not running yet)

@@ -69,6 +69,12 @@ func runCommand(_ path: String, args: [String]) -> String? {
     }
 }
 
+/// Walk up the process tree to find the long-lived CLI process (e.g. Claude Code node).
+/// Uses ProcessScanner from CodeIslandCore for reliable cross-install detection.
+func findCLIAncestorPid() -> pid_t {
+    ProcessScanner.findCLIAncestorPid(from: getppid()) ?? getppid()
+}
+
 func debugLog(_ message: String) {
     guard ProcessInfo.processInfo.environment["CODEISLAND_DEBUG"] != nil else { return }
     let ts = ISO8601DateFormatter().string(from: Date())
@@ -263,8 +269,9 @@ if let source = sourceTag {
     json["_source"] = source
 }
 
-// Parent PID — the CLI process that spawned this hook (works for any CLI)
-json["_ppid"] = getppid()
+// CLI process PID — walk up the process tree to find the actual Claude Code process,
+// not the ephemeral bash hook script that spawned us.
+json["_ppid"] = findCLIAncestorPid()
 
 // --- Serialize enriched JSON ---
 guard let enriched = try? JSONSerialization.data(withJSONObject: json) else { exit(1) }

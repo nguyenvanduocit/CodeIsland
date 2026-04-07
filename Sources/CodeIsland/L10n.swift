@@ -63,13 +63,6 @@ final class L10n: ObservableObject {
         "collapse_on_mouse_leave": "Auto-collapse on Mouse Leave",
         "collapse_on_mouse_leave_desc": "Collapse expanded panel back to notch when mouse moves away",
         "sessions": "Sessions",
-        "session_cleanup": "Idle Session Cleanup",
-        "session_cleanup_desc": "Automatically remove sessions with no activity for the set duration",
-        "no_cleanup": "Never",
-        "10_minutes": "10 Minutes",
-        "30_minutes": "30 Minutes",
-        "1_hour": "1 Hour",
-        "2_hours": "2 Hours",
         "tool_history_limit": "Tool History Limit",
         "tool_history_limit_desc": "Max number of recent tool calls shown per session",
 
@@ -134,7 +127,7 @@ final class L10n: ObservableObject {
 
         // About
         "about_desc1": "Real-time AI coding agent status panel for macOS",
-        "about_desc2": "Supports 8 CLI/IDE tools via Unix socket IPC",
+        "about_desc2": "Claude Code status panel via Unix socket IPC",
 
         // Window
         "settings_title": "CodeIsland Settings",
@@ -167,16 +160,7 @@ final class L10n: ObservableObject {
         "submit": "SUBMIT",
         "open_path": "Open",
         "copy_session_id": "Copy session ID",
-
-        // Session grouping
-        "status_running": "Running",
-        "status_waiting": "Waiting",
-        "status_processing": "Processing",
-        "status_idle": "Idle",
-        "other": "Other",
         "n_sessions": "sessions",
-        "scroll_for_more": "Scroll for more",
-        "scroll_hidden": "more below",
         "lines": "lines",
     ]
 
@@ -212,13 +196,6 @@ final class L10n: ObservableObject {
         "collapse_on_mouse_leave": "鼠标离开时自动收起",
         "collapse_on_mouse_leave_desc": "鼠标移出展开的面板后自动收回到刘海状态",
         "sessions": "会话",
-        "session_cleanup": "空闲会话清理",
-        "session_cleanup_desc": "自动移除超过指定时间没有活动的会话",
-        "no_cleanup": "不清理",
-        "10_minutes": "10 分钟",
-        "30_minutes": "30 分钟",
-        "1_hour": "1 小时",
-        "2_hours": "2 小时",
         "tool_history_limit": "工具历史上限",
         "tool_history_limit_desc": "每个会话显示的最近工具调用数量上限",
 
@@ -283,7 +260,7 @@ final class L10n: ObservableObject {
 
         // About
         "about_desc1": "macOS 实时 AI 编码 Agent 状态面板",
-        "about_desc2": "通过 Unix socket IPC 支持 8 种 CLI/IDE 工具",
+        "about_desc2": "通过 Unix socket IPC 实现的 Claude Code 状态面板",
 
         // Window
         "settings_title": "CodeIsland 设置",
@@ -316,16 +293,7 @@ final class L10n: ObservableObject {
         "submit": "提交",
         "open_path": "打开",
         "copy_session_id": "复制会话 ID",
-
-        // Session grouping
-        "status_running": "运行中",
-        "status_waiting": "等待中",
-        "status_processing": "处理中",
-        "status_idle": "空闲",
-        "other": "其他",
         "n_sessions": "个会话",
-        "scroll_for_more": "向下滚动查看更多",
-        "scroll_hidden": "个未显示",
         "lines": "行",
     ]
 }

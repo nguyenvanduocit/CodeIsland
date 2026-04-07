@@ -55,11 +55,6 @@ struct TerminalVisibilityDetector {
         // Fast path: terminal not even frontmost
         guard isTerminalFrontmostForSession(session) else { return false }
 
-        // Native app bundles (Cursor APP, Codex APP): app IS the session, suppress when frontmost
-        if session.isNativeAppMode {
-            return true
-        }
-
         // IDE integrated terminals: can't query tab state, assume NOT visible
         // (show notification — safer than suppressing when user may be editing code)
         if session.isIDETerminal {

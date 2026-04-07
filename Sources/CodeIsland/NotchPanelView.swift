@@ -25,7 +25,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
+        isActive && !(hideWhenNoSession && appState.sessions.isEmpty)
     }
     private var shouldShowExpanded: Bool {
         showBar && appState.surface.isExpanded
@@ -224,8 +224,6 @@ private struct CompactLeftWing: View {
     var appState: AppState
     let expanded: Bool
     let mascotSize: CGFloat
-    @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
-
     private var displaySource: String { appState.rotatingSession?.source ?? appState.primarySource }
     private var displayStatus: AgentStatus { appState.rotatingSession?.status ?? appState.status }
 
@@ -233,30 +231,6 @@ private struct CompactLeftWing: View {
         HStack(spacing: 6) {
             if expanded {
                 AppLogoView(size: 36, showBackground: false)
-                if appState.sessions.count > 1 {
-                    HStack(spacing: 1) {
-                        ForEach([("all", "ALL"), ("status", "STA"), ("cli", "CLI")], id: \.0) { tag, label in
-                            let selected = groupingMode == tag
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.15)) { groupingMode = tag }
-                            } label: {
-                                PixelText(
-                                    text: label,
-                                    color: selected ? Color(red: 0.3, green: 0.85, blue: 0.4) : .white.opacity(0.3),
-                                    pixelSize: 1.3
-                                )
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Rectangle().fill(selected ? .white.opacity(0.1) : .clear)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .background(Rectangle().fill(.white.opacity(0.05)))
-                    .overlay(Rectangle().stroke(.white.opacity(0.1), lineWidth: 1))
-                }
             } else {
                 MascotView(source: displaySource, status: displayStatus, size: mascotSize)
                     .id(displaySource)
@@ -838,102 +812,26 @@ private struct SessionListView: View {
     var appState: AppState
     /// When set, only show this session (auto-expand on completion)
     var onlySessionId: String? = nil
-    @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     @AppStorage(SettingsKey.maxVisibleSessions) private var maxVisibleSessions = SettingsDefaults.maxVisibleSessions
 
-    private var groupedSessions: [(header: String, source: String?, ids: [String])] {
+    private var sessionIds: [String] {
         if let only = onlySessionId, appState.sessions[only] != nil {
-            return [("", nil, [only])]
+            return [only]
         }
-
-        let sorted = appState.sessions.keys.sorted()
-
-        switch groupingMode {
-        case "status":
-            let l10n = L10n.shared
-            let groups: [(Set<AgentStatus>, String)] = [
-                ([.running], l10n["status_running"]),
-                ([.waitingApproval, .waitingQuestion], l10n["status_waiting"]),
-                ([.processing], l10n["status_processing"]),
-                ([.idle], l10n["status_idle"]),
-            ]
-            var result: [(String, String?, [String])] = []
-            for (statuses, label) in groups {
-                let ids = sorted.filter { id in
-                    guard let s = appState.sessions[id] else { return false }
-                    return statuses.contains(s.status)
-                }
-                if !ids.isEmpty {
-                    result.append(("\(label) (\(ids.count))", nil, ids))
-                }
-            }
-            return result
-
-        case "cli":
-            let cliOrder: [(source: String, name: String)] = [
-                ("claude", "Claude"),
-                ("codex", "Codex"),
-                ("gemini", "Gemini"),
-                ("cursor", "Cursor"),
-                ("qoder", "Qoder"),
-                ("droid", "Factory"),
-                ("codebuddy", "CodeBuddy"),
-                ("opencode", "OpenCode"),
-            ]
-            var result: [(String, String?, [String])] = []
-            var seen = Set<String>()
-            for cli in cliOrder {
-                let ids = sorted.filter { id in
-                    appState.sessions[id]?.source == cli.source
-                }
-                ids.forEach { seen.insert($0) }
-                if !ids.isEmpty {
-                    result.append(("\(cli.name) (\(ids.count))", cli.source, ids))
-                }
-            }
-            let remaining = sorted.filter { !seen.contains($0) }
-            if !remaining.isEmpty {
-                result.append(("\(L10n.shared["other"]) (\(remaining.count))", nil, remaining))
-            }
-            return result
-
-        default: // "all"
-            return [("", nil, sorted)]
-        }
+        return appState.sessions.keys.sorted()
     }
 
     var body: some View {
-        // Compute once per render — groupedSessions, totalCount, needsScroll
-        let groups = groupedSessions
-        let totalSessionCount = groups.reduce(0) { $0 + $1.ids.count }
-        let needsScroll = onlySessionId == nil && totalSessionCount > maxVisibleSessions
+        let ids = sessionIds
+        let needsScroll = onlySessionId == nil && ids.count > maxVisibleSessions
         let content = VStack(spacing: 6) {
-            ForEach(groups, id: \.header) { group in
-                if !group.header.isEmpty {
-                    HStack(spacing: 6) {
-                        if let src = group.source, let icon = cliIcon(source: src) {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .frame(width: 14, height: 14)
-                        }
-                        Text(group.header)
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.5))
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 6)
-                    .padding(.bottom, 2)
-                }
-
-                ForEach(group.ids, id: \.self) { sessionId in
-                    if let session = appState.sessions[sessionId] {
-                        SessionCard(
-                            sessionId: sessionId,
-                            session: session,
-                            isCompletion: onlySessionId != nil
-                        )
-                    }
+            ForEach(ids, id: \.self) { sessionId in
+                if let session = appState.sessions[sessionId] {
+                    SessionCard(
+                        sessionId: sessionId,
+                        session: session,
+                        isCompletion: onlySessionId != nil
+                    )
                 }
             }
 
@@ -1239,9 +1137,6 @@ private struct SessionCard: View {
                         if session.interrupted {
                             SessionTag("INT", color: Color(red: 1.0, green: 0.6, blue: 0.2))
                         }
-                        if session.isYoloMode == true {
-                            SessionTag("YOLO", color: Color(red: 1.0, green: 0.35, blue: 0.35))
-                        }
                         SessionTag(timeAgo(session.startTime))
                         TerminalJumpButton(session: session, sessionId: sessionId)
                     }
@@ -1322,9 +1217,7 @@ private struct SessionCard: View {
         .contentShape(Rectangle())
         .onHover { h in withAnimation(NotchAnimation.micro) { hovering = h } }
         .onTapGesture {
-            if isCompletion {
-                TerminalActivator.activate(session: session, sessionId: sessionId)
-            }
+            TerminalActivator.activate(session: session, sessionId: sessionId)
         }
     }
 
@@ -1549,14 +1442,7 @@ private struct TerminalJumpButton: View {
     private let green = Color(red: 0.3, green: 0.85, blue: 0.4)
 
     /// Known bundle IDs for IDE/app sources
-    private static let sourceBundleIds: [String: String] = [
-        "cursor": "com.todesktop.230313mzl4w4u92",
-        "qoder": "com.qoder.ide",
-        "droid": "com.factory.app",
-        "codebuddy": "com.tencent.codebuddy",
-        "codex": "com.openai.codex",
-        "opencode": "ai.opencode.desktop",
-    ]
+    private static let sourceBundleIds: [String: String] = [:]
 
     private static var termIconCache: [String: NSImage] = [:]
 
@@ -1698,13 +1584,6 @@ private struct Line: Shape {
 
 private let cliIconFiles: [String: String] = [
     "claude": "claude",
-    "codex": "codex",
-    "gemini": "gemini",
-    "cursor": "cursor",
-    "qoder": "qoder",
-    "droid": "factory",
-    "codebuddy": "codebuddy",
-    "opencode": "opencode",
 ]
 
 private var cliIconCache: [String: NSImage] = [:]

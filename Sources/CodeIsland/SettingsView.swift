@@ -146,12 +146,6 @@ private struct GeneralPage: View {
                     ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { index, screen in
                         let name = screen.localizedName
                         let isBuiltin = name.contains("Built-in") || name.contains("内置")
-                        let hasNotch: Bool = {
-                            if #available(macOS 12.0, *) {
-                                return screen.auxiliaryTopLeftArea != nil
-                            }
-                            return false
-                        }()
                         let label = isBuiltin ? l10n["builtin_display"] : name
                         Text(label).tag("screen_\(index)")
                     }
@@ -170,7 +164,6 @@ private struct BehaviorPage: View {
     @AppStorage(SettingsKey.hideWhenNoSession) private var hideWhenNoSession = SettingsDefaults.hideWhenNoSession
     @AppStorage(SettingsKey.smartSuppress) private var smartSuppress = SettingsDefaults.smartSuppress
     @AppStorage(SettingsKey.collapseOnMouseLeave) private var collapseOnMouseLeave = SettingsDefaults.collapseOnMouseLeave
-    @AppStorage(SettingsKey.sessionTimeout) private var sessionTimeout = SettingsDefaults.sessionTimeout
     @AppStorage(SettingsKey.maxToolHistory) private var maxToolHistory = SettingsDefaults.maxToolHistory
 
     var body: some View {
@@ -203,16 +196,6 @@ private struct BehaviorPage: View {
             }
 
             Section(l10n["sessions"]) {
-                Picker(selection: $sessionTimeout) {
-                    Text(l10n["no_cleanup"]).tag(0)
-                    Text(l10n["10_minutes"]).tag(10)
-                    Text(l10n["30_minutes"]).tag(30)
-                    Text(l10n["1_hour"]).tag(60)
-                    Text(l10n["2_hours"]).tag(120)
-                } label: {
-                    Text(l10n["session_cleanup"])
-                    Text(l10n["session_cleanup_desc"])
-                }
                 Picker(selection: $maxToolHistory) {
                     Text("10").tag(10)
                     Text("20").tag(20)
@@ -241,7 +224,6 @@ private struct HooksPage: View {
         for cli in ConfigInstaller.allCLIs {
             cliStatuses[cli.source] = ConfigInstaller.isInstalled(source: cli.source)
         }
-        cliStatuses["opencode"] = ConfigInstaller.isInstalled(source: "opencode")
     }
 
     private func statusText(installed: Bool, exists: Bool) -> String {
@@ -251,31 +233,18 @@ private struct HooksPage: View {
     var body: some View {
         Form {
             Section(l10n["cli_status"]) {
-                ForEach(ConfigInstaller.allCLIs, id: \.source) { cli in
-                    let installed = cliStatuses[cli.source] ?? false
-                    let exists = ConfigInstaller.cliExists(source: cli.source)
-                    CLIStatusRow(
-                        name: cli.name,
-                        source: cli.source,
-                        configPath: "~/\(cli.configPath)",
-                        fullPath: cli.fullPath,
-                        installed: installed,
-                        exists: exists
-                    ) { _ in refreshCLIStatuses() }
-                    .id("\(cli.source)-\(refreshKey)")
-                }
-                // OpenCode (plugin-based, not hooks)
-                let ocInstalled = cliStatuses["opencode"] ?? false
-                let ocExists = ConfigInstaller.cliExists(source: "opencode")
+                let cli = ConfigInstaller.allCLIs[0]
+                let installed = cliStatuses[cli.source] ?? false
+                let exists = ConfigInstaller.cliExists(source: cli.source)
                 CLIStatusRow(
-                    name: "OpenCode",
-                    source: "opencode",
-                    configPath: "~/.config/opencode/config.json",
-                    fullPath: NSHomeDirectory() + "/.config/opencode/config.json",
-                    installed: ocInstalled,
-                    exists: ocExists
+                    name: cli.name,
+                    source: cli.source,
+                    configPath: "~/\(cli.configPath)",
+                    fullPath: cli.fullPath,
+                    installed: installed,
+                    exists: exists
                 ) { _ in refreshCLIStatuses() }
-                .id("opencode-\(refreshKey)")
+                .id("\(cli.source)-\(refreshKey)")
             }
 
             Section(l10n["management"]) {
@@ -284,9 +253,6 @@ private struct HooksPage: View {
                         // Enable all detected CLIs before reinstalling
                         for cli in ConfigInstaller.allCLIs where ConfigInstaller.cliExists(source: cli.source) {
                             UserDefaults.standard.set(true, forKey: "cli_enabled_\(cli.source)")
-                        }
-                        if ConfigInstaller.cliExists(source: "opencode") {
-                            UserDefaults.standard.set(true, forKey: "cli_enabled_opencode")
                         }
                         if ConfigInstaller.install() {
                             refreshCLIStatuses()
@@ -308,7 +274,6 @@ private struct HooksPage: View {
                         for cli in ConfigInstaller.allCLIs {
                             UserDefaults.standard.set(false, forKey: "cli_enabled_\(cli.source)")
                         }
-                        UserDefaults.standard.set(false, forKey: "cli_enabled_opencode")
                         ConfigInstaller.uninstall()
                         refreshCLIStatuses()
                         refreshKey += 1
@@ -556,13 +521,6 @@ private struct MascotsPage: View {
 
     private let mascotList: [(name: String, source: String, desc: String, color: Color)] = [
         ("Clawd", "claude", "Claude Code", Color(red: 0.871, green: 0.533, blue: 0.427)),
-        ("Dex", "codex", "Codex (OpenAI)", Color(red: 0.92, green: 0.92, blue: 0.93)),
-        ("Gemini", "gemini", "Gemini CLI", Color(red: 0.278, green: 0.588, blue: 0.894)),
-        ("CursorBot", "cursor", "Cursor", Color(red: 0.96, green: 0.31, blue: 0.0)),
-        ("QoderBot", "qoder", "Qoder", Color(red: 0.165, green: 0.859, blue: 0.361)),
-        ("Droid", "droid", "Factory", Color(red: 0.835, green: 0.416, blue: 0.149)),
-        ("Buddy", "codebuddy", "CodeBuddy", Color(red: 0.424, green: 0.302, blue: 1.0)),
-        ("OpBot", "opencode", "OpenCode", Color(red: 0.55, green: 0.55, blue: 0.57)),
     ]
 
     var body: some View {

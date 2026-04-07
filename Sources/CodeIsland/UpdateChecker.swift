@@ -22,28 +22,24 @@ final class UpdateChecker {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 10
 
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
-            guard let self, let data, error == nil else {
-                Self.log.debug("Update check failed: \(error?.localizedDescription ?? "no data")")
-                return
-            }
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let tagName = json["tag_name"] as? String,
-                  let htmlURL = json["html_url"] as? String else { return }
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let tagName = json["tag_name"] as? String,
+                      let htmlURL = json["html_url"] as? String else { return }
 
-            let remote = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
-            let local = self.currentVersion
+                let remote = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
 
-            if self.isNewer(remote: remote, local: local) {
-                DispatchQueue.main.async {
-                    self.showUpdateAlert(remoteVersion: remote, releaseURL: htmlURL)
+                if isNewer(remote: remote, local: currentVersion) {
+                    showUpdateAlert(remoteVersion: remote, releaseURL: htmlURL)
+                } else if !silent {
+                    showUpToDateAlert()
                 }
-            } else if !silent {
-                DispatchQueue.main.async {
-                    self.showUpToDateAlert()
-                }
+            } catch {
+                Self.log.debug("Update check failed: \(error.localizedDescription)")
             }
-        }.resume()
+        }
     }
 
     private func isNewer(remote: String, local: String) -> Bool {
