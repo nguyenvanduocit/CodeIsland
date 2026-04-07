@@ -18,6 +18,8 @@ public struct SessionSnapshot {
     public var model: String?
     public var permissionMode: String?
     public var toolHistory: [ToolHistoryEntry] = []
+    public var errorStreak: Int = 0
+    public var transcriptSize: Int64 = 0
     public var subagents: [String: SubagentState] = [:]
     public var startTime: Date = Date()
     public var lastUserPrompt: String?
@@ -33,6 +35,7 @@ public struct SessionSnapshot {
     public var tmuxClientTty: String?   // tmux client TTY for real terminal detection
     public var termBundleId: String?    // __CFBundleIdentifier for precise terminal ID
     public var cliPid: pid_t?            // CLI process PID (from bridge _ppid)
+    public var transcriptPath: String?   // Path to the JSONL transcript file
     public var source: String = "claude"
     public var interrupted: Bool = false
     public var sessionTitle: String?
@@ -56,13 +59,6 @@ public struct SessionSnapshot {
 
     public mutating func addRecentMessage(_ msg: ChatMessage, maxCount: Int = 3) {
         recentMessages.append(msg)
-        if recentMessages.count > maxCount {
-            recentMessages.removeFirst(recentMessages.count - maxCount)
-        }
-    }
-
-    public mutating func insertRecentMessage(_ msg: ChatMessage, at index: Int, maxCount: Int = 3) {
-        recentMessages.insert(msg, at: index)
         if recentMessages.count > maxCount {
             recentMessages.removeFirst(recentMessages.count - maxCount)
         }
@@ -156,7 +152,7 @@ public struct SessionSnapshot {
             let lower = bid.lowercased()
             if lower.contains("cmux") { return "cmux" }
             if lower.contains("warp") { return "Warp" }
-            if lower.contains("ghostty") { return "Ghostty" }
+            if lower == "com.mitchellh.ghostty" { return "Ghostty" }
             if lower.contains("iterm2") { return "iTerm2" }
             if lower.contains("kitty") { return "Kitty" }
             if lower.contains("alacritty") { return "Alacritty" }
@@ -187,7 +183,7 @@ public struct SessionSnapshot {
         guard let app = termApp else { return nil }
         let lower = app.lowercased()
         if lower.contains("cmux") { return "cmux" }
-        if lower.contains("ghostty") { return "Ghostty" }
+        if lower == "ghostty" { return "Ghostty" }
         if lower.contains("iterm") { return "iTerm2" }
         if lower.contains("warp") { return "Warp" }
         if lower.contains("alacritty") { return "Alacritty" }
@@ -322,137 +318,181 @@ public func reduceEvent(
     let isWaiting = sessions[sessionId]?.status == .waitingApproval
         || sessions[sessionId]?.status == .waitingQuestion
 
-    // Update this session's state
+    // Update this session's state based on Claude Code hook events.
+    // Schema reference: claude-code/src/entrypoints/sdk/coreSchemas.ts
     switch eventName {
+
+    // ── Turn lifecycle ─────────────────────────────────────────────
     case "UserPromptSubmit":
+        // Schema: { prompt: string }
         sessions[sessionId]?.interrupted = false
         sessions[sessionId]?.status = .processing
         sessions[sessionId]?.currentTool = nil
         sessions[sessionId]?.toolDescription = nil
-        // Try multiple possible field names for user prompt
-        let prompt = event.rawJSON["prompt"] as? String
-            ?? event.rawJSON["user_prompt"] as? String
-            ?? event.rawJSON["message"] as? String
-            ?? event.rawJSON["input"] as? String
-            ?? event.rawJSON["content"] as? String
-        if let prompt {
-            sessions[sessionId]?.lastUserPrompt = prompt
-            if sessions[sessionId]?.recentMessages.last?.isUser == true {
-                sessions[sessionId]?.recentMessages.removeLast()
+        sessions[sessionId]?.lastAssistantMessage = nil  // clear so collapsed bar shows user prompt
+        if let prompt = event.rawJSON["prompt"] as? String, !prompt.isEmpty {
+            // Detect <task-notification> — system-injected when background agent completes
+            if let info = TaskNotificationInfo.parse(prompt) {
+                let displayText = info.summary ?? "Task \(info.status)"
+                sessions[sessionId]?.lastUserPrompt = displayText
+                sessions[sessionId]?.addRecentMessage(
+                    ChatMessage(kind: .taskNotification(info), text: displayText)
+                )
+            } else {
+                sessions[sessionId]?.lastUserPrompt = prompt
+                // Replace trailing duplicate user message
+                if sessions[sessionId]?.recentMessages.last?.isUser == true {
+                    sessions[sessionId]?.recentMessages.removeLast()
+                }
+                sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: true, text: prompt))
             }
-            sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: true, text: prompt))
         }
+
+    case "Stop":
+        // Schema: { stop_hook_active: bool, last_assistant_message?: string }
+        // Agent finished its turn — session is now idle, waiting for user input.
+        // Only clear subagents that belong to the main agent (agentId == nil).
+        // Background subagents may still be running.
+        sessions[sessionId]?.currentTool = nil
+        sessions[sessionId]?.toolDescription = nil
+        sessions[sessionId]?.subagents.removeAll()
+        if let msg = event.rawJSON["last_assistant_message"] as? String, !msg.isEmpty {
+            sessions[sessionId]?.lastAssistantMessage = msg
+            sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: msg))
+        }
+        sessions[sessionId]?.status = .idle
+        effects.append(.enqueueCompletion(sessionId: sessionId))
+
+    case "StopFailure":
+        // Schema: { error: object, error_details?: string, last_assistant_message?: string }
+        // API error (rate limit, auth, prompt too long). Session goes idle with error context.
+        sessions[sessionId]?.status = .idle
+        sessions[sessionId]?.currentTool = nil
+        sessions[sessionId]?.toolDescription = event.rawJSON["error_details"] as? String
+        sessions[sessionId]?.subagents.removeAll()
+        if let msg = event.rawJSON["last_assistant_message"] as? String, !msg.isEmpty {
+            sessions[sessionId]?.lastAssistantMessage = msg
+            sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: msg))
+        }
+        effects.append(.enqueueCompletion(sessionId: sessionId))
+
+    // ── Tool lifecycle ─────────────────────────────────────────────
     case "PreToolUse":
+        // Schema: { tool_name: string, tool_input: any, tool_use_id: string }
         if !isWaiting {
             sessions[sessionId]?.status = .running
             sessions[sessionId]?.currentTool = event.toolName
             sessions[sessionId]?.toolDescription = event.toolDescription
         }
+
     case "PostToolUse":
+        // Schema: { tool_name: string, tool_input: any, tool_response: any, tool_use_id: string }
         if let tool = sessions[sessionId]?.currentTool {
             let desc = sessions[sessionId]?.toolDescription
             sessions[sessionId]?.recordTool(tool, description: desc, success: true, agentType: nil, maxHistory: maxHistory)
         }
+        sessions[sessionId]?.errorStreak = 0
         if !isWaiting {
             sessions[sessionId]?.status = .processing
             sessions[sessionId]?.currentTool = nil
             sessions[sessionId]?.toolDescription = nil
         }
+
     case "PostToolUseFailure":
+        // Schema: { tool_name: string, tool_input: any, error: string, is_interrupt?: bool, tool_use_id: string }
         if let tool = sessions[sessionId]?.currentTool {
             let desc = sessions[sessionId]?.toolDescription
             sessions[sessionId]?.recordTool(tool, description: desc, success: false, agentType: nil, maxHistory: maxHistory)
         }
+        let currentStreak = sessions[sessionId]?.errorStreak ?? 0
+        sessions[sessionId]?.errorStreak = currentStreak + 1
+        // is_interrupt = user pressed Ctrl+C during tool execution
+        if event.rawJSON["is_interrupt"] as? Bool == true {
+            sessions[sessionId]?.interrupted = true
+        }
         if !isWaiting {
             sessions[sessionId]?.status = .processing
             sessions[sessionId]?.currentTool = nil
             sessions[sessionId]?.toolDescription = nil
         }
+
     case "PermissionDenied":
+        // Schema: { tool_name: string, tool_input: any, reason: string, tool_use_id: string }
         if !isWaiting {
             sessions[sessionId]?.status = .processing
             sessions[sessionId]?.currentTool = nil
             sessions[sessionId]?.toolDescription = nil
         }
+
+    // ── Subagent lifecycle ─────────────────────────────────────────
     case "SubagentStart":
+        // Schema: { agent_id: string, agent_type: string }
         if !isWaiting {
             sessions[sessionId]?.status = .running
             sessions[sessionId]?.currentTool = "Agent"
             sessions[sessionId]?.toolDescription = event.rawJSON["agent_type"] as? String
         }
+
     case "SubagentStop":
+        // Schema: { agent_id: string, agent_type: string, last_assistant_message?: string }
         if !isWaiting {
             sessions[sessionId]?.status = .processing
             sessions[sessionId]?.currentTool = nil
             sessions[sessionId]?.toolDescription = nil
         }
-    case "AfterAgentResponse":
-        if let text = event.rawJSON["text"] as? String, !text.isEmpty {
-            sessions[sessionId]?.lastAssistantMessage = text
-            sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: text))
+
+    // ── Session lifecycle ──────────────────────────────────────────
+    case "SessionStart":
+        // Schema: { source: 'startup'|'resume'|'clear'|'compact', model?: string }
+        // Reset session — new conversation started.
+        effects.append(.stopMonitor(sessionId: sessionId))
+        let oldPid = sessions[sessionId]?.cliPid
+        sessions[sessionId] = SessionSnapshot(startTime: Date())
+        // Re-apply metadata (extractMetadata above wrote to the old snapshot)
+        extractMetadata(into: &sessions, sessionId: sessionId, event: event)
+        // Carry forward PID if bridge provided it via extractMetadata, else restore old
+        if sessions[sessionId]?.cliPid == nil, let pid = oldPid {
+            sessions[sessionId]?.cliPid = pid
         }
-        sessions[sessionId]?.status = .processing
-    case "Stop":
-        // Detect ESC/Ctrl+C interruption
-        let stopReason = event.rawJSON["stop_reason"] as? String ?? ""
-        sessions[sessionId]?.interrupted = (stopReason == "user" || stopReason == "interrupted")
-        sessions[sessionId]?.status = .idle
-        sessions[sessionId]?.currentTool = nil
-        sessions[sessionId]?.toolDescription = nil
-        let assistantMsg = event.rawJSON["last_assistant_message"] as? String
-            ?? event.rawJSON["text"] as? String
-            ?? event.rawJSON["message"] as? String
-        if let msg = assistantMsg {
-            sessions[sessionId]?.lastAssistantMessage = msg
-            sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: msg))
-        }
-        // Try to capture user prompt from Stop event if not already set
-        if sessions[sessionId]?.lastUserPrompt == nil {
-            if let prompt = event.rawJSON["last_user_message"] as? String {
-                sessions[sessionId]?.lastUserPrompt = prompt
-                let insertAt = max(0, (sessions[sessionId]?.recentMessages.count ?? 1) - 1)
-                sessions[sessionId]?.insertRecentMessage(ChatMessage(isUser: true, text: prompt), at: insertAt)
+        // Remove stale sessions sharing the same PID (process started new conversation)
+        if let pid = sessions[sessionId]?.cliPid, pid > 0 {
+            for (key, existing) in sessions where key != sessionId && existing.cliPid == pid {
+                effects.append(.removeSession(sessionId: key))
             }
         }
-        effects.append(.enqueueCompletion(sessionId: sessionId))
-    case "SessionStart":
-        effects.append(.stopMonitor(sessionId: sessionId))
-        sessions[sessionId] = SessionSnapshot(startTime: Date())
-        // Re-apply metadata from this event (common extraction above wrote to the old session)
-        if let cwd = event.rawJSON["cwd"] as? String, !cwd.isEmpty { sessions[sessionId]?.cwd = cwd }
-        if let model = event.rawJSON["model"] as? String, !model.isEmpty { sessions[sessionId]?.model = model }
-        if let ppid = event.rawJSON["_ppid"] as? Int, ppid > 0 {
-            sessions[sessionId]?.cliPid = pid_t(ppid)
-        }
-        if let source = SessionSnapshot.normalizedSupportedSource(event.rawJSON["_source"] as? String) {
-            sessions[sessionId]?.source = source
-        }
-        if let app = event.rawJSON["_term_app"] as? String, !app.isEmpty { sessions[sessionId]?.termApp = app }
-        if let bundle = event.rawJSON["_term_bundle"] as? String, !bundle.isEmpty { sessions[sessionId]?.termBundleId = bundle }
-        if let ses = event.rawJSON["_iterm_session"] as? String, !ses.isEmpty { sessions[sessionId]?.itermSessionId = ses }
-        if let tty = event.rawJSON["_tty"] as? String, !tty.isEmpty { sessions[sessionId]?.ttyPath = tty }
-        if let kitty = event.rawJSON["_kitty_window"] as? String, !kitty.isEmpty { sessions[sessionId]?.kittyWindowId = kitty }
-        if let pane = event.rawJSON["_tmux_pane"] as? String, !pane.isEmpty { sessions[sessionId]?.tmuxPane = pane }
-        if let tmuxTty = event.rawJSON["_tmux_client_tty"] as? String, !tmuxTty.isEmpty { sessions[sessionId]?.tmuxClientTty = tmuxTty }
-        if let mode = event.rawJSON["permission_mode"] as? String { sessions[sessionId]?.permissionMode = mode }
-        if let roots = event.rawJSON["workspace_roots"] as? [String], let first = roots.first, !first.isEmpty {
-            sessions[sessionId]?.cwd = first
-        }
         effects.append(.tryMonitorSession(sessionId: sessionId))
+
     case "SessionEnd":
-        // Side effect: AppState handles pending permission deny before removal
+        // Schema: { reason: 'clear'|'resume'|'logout'|'prompt_input_exit'|'other' }
         effects.append(.removeSession(sessionId: sessionId))
         return effects
-    case "Notification":
-        if let msg = event.rawJSON["message"] as? String {
-            sessions[sessionId]?.toolDescription = msg
-        }
-        if QuestionPayload.from(event: event) != nil {
-            sessions[sessionId]?.status = .waitingQuestion
-        }
+
+    // ── Context management ─────────────────────────────────────────
     case "PreCompact":
+        // Schema: { trigger: 'manual'|'auto', custom_instructions?: string }
         sessions[sessionId]?.status = .processing
         sessions[sessionId]?.toolDescription = "Compacting context\u{2026}"
+
+    case "PostCompact":
+        // Schema: { trigger: 'manual'|'auto', compact_summary: string }
+        if !isWaiting {
+            sessions[sessionId]?.status = .processing
+            sessions[sessionId]?.toolDescription = nil
+        }
+
+    // ── Environment changes ────────────────────────────────────────
+    case "CwdChanged":
+        // Schema: { old_cwd: string, new_cwd: string }
+        if let newCwd = event.rawJSON["new_cwd"] as? String, !newCwd.isEmpty {
+            sessions[sessionId]?.cwd = newCwd
+        }
+
+    case "Notification":
+        // Schema: { message: string, title?: string, notification_type: string }
+        // Desktop notification — agent wants user attention. Fires AFTER Stop.
+        // Don't change session status; session is already idle by this point.
+        break
+
     default:
         break
     }
@@ -518,6 +558,9 @@ public func extractMetadata(into sessions: inout [String: SessionSnapshot], sess
     }
     if let source = SessionSnapshot.normalizedSupportedSource(event.rawJSON["_source"] as? String) {
         sessions[sessionId]?.source = source
+    }
+    if let tp = event.rawJSON["transcript_path"] as? String, !tp.isEmpty {
+        sessions[sessionId]?.transcriptPath = tp
     }
 }
 

@@ -1,10 +1,11 @@
 import Foundation
-import Combine
+import SwiftUI
 
-final class L10n: ObservableObject {
+@Observable
+final class L10n {
     static let shared = L10n()
 
-    @Published var language: String {
+    var language: String {
         didSet { UserDefaults.standard.set(language, forKey: SettingsKey.appLanguage) }
     }
 
@@ -296,4 +297,17 @@ final class L10n: ObservableObject {
         "n_sessions": "个会话",
         "lines": "行",
     ]
+}
+
+// MARK: - Environment Key
+
+private struct L10nKey: EnvironmentKey {
+    static let defaultValue = L10n.shared
+}
+
+extension EnvironmentValues {
+    var l10n: L10n {
+        get { self[L10nKey.self] }
+        set { self[L10nKey.self] = newValue }
+    }
 }

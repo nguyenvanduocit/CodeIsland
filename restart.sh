@@ -5,9 +5,6 @@ APP_NAME="CodeIsland"
 BUILD_DIR=".build/debug"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 
-echo "Building $APP_NAME (debug)..."
-swift build
-
 echo "Creating app bundle..."
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"

@@ -8,6 +8,7 @@ enum SettingsKey {
     // General - System
     static let launchAtLogin = "launchAtLogin"
     static let displayChoice = "displayChoice"             // "auto", "builtin", "main"
+    static let panelHorizontalOffset = "panelHorizontalOffset"
 
     // General - Behavior
     static let hideInFullscreen = "hideInFullscreen"
@@ -41,6 +42,7 @@ enum SettingsKey {
 
 struct SettingsDefaults {
     static let displayChoice = "auto"
+    static let panelHorizontalOffset = 0.0
     static let hideInFullscreen = true
     static let hideWhenNoSession = false
     static let smartSuppress = true
@@ -75,6 +77,7 @@ class SettingsManager {
     private init() {
         defaults.register(defaults: [
             SettingsKey.displayChoice: SettingsDefaults.displayChoice,
+            SettingsKey.panelHorizontalOffset: SettingsDefaults.panelHorizontalOffset,
             SettingsKey.hideInFullscreen: SettingsDefaults.hideInFullscreen,
             SettingsKey.hideWhenNoSession: SettingsDefaults.hideWhenNoSession,
             SettingsKey.smartSuppress: SettingsDefaults.smartSuppress,
@@ -112,6 +115,11 @@ class SettingsManager {
     var displayChoice: String {
         get { defaults.string(forKey: SettingsKey.displayChoice) ?? SettingsDefaults.displayChoice }
         set { defaults.set(newValue, forKey: SettingsKey.displayChoice) }
+    }
+
+    var panelHorizontalOffset: Double {
+        get { defaults.double(forKey: SettingsKey.panelHorizontalOffset) }
+        set { defaults.set(newValue, forKey: SettingsKey.panelHorizontalOffset) }
     }
 
     var hideInFullscreen: Bool {

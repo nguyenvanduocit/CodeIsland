@@ -11,6 +11,13 @@ class HookServer {
     nonisolated static var socketPath: String { SocketPath.path }
     private var listener: NWListener?
 
+    /// Per-connection state: tracks whether we've already sent a response,
+    /// so our own `connection.cancel()` doesn't masquerade as a peer disconnect.
+    private final class ConnectionContext {
+        var responded = false
+    }
+    private var connectionContexts: [ObjectIdentifier: ConnectionContext] = [:]
+
     init(appState: AppState) {
         self.appState = appState
     }
@@ -94,20 +101,34 @@ class HookServer {
         }
     }
 
+    /// Internal tools that are safe to auto-approve without user confirmation.
+    private static let autoApproveTools: Set<String> = [
+        "TaskCreate", "TaskUpdate", "TaskGet", "TaskList", "TaskOutput", "TaskStop",
+        "TodoRead", "TodoWrite",
+        "EnterPlanMode", "ExitPlanMode",
+    ]
+
     private func processRequest(data: Data, connection: NWConnection) {
         guard let event = HookEvent(from: data) else {
-            sendResponse(connection: connection, data: Data("{\"error\":\"parse_failed\"}".utf8))
+            sendResponse(connection: connection, data: HookResponse.parseError)
             return
         }
 
         if let rawSource = event.rawJSON["_source"] as? String,
            SessionSnapshot.normalizedSupportedSource(rawSource) == nil {
-            sendResponse(connection: connection, data: Data("{}".utf8))
+            sendResponse(connection: connection, data: HookResponse.empty)
             return
         }
 
         if event.eventName == "PermissionRequest" {
             let sessionId = event.sessionId ?? "default"
+
+            // Auto-approve safe internal tools without showing UI
+            if let toolName = event.toolName, Self.autoApproveTools.contains(toolName) {
+                sendResponse(connection: connection, data: HookResponse.permission(.allow))
+                return
+            }
+
             // AskUserQuestion is a question, not a permission — route to QuestionBar
             if event.toolName == "AskUserQuestion" {
                 monitorPeerDisconnect(connection: connection, sessionId: sessionId)
@@ -138,23 +159,45 @@ class HookServer {
             }
         } else {
             appState.handleEvent(event)
-            sendResponse(connection: connection, data: Data("{}".utf8))
+            sendResponse(connection: connection, data: HookResponse.empty)
         }
     }
 
-    /// Watch for bridge process disconnect — indicates user answered in terminal
+    /// Watch for bridge process disconnect — indicates the bridge process actually died
+    /// (e.g. user Ctrl-C'd Claude Code), NOT a normal half-close.
+    ///
+    /// The bridge always does `shutdown(SHUT_WR)` after sending the request, which
+    /// produces an immediate EOF on the read side. The old `connection.receive` approach
+    /// would trigger on that EOF, causing every PermissionRequest to be auto-denied
+    /// before the UI card was even visible.
+    ///
+    /// We now rely on `stateUpdateHandler` transitioning to `cancelled`/`failed` —
+    /// which only happens on real socket teardown, not half-close.
     private func monitorPeerDisconnect(connection: NWConnection, sessionId: String) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 1) { [weak self] _, _, isComplete, error in
+        let context = ConnectionContext()
+        connectionContexts[ObjectIdentifier(connection)] = context
+
+        connection.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
-                guard let self = self else { return }
-                if isComplete || error != nil {
-                    self.appState.handlePeerDisconnect(sessionId: sessionId)
+                guard let self else { return }
+                switch state {
+                case .cancelled, .failed:
+                    if !context.responded {
+                        self.appState.handlePeerDisconnect(sessionId: sessionId)
+                    }
+                    self.connectionContexts.removeValue(forKey: ObjectIdentifier(connection))
+                default:
+                    break
                 }
             }
         }
     }
 
     private func sendResponse(connection: NWConnection, data: Data) {
+        // Mark as responded BEFORE cancel() so the disconnect monitor ignores our own teardown.
+        if let context = connectionContexts[ObjectIdentifier(connection)] {
+            context.responded = true
+        }
         connection.send(content: data, completion: .contentProcessed { _ in
             connection.cancel()
         })

@@ -174,6 +174,36 @@ public enum ProcessScanner {
         return result
     }
 
+    /// Get the controlling TTY path for a process (e.g. "/dev/ttys003").
+    public static func ttyPath(for pid: pid_t) -> String? {
+        var info = proc_bsdinfo()
+        let ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size))
+        guard ret > 0 else { return nil }
+        let dev = info.e_tdev
+        // -1 (NODEV) means no controlling terminal
+        guard dev != UInt32(bitPattern: -1), dev != 0 else { return nil }
+        guard let name = devname(dev_t(dev), S_IFCHR) else { return nil }
+        return "/dev/\(String(cString: name))"
+    }
+
+    /// Walk up the process tree from a PID to find the terminal app's bundle identifier.
+    public static func findTerminalBundleId(for pid: pid_t) -> String? {
+        var current = pid
+        for _ in 0..<10 {
+            guard let ppid = parentPid(for: current), ppid > 1 else { break }
+            if let execPath = executablePath(for: ppid),
+               let dotAppSlash = execPath.range(of: ".app/") {
+                // "/Applications/Ghostty.app/Contents/MacOS/ghostty" → "/Applications/Ghostty.app"
+                let appPath = String(execPath[..<dotAppSlash.lowerBound]) + ".app"
+                if let bundle = Bundle(path: appPath) {
+                    return bundle.bundleIdentifier
+                }
+            }
+            current = ppid
+        }
+        return nil
+    }
+
     /// Find the Claude Code ancestor PID from a given starting PID (for bridge).
     public static func findCLIAncestorPid(from startPid: pid_t) -> pid_t? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path

@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreServices
 import os.log
 import CodeIslandCore
 
@@ -10,36 +9,31 @@ private let log = Logger(subsystem: "com.codeisland", category: "AppState")
 final class AppState {
     var sessions: [String: SessionSnapshot] = [:]
     var activeSessionId: String?
-    var permissionQueue: [PermissionRequest] = []
-    var questionQueue: [QuestionRequest] = []
+    var lastInputSessionId: String?
 
     /// Computed: first item in permission queue (backward compat for UI reads)
-    var pendingPermission: PermissionRequest? { permissionQueue.first }
+    var pendingPermission: PermissionRequest? { requestQueue.pendingPermission }
     /// Computed: first item in question queue
-    var pendingQuestion: QuestionRequest? { questionQueue.first }
+    var pendingQuestion: QuestionRequest? { requestQueue.pendingQuestion }
     /// Preview-only: mock question payload for DebugHarness (no continuation needed)
     var previewQuestionPayload: QuestionPayload?
     var surface: IslandSurface = .collapsed
 
-    var justCompletedSessionId: String? {
-        if case .completionCard(let id) = surface { return id }
-        return nil
+    var justCompletedSessionId: String? { completionQueue.justCompletedSessionId }
+
+    /// Mouse must enter the panel before auto-collapse is allowed (prevents instant dismiss)
+    var completionHasBeenEntered: Bool {
+        get { completionQueue.completionHasBeenEntered }
+        set { completionQueue.completionHasBeenEntered = newValue }
     }
 
     private var maxHistory: Int { SettingsManager.shared.maxToolHistory }
-    private var cleanupTimer: Timer?
-    private var autoCollapseTask: Task<Void, Never>?
-    private var completionQueue: [String] = []
-    /// Mouse must enter the panel before auto-collapse is allowed (prevents instant dismiss)
-    var completionHasBeenEntered = false
-    private var processMonitors: [String: (source: DispatchSourceProcess, pid: pid_t)] = [:]
-    private var saveTimer: Timer?
-    private var fsEventStream: FSEventStreamRef?
-    private var lastFSScanTime: Date = .distantPast
-    private var isShowingCompletion: Bool {
-        if case .completionCard = surface { return true }
-        return false
-    }
+    private var cleanupTask: Task<Void, Never>?
+    let processMonitor = ProcessMonitorService()
+    let discoveryService = SessionDiscoveryService()
+    let completionQueue = CompletionQueueService()
+    let requestQueue = RequestQueueService()
+    private var saveTask: Task<Void, Never>?
     private var modelReadAttempted: Set<String> = []
 
     var rotatingSessionId: String?
@@ -47,100 +41,87 @@ final class AppState {
         guard let rid = rotatingSessionId else { return nil }
         return sessions[rid]
     }
-    private var rotationTimer: Timer?
+    private var rotationTask: Task<Void, Never>?
 
-    private func startCleanupTimer() {
-        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+    private func setupServices() {
+        // Wire CompletionQueueService callbacks
+        completionQueue.onSurfaceChange = { [weak self] newSurface in self?.surface = newSurface }
+        completionQueue.onActiveSessionChange = { [weak self] sid in self?.activeSessionId = sid }
+        completionQueue.sessionExists = { [weak self] sid in self?.sessions[sid] != nil }
+        completionQueue.getSession = { [weak self] sid in self?.sessions[sid] }
+        completionQueue.currentSurface = { [weak self] in self?.surface ?? .collapsed }
+
+        // Wire RequestQueueService callbacks
+        // Note: animation is applied at the call site (handleQuestion/handlePermission),
+        // not inside the callback, to avoid re-entrancy during service mutations.
+        requestQueue.onSurfaceChange = { [weak self] newSurface in self?.surface = newSurface }
+        requestQueue.onActiveSessionChange = { [weak self] sid in self?.activeSessionId = sid }
+        requestQueue.onSessionStatusChange = { [weak self] sid, status, tool, desc in
+            guard let self, var snap = self.sessions[sid] else { return }
+            snap.status = status
+            if status == .waitingApproval {
+                snap.currentTool = tool
+                snap.toolDescription = desc
+            }
+            self.sessions[sid] = snap
+        }
+        requestQueue.onPlaySound = { SoundManager.shared.handleEvent($0) }
+    }
+
+    private func startCleanupLoop() {
+        cleanupTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
                 self?.cleanupIdleSessions()
             }
         }
     }
 
     private func cleanupIdleSessions() {
+        // Refresh transcript file sizes for context usage tracking
+        for (sessionId, session) in sessions {
+            guard let path = session.transcriptPath, !path.isEmpty else { continue }
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+               let size = attrs[.size] as? Int64 {
+                sessions[sessionId]?.transcriptSize = size
+            }
+        }
+
         // 1. Kill orphaned Claude processes (terminal closed but process survived)
-        // Collect first to avoid mutating sessionPids during iteration
+        // Collect first to avoid mutating during iteration
         var orphaned: [(String, pid_t)] = []
-        for (sessionId, monitor) in processMonitors {
-            let pid = monitor.pid
+        for (sessionId, session) in sessions {
+            guard let pid = processMonitor.pid(for: sessionId) else { continue }
             var info = proc_bsdinfo()
             let ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size))
             if ret > 0 && info.pbi_ppid <= 1 {
                 orphaned.append((sessionId, pid))
             }
+            _ = session // silence unused warning
         }
         for (sessionId, pid) in orphaned {
             kill(pid, SIGTERM)
             removeSession(sessionId)
         }
 
-        // 2. Remove idle sessions whose process is dead
-        for (key, session) in sessions where session.status == .idle {
-            if processMonitors[key] != nil { continue }
+        // 2. Remove sessions whose process is dead (any status — prevents phantom counts)
+        for (key, session) in sessions {
+            if processMonitor.isMonitoring(key) { continue }
 
             // Known PID is dead — remove after brief grace (10s)
             if let pid = session.cliPid, pid > 0, kill(pid, 0) != 0 {
-                let idleSeconds = -session.lastActivity.timeIntervalSinceNow
-                if idleSeconds > 10 { removeSession(key) }
+                let inactiveSeconds = -session.lastActivity.timeIntervalSinceNow
+                if inactiveSeconds > 10 { removeSession(key) }
                 continue
             }
 
-            // No PID at all — remove after 2 minutes (safety net)
+            // No PID at all — safety net: remove after 5 min inactive
             if session.cliPid == nil || session.cliPid == 0 {
-                let idleMinutes = Int(-session.lastActivity.timeIntervalSinceNow / 60)
-                if idleMinutes >= 2 { removeSession(key) }
+                let inactiveMinutes = Int(-session.lastActivity.timeIntervalSinceNow / 60)
+                if inactiveMinutes >= 5 { removeSession(key) }
             }
         }
-        refreshDerivedState()
-    }
-
-    // MARK: - Process Monitoring (DispatchSource)
-
-    /// Watch a Claude process for exit — waits a grace period before removing, in case the
-    /// process restarts (e.g. auto-update) or a new hook event re-activates the session.
-    private func monitorProcess(sessionId: String, pid: pid_t) {
-        guard processMonitors[sessionId] == nil else { return }
-        let source = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
-        source.setEventHandler { [weak self] in
-            Task { @MainActor in
-                guard let self = self, self.sessions[sessionId] != nil else { return }
-                self.handleProcessExit(sessionId: sessionId, exitedPid: pid)
-            }
-        }
-        source.resume()
-        processMonitors[sessionId] = (source: source, pid: pid)
-
-        // Safety: if process already exited before monitor started
-        if kill(pid, 0) != 0 && errno == ESRCH {
-            handleProcessExit(sessionId: sessionId, exitedPid: pid)
-        }
-    }
-
-    /// Grace period after process exit — gives 5s for a replacement process or fresh hook event
-    /// to claim the session before removal. Prevents flicker during agent restarts.
-    private func handleProcessExit(sessionId: String, exitedPid: pid_t) {
-        // Tear down the dead monitor immediately
-        stopMonitor(sessionId)
-
-        let exitTime = Date()
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
-            guard let self = self, self.sessions[sessionId] != nil else { return }
-
-            // A new monitor was attached during the grace period (new process took over)
-            if self.processMonitors[sessionId] != nil { return }
-
-            // Session received fresh activity during the grace period — still alive
-            if let lastActivity = self.sessions[sessionId]?.lastActivity,
-               lastActivity > exitTime { return }
-
-            self.removeSession(sessionId)
-        }
-    }
-
-    private func stopMonitor(_ sessionId: String) {
-        processMonitors[sessionId]?.source.cancel()
-        processMonitors.removeValue(forKey: sessionId)
+        // refreshDerivedState is called inside removeSession for each removal
     }
 
     /// Remove a session, clean up its monitor, and resume any pending continuations.
@@ -155,7 +136,7 @@ final class AppState {
             showNextPending()
         }
         sessions.removeValue(forKey: sessionId)
-        stopMonitor(sessionId)
+        processMonitor.stop(sessionId: sessionId)
         if activeSessionId == sessionId {
             activeSessionId = mostActiveSessionId()
         }
@@ -178,16 +159,17 @@ final class AppState {
             if rotatingSessionId == nil || !cachedActiveIds.contains(rotatingSessionId!) {
                 rotatingSessionId = cachedActiveIds.first
             }
-            if rotationTimer == nil {
-                rotationTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-                    Task { @MainActor in
+            if rotationTask == nil {
+                rotationTask = Task { [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(3))
                         self?.rotateToNextSession()
                     }
                 }
             }
         } else {
-            rotationTimer?.invalidate()
-            rotationTimer = nil
+            rotationTask?.cancel()
+            rotationTask = nil
             rotatingSessionId = nil
         }
     }
@@ -204,119 +186,12 @@ final class AppState {
         }
     }
 
-    /// Start monitoring the CLI process for a session.
-    /// Prefers the PID captured by the bridge (_ppid), falls back to scanning for Claude processes by CWD.
-    private func tryMonitorSession(_ sessionId: String) {
-        guard processMonitors[sessionId] == nil else { return }
-
-        // Primary: use PID from bridge (works for any CLI)
-        if let pid = sessions[sessionId]?.cliPid, pid > 0, kill(pid, 0) == 0 {
-            monitorProcess(sessionId: sessionId, pid: pid)
-            return
-        }
-
-        // Fallback: scan for Claude Code processes by CWD
-        guard let cwd = sessions[sessionId]?.cwd else { return }
-        Task.detached {
-            let pid = Self.findPidForCwd(cwd)
-            await MainActor.run { [weak self] in
-                guard let self = self, let pid = pid,
-                      self.sessions[sessionId] != nil else { return }
-                self.monitorProcess(sessionId: sessionId, pid: pid)
-            }
-        }
-    }
-
-    /// Find a Claude process PID by matching CWD
-    private nonisolated static func findPidForCwd(_ cwd: String) -> pid_t? {
-        for pid in findClaudePids() {
-            if getCwd(for: pid) == cwd { return pid }
-        }
-        return nil
-    }
-
     private func enqueueCompletion(_ sessionId: String) {
-        // Don't queue duplicates
-        if completionQueue.contains(sessionId) || justCompletedSessionId == sessionId { return }
-
-        if isShowingCompletion {
-            // Already showing one — queue this for later
-            completionQueue.append(sessionId)
-        } else {
-            // Show immediately
-            showCompletion(sessionId)
-        }
-    }
-
-    /// Fast app-level suppress check (main-thread safe, no blocking).
-    private func shouldSuppressAppLevel(for sessionId: String) -> Bool {
-        guard UserDefaults.standard.bool(forKey: SettingsKey.smartSuppress) else { return false }
-        guard let session = sessions[sessionId],
-              (session.termApp != nil || session.termBundleId != nil) else { return false }
-        return TerminalVisibilityDetector.isTerminalFrontmostForSession(session)
-    }
-
-    private func showCompletion(_ sessionId: String) {
-        // Fast path: terminal not even frontmost — show immediately
-        guard shouldSuppressAppLevel(for: sessionId) else {
-            doShowCompletion(sessionId)
-            return
-        }
-
-        // Terminal IS frontmost — check tab-level on background thread
-        guard let session = sessions[sessionId] else { return }
-        let sessionCopy = session
-        Task.detached {
-            let tabVisible = TerminalVisibilityDetector.isSessionTabVisible(sessionCopy)
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                // Verify state hasn't changed while we were checking
-                // (e.g. approval/question card popped up, session was removed)
-                guard self.sessions[sessionId] != nil else { return }
-                switch self.surface {
-                case .approvalCard, .questionCard: return  // don't overwrite higher-priority surfaces
-                default: break
-                }
-                if !tabVisible {
-                    withAnimation(NotchAnimation.pop) {
-                        self.doShowCompletion(sessionId)
-                    }
-                }
-            }
-        }
-    }
-
-    private func doShowCompletion(_ sessionId: String) {
-        activeSessionId = sessionId
-        surface = .completionCard(sessionId: sessionId)
-        completionHasBeenEntered = false
-
-        autoCollapseTask?.cancel()
-        autoCollapseTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
-            guard !Task.isCancelled else { return }
-            showNextCompletionOrCollapse()
-        }
+        completionQueue.enqueue(sessionId)
     }
 
     func cancelCompletionQueue() {
-        autoCollapseTask?.cancel()
-        completionQueue.removeAll()
-    }
-
-    private func showNextCompletionOrCollapse() {
-        while let next = completionQueue.first {
-            completionQueue.removeFirst()
-            if sessions[next] != nil {
-                withAnimation(NotchAnimation.pop) {
-                    showCompletion(next)
-                }
-                return
-            }
-        }
-        withAnimation(NotchAnimation.close) {
-            surface = .collapsed
-        }
+        completionQueue.cancel()
     }
 
     // Cached derived state (refreshed by refreshDerivedState after session mutations)
@@ -358,24 +233,28 @@ final class AppState {
     }
 
     private func refreshProviderTitle(for trackedSessionId: String, providerSessionId: String? = nil) {
-        guard let session = sessions[trackedSessionId] else { return }
+        guard var snap = sessions[trackedSessionId] else { return }
 
-        let lookupSessionId = providerSessionId ?? session.providerSessionId ?? trackedSessionId
+        let lookupSessionId = providerSessionId ?? snap.providerSessionId ?? trackedSessionId
         if let providerSessionId {
-            sessions[trackedSessionId]?.providerSessionId = providerSessionId
-        } else if session.source == "claude" {
-            sessions[trackedSessionId]?.providerSessionId = lookupSessionId
+            snap.providerSessionId = providerSessionId
+        } else if snap.source == "claude" {
+            snap.providerSessionId = lookupSessionId
         }
 
-        guard session.source == "claude" else { return }
+        guard snap.source == "claude" else {
+            sessions[trackedSessionId] = snap
+            return
+        }
 
-        if let resolved = SessionTitleStore.title(for: lookupSessionId, provider: session.source, cwd: session.cwd) {
-            sessions[trackedSessionId]?.sessionTitle = resolved.title
-            sessions[trackedSessionId]?.sessionTitleSource = resolved.source
+        if let resolved = SessionTitleStore.title(for: lookupSessionId, provider: snap.source, cwd: snap.cwd) {
+            snap.sessionTitle = resolved.title
+            snap.sessionTitleSource = resolved.source
         } else {
-            sessions[trackedSessionId]?.sessionTitle = nil
-            sessions[trackedSessionId]?.sessionTitleSource = nil
+            snap.sessionTitle = nil
+            snap.sessionTitleSource = nil
         }
+        sessions[trackedSessionId] = snap
     }
 
     func handleEvent(_ event: HookEvent) {
@@ -396,13 +275,21 @@ final class AppState {
 
         let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: maxHistory)
 
+        if event.eventName == "UserPromptSubmit" {
+            lastInputSessionId = sessionId
+        }
+
         // Model transcript read: done AFTER reduceEvent so extractMetadata has filled in cwd
         if sessions[sessionId]?.model == nil && !modelReadAttempted.contains(sessionId) {
             modelReadAttempted.insert(sessionId)
             let cwd = sessions[sessionId]?.cwd
-            let model = Self.readModelFromTranscript(sessionId: sessionId, cwd: cwd)
-            sessions[sessionId]?.model = model
+            if let model = SessionDiscoveryService.readModelFromTranscript(sessionId: sessionId, cwd: cwd) {
+                sessions[sessionId]?.model = model
+            }
         }
+
+        // Messages are managed by the reducer (UserPromptSubmit → user msg, Stop → assistant msg).
+        // Transcript reads are only used at discovery/restore time for initial population.
 
         // If session was waiting but received an activity event, the question/permission
         // was answered externally (e.g. user replied in terminal). Clear pending items.
@@ -413,11 +300,12 @@ final class AppState {
             if !keepWaiting.contains(en) {
                 drainPermissions(forSession: sessionId)
                 drainQuestions(forSession: sessionId)
-                if sessions[sessionId]?.status == .waitingApproval
-                    || sessions[sessionId]?.status == .waitingQuestion {
-                    sessions[sessionId]?.status = (en == "Stop") ? .idle : .processing
-                    sessions[sessionId]?.currentTool = nil
-                    sessions[sessionId]?.toolDescription = nil
+                if var snap = sessions[sessionId],
+                   snap.status == .waitingApproval || snap.status == .waitingQuestion {
+                    snap.status = (en == "Stop") ? .idle : .processing
+                    snap.currentTool = nil
+                    snap.toolDescription = nil
+                    sessions[sessionId] = snap
                 }
                 showNextPending()
             }
@@ -449,11 +337,16 @@ final class AppState {
         case .playSound(let eventName):
             SoundManager.shared.handleEvent(eventName)
         case .tryMonitorSession(let sid):
-            if processMonitors[sid] == nil {
-                tryMonitorSession(sid)
-            }
+            processMonitor.tryMonitor(
+                sessionId: sid,
+                cliPid: sessions[sid]?.cliPid,
+                cwd: sessions[sid]?.cwd,
+                onPidFound: { [weak self] sessionId, pid in
+                    self?.sessions[sessionId]?.cliPid = pid
+                }
+            )
         case .stopMonitor(let sid):
-            stopMonitor(sid)
+            processMonitor.stop(sessionId: sid)
         case .removeSession(let sid):
             removeSession(sid)
         case .enqueueCompletion(let sid):
@@ -470,76 +363,36 @@ final class AppState {
         }
         // Extract metadata so blocking-first sessions have cwd, source, cliPid, terminal info
         extractMetadata(into: &sessions, sessionId: sessionId, event: event)
-        tryMonitorSession(sessionId)
-
-        // Clear any pending questions for THIS session (mutually exclusive within a session)
-        drainQuestions(forSession: sessionId)
-
-        sessions[sessionId]?.status = .waitingApproval
-        sessions[sessionId]?.currentTool = event.toolName
-        sessions[sessionId]?.toolDescription = event.toolDescription
+        processMonitor.tryMonitor(
+            sessionId: sessionId,
+            cliPid: sessions[sessionId]?.cliPid,
+            cwd: sessions[sessionId]?.cwd,
+            onPidFound: { [weak self] sid, pid in self?.sessions[sid]?.cliPid = pid }
+        )
         sessions[sessionId]?.lastActivity = Date()
-
-        let request = PermissionRequest(event: event, continuation: continuation)
-        permissionQueue.append(request)
-
-        // Show UI only if this is the first (or only) queued item
-        if permissionQueue.count == 1 {
-            activeSessionId = sessionId
-            surface = .approvalCard(sessionId: sessionId)
-            SoundManager.shared.handleEvent("PermissionRequest")
-        }
+        requestQueue.enqueuePermission(request: PermissionRequest(event: event, continuation: continuation))
         refreshDerivedState()
     }
 
     func approvePermission(always: Bool = false) {
-        guard !permissionQueue.isEmpty else { return }
-        let pending = permissionQueue.removeFirst()
-        let responseData: Data
-        if always {
-            let toolName = pending.event.toolName ?? ""
-            let obj: [String: Any] = [
-                "hookSpecificOutput": [
-                    "hookEventName": "PermissionRequest",
-                    "decision": [
-                        "behavior": "allow",
-                        "updatedPermissions": [[
-                            "type": "addRules",
-                            "rules": [["toolName": toolName, "ruleContent": "*"]],
-                            "behavior": "allow",
-                            "destination": "session"
-                        ]]
-                    ] as [String: Any]
-                ] as [String: Any]
-            ]
-            responseData = (try? JSONSerialization.data(withJSONObject: obj)) ?? Data("{}".utf8)
-        } else {
-            let response = #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}"#
-            responseData = Data(response.utf8)
-        }
-        pending.continuation.resume(returning: responseData)
-        let sessionId = pending.event.sessionId ?? "default"
+        guard let sessionId = requestQueue.approve(always: always) else { return }
         sessions[sessionId]?.status = .running
-
-        showNextPending()
+        applyShowNextPending()
         refreshDerivedState()
     }
 
     func denyPermission() {
-        guard !permissionQueue.isEmpty else { return }
-        let pending = permissionQueue.removeFirst()
-        let response = #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny"}}}"#
-        pending.continuation.resume(returning: Data(response.utf8))
-        let sessionId = pending.event.sessionId ?? "default"
-        sessions[sessionId]?.status = .idle
-        sessions[sessionId]?.currentTool = nil
-        sessions[sessionId]?.toolDescription = nil
-
+        guard let sessionId = requestQueue.deny() else { return }
+        if var snap = sessions[sessionId] {
+            snap.status = .idle
+            snap.currentTool = nil
+            snap.toolDescription = nil
+            sessions[sessionId] = snap
+        }
         if activeSessionId == sessionId {
             activeSessionId = mostActiveSessionId()
         }
-
-        showNextPending()
+        applyShowNextPending()
         refreshDerivedState()
     }
 
@@ -549,26 +402,19 @@ final class AppState {
             sessions[sessionId] = SessionSnapshot()
         }
         extractMetadata(into: &sessions, sessionId: sessionId, event: event)
-        tryMonitorSession(sessionId)
-
+        processMonitor.tryMonitor(
+            sessionId: sessionId,
+            cliPid: sessions[sessionId]?.cliPid,
+            cwd: sessions[sessionId]?.cwd,
+            onPidFound: { [weak self] sid, pid in self?.sessions[sid]?.cliPid = pid }
+        )
         guard let question = QuestionPayload.from(event: event) else {
-            continuation.resume(returning: Data("{}".utf8))
+            continuation.resume(returning: HookResponse.empty)
             return
         }
-        drainPermissions(forSession: sessionId)
-
-        sessions[sessionId]?.status = .waitingQuestion
         sessions[sessionId]?.lastActivity = Date()
-
-        let request = QuestionRequest(event: event, question: question, continuation: continuation)
-        questionQueue.append(request)
-
-        if questionQueue.count == 1 {
-            activeSessionId = sessionId
-            withAnimation(NotchAnimation.open) {
-                surface = .questionCard(sessionId: sessionId)
-            }
-            SoundManager.shared.handleEvent("PermissionRequest")
+        withAnimation(NotchAnimation.open) {
+            requestQueue.enqueueQuestion(request: QuestionRequest(event: event, question: question, continuation: continuation))
         }
         refreshDerivedState()
     }
@@ -579,7 +425,12 @@ final class AppState {
             sessions[sessionId] = SessionSnapshot()
         }
         extractMetadata(into: &sessions, sessionId: sessionId, event: event)
-        tryMonitorSession(sessionId)
+        processMonitor.tryMonitor(
+            sessionId: sessionId,
+            cliPid: sessions[sessionId]?.cliPid,
+            cwd: sessions[sessionId]?.cwd,
+            onPidFound: { [weak self] sid, pid in self?.sessions[sid]?.cliPid = pid }
+        )
 
         let payload: QuestionPayload
         if let questions = event.toolInput?["questions"] as? [[String: Any]],
@@ -604,128 +455,68 @@ final class AppState {
             payload = QuestionPayload(question: questionText, options: options)
         }
 
-        drainPermissions(forSession: sessionId)
-        drainQuestions(forSession: sessionId)
-
-        sessions[sessionId]?.status = .waitingQuestion
         sessions[sessionId]?.lastActivity = Date()
-
-        let request = QuestionRequest(event: event, question: payload, continuation: continuation, isFromPermission: true)
-        questionQueue.append(request)
-
-        if questionQueue.count == 1 {
-            activeSessionId = sessionId
-            withAnimation(NotchAnimation.open) {
-                surface = .questionCard(sessionId: sessionId)
-            }
-            SoundManager.shared.handleEvent("PermissionRequest")
+        withAnimation(NotchAnimation.open) {
+            requestQueue.enqueueQuestion(request: QuestionRequest(event: event, question: payload, continuation: continuation, isFromPermission: true))
         }
         refreshDerivedState()
     }
 
     func answerQuestion(_ answer: String) {
-        guard !questionQueue.isEmpty else { return }
-        let pending = questionQueue.removeFirst()
-        let responseData: Data
-        if pending.isFromPermission {
-            let answerKey = pending.question.header ?? "answer"
-            let obj: [String: Any] = [
-                "hookSpecificOutput": [
-                    "hookEventName": "PermissionRequest",
-                    "decision": [
-                        "behavior": "allow",
-                        "updatedInput": [
-                            "answers": [answerKey: answer]
-                        ]
-                    ] as [String: Any]
-                ] as [String: Any]
-            ]
-            responseData = (try? JSONSerialization.data(withJSONObject: obj)) ?? Data("{}".utf8)
-        } else {
-            let obj: [String: Any] = [
-                "hookSpecificOutput": [
-                    "hookEventName": "Notification",
-                    "answer": answer
-                ] as [String: Any]
-            ]
-            responseData = (try? JSONSerialization.data(withJSONObject: obj)) ?? Data("{}".utf8)
-        }
-        pending.continuation.resume(returning: responseData)
-        let sessionId = pending.event.sessionId ?? "default"
+        guard let sessionId = requestQueue.answer(answer) else { return }
         sessions[sessionId]?.status = .processing
-
-        showNextPending()
+        applyShowNextPending()
         refreshDerivedState()
     }
 
     func skipQuestion() {
-        guard !questionQueue.isEmpty else { return }
-        let pending = questionQueue.removeFirst()
-        let responseData: Data
-        if pending.isFromPermission {
-            responseData = Data(#"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny"}}}"#.utf8)
-        } else {
-            responseData = Data(#"{"hookSpecificOutput":{"hookEventName":"Notification"}}"#.utf8)
-        }
-        pending.continuation.resume(returning: responseData)
-        let sessionId = pending.event.sessionId ?? "default"
+        guard let sessionId = requestQueue.skip() else { return }
         sessions[sessionId]?.status = .processing
-
-        showNextPending()
+        applyShowNextPending()
         refreshDerivedState()
-    }
-
-    /// Drain all queued permissions for a specific session, resuming their continuations with deny
-    private func drainPermissions(forSession sessionId: String) {
-        let denyResponse = Data(#"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny"}}}"#.utf8)
-        permissionQueue.removeAll { item in
-            guard item.event.sessionId == sessionId else { return false }
-            item.continuation.resume(returning: denyResponse)
-            return true
-        }
     }
 
     /// Called when the bridge socket disconnects — the question/permission was answered externally (e.g. user replied in terminal)
     func handlePeerDisconnect(sessionId: String) {
-        let hadPending = !questionQueue.filter({ $0.event.sessionId == sessionId }).isEmpty
-            || !permissionQueue.filter({ $0.event.sessionId == sessionId }).isEmpty
+        let hadPending = requestQueue.permissionQueue.contains(where: { $0.event.sessionId == sessionId })
+            || requestQueue.questionQueue.contains(where: { $0.event.sessionId == sessionId })
         guard hadPending else { return }
 
-        drainQuestions(forSession: sessionId)
-        drainPermissions(forSession: sessionId)
-        if sessions[sessionId]?.status == .waitingApproval
-            || sessions[sessionId]?.status == .waitingQuestion {
-            sessions[sessionId]?.status = .processing
-            sessions[sessionId]?.currentTool = nil
-            sessions[sessionId]?.toolDescription = nil
+        requestQueue.drainAll(forSession: sessionId)
+        if var snap = sessions[sessionId],
+           snap.status == .waitingApproval || snap.status == .waitingQuestion {
+            snap.status = .processing
+            snap.currentTool = nil
+            snap.toolDescription = nil
+            sessions[sessionId] = snap
         }
-        showNextPending()
+        applyShowNextPending()
         refreshDerivedState()
     }
 
-    /// Drain all queued questions for a specific session, resuming their continuations with empty
+    private func drainPermissions(forSession sessionId: String) {
+        requestQueue.drainPermissions(forSession: sessionId)
+    }
+
     private func drainQuestions(forSession sessionId: String) {
-        questionQueue.removeAll { item in
-            guard item.event.sessionId == sessionId else { return false }
-            item.continuation.resume(returning: Data("{}".utf8))
-            return true
-        }
+        requestQueue.drainQuestions(forSession: sessionId)
     }
 
     /// After dequeuing, show next pending item or collapse
     private func showNextPending() {
-        if let next = permissionQueue.first {
-            let sid = next.event.sessionId ?? "default"
-            activeSessionId = sid
-            surface = .approvalCard(sessionId: sid)
-        } else if let next = questionQueue.first {
-            let sid = next.event.sessionId ?? "default"
-            activeSessionId = sid
-            surface = .questionCard(sessionId: sid)
-        } else if case .approvalCard = surface {
-            surface = .collapsed
-        } else if case .questionCard = surface {
-            surface = .collapsed
+        applyShowNextPending()
+    }
+
+    private func applyShowNextPending() {
+        let next = requestQueue.showNextPending()
+        switch next {
+        case .approvalCard, .questionCard:
+            surface = next
+        case .collapsed:
+            if case .approvalCard = surface { surface = .collapsed }
+            else if case .questionCard = surface { surface = .collapsed }
+        default:
+            break
         }
     }
 
@@ -745,39 +536,17 @@ final class AppState {
         return (bestNonIdle ?? bestAny)?.key
     }
 
-    /// Read model from session transcript file
-    private static func readModelFromTranscript(sessionId: String, cwd: String?) -> String? {
-        guard let cwd = cwd else { return nil }
-        let projectDir = cwd.claudeProjectDirEncoded()
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let path = "\(home)/.claude/projects/\(projectDir)/\(sessionId).jsonl"
-        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { handle.closeFile() }
-        let chunk = handle.readData(ofLength: 32768)
-        guard let text = String(data: chunk, encoding: .utf8) else { return nil }
-        for line in text.components(separatedBy: "\n") {
-            guard !line.isEmpty,
-                  let data = line.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let message = json["message"] as? [String: Any],
-                  let model = message["model"] as? String, !model.isEmpty
-            else { continue }
-            return model
-        }
-        return nil
-    }
-
     // MARK: - Session Discovery (FSEventStream + process scan)
 
     /// Start continuous monitoring: initial process scan + FSEventStream on ~/.claude/projects/
     // MARK: - Session Persistence
 
     private func scheduleSave() {
-        saveTimer?.invalidate()
-        saveTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                self?.saveSessions()
-            }
+        saveTask?.cancel()
+        saveTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            self?.saveSessions()
         }
     }
 
@@ -788,7 +557,26 @@ final class AppState {
     private func restoreSessions() {
         let persisted = SessionPersistence.load()
         let cutoff = Date().addingTimeInterval(-30 * 60) // 30 minutes
+
+        // Deduplicate by PID: when multiple sessions share the same cliPid,
+        // keep only the one with the most recent lastActivity.
+        var bestByPid: [Int32: PersistedSession] = [:]
+        var noPidSessions: [PersistedSession] = []
         for p in persisted where p.lastActivity > cutoff {
+            guard SessionSnapshot.normalizedSupportedSource(p.source) != nil else { continue }
+            if let pid = p.cliPid, pid > 0 {
+                if let existing = bestByPid[pid] {
+                    if p.lastActivity > existing.lastActivity { bestByPid[pid] = p }
+                } else {
+                    bestByPid[pid] = p
+                }
+            } else {
+                noPidSessions.append(p)
+            }
+        }
+        let deduped = Array(bestByPid.values) + noPidSessions
+
+        for p in deduped {
             guard sessions[p.sessionId] == nil else { continue }
             guard let source = SessionSnapshot.normalizedSupportedSource(p.source) else { continue }
             var snapshot = SessionSnapshot(startTime: p.startTime)
@@ -798,10 +586,16 @@ final class AppState {
             snapshot.sessionTitle = p.sessionTitle
             snapshot.sessionTitleSource = p.sessionTitleSource
             snapshot.providerSessionId = p.providerSessionId
-            snapshot.lastUserPrompt = p.lastUserPrompt
             snapshot.lastAssistantMessage = p.lastAssistantMessage
             if let prompt = p.lastUserPrompt {
-                snapshot.addRecentMessage(ChatMessage(isUser: true, text: prompt))
+                if let info = TaskNotificationInfo.parse(prompt) {
+                    let display = info.summary ?? "Task \(info.status)"
+                    snapshot.lastUserPrompt = display
+                    snapshot.addRecentMessage(ChatMessage(kind: .taskNotification(info), text: display))
+                } else {
+                    snapshot.lastUserPrompt = prompt
+                    snapshot.addRecentMessage(ChatMessage(isUser: true, text: prompt))
+                }
             }
             if let reply = p.lastAssistantMessage {
                 snapshot.addRecentMessage(ChatMessage(isUser: false, text: reply))
@@ -820,99 +614,63 @@ final class AppState {
             }
             sessions[p.sessionId] = snapshot
             refreshProviderTitle(for: p.sessionId)
-            // Synchronous path: if cliPid is set and process is alive, attach immediately
+            // Attach process monitor if alive — but don't override status.
+            // The process stays alive while waiting for user input (idle).
+            // Status will be set correctly by hook events (Stop → idle, UserPromptSubmit → processing).
             if let pid = snapshot.cliPid, pid > 0, kill(pid, 0) == 0 {
-                monitorProcess(sessionId: p.sessionId, pid: pid)
-                sessions[p.sessionId]?.status = .processing
+                processMonitor.monitor(sessionId: p.sessionId, pid: pid)
             } else {
                 // Async fallback: scan for Claude processes by CWD
                 let sid = p.sessionId
-                Task.detached {
-                    let pid = Self.findPidForCwd(snapshot.cwd ?? "")
-                    await MainActor.run { [weak self] in
-                        guard let self = self, let pid = pid,
-                              self.sessions[sid] != nil,
-                              self.processMonitors[sid] == nil else { return }
-                        self.monitorProcess(sessionId: sid, pid: pid)
-                        self.sessions[sid]?.status = .processing
-                        // Re-select active session now that we know it's alive
-                        if self.activeSessionId == nil || self.sessions[self.activeSessionId ?? ""]?.status == .idle {
-                            self.activeSessionId = sid
-                        }
+                processMonitor.tryMonitor(
+                    sessionId: sid,
+                    cliPid: snapshot.cliPid,
+                    cwd: snapshot.cwd,
+                    onPidFound: { [weak self] sessionId, pid in
+                        guard let self, self.sessions[sessionId] != nil else { return }
+                        self.sessions[sessionId]?.cliPid = pid
                         self.refreshDerivedState()
                     }
-                }
+                )
             }
         }
         SessionPersistence.clear()
+
+        // Replay events logged while app was not running
+        for eventData in EventLog.readAndClear() {
+            if let event = HookEvent(from: eventData) {
+                handleEvent(event)
+            }
+        }
+
         if activeSessionId == nil {
-            activeSessionId = sessions.first(where: { $0.value.status != .idle })?.key
-                ?? sessions.keys.sorted().first
+            activeSessionId = sessions.keys.sorted().first
         }
         refreshDerivedState()
     }
 
     func startSessionDiscovery() {
-        startCleanupTimer()
+        startCleanupLoop()
+        setupServices()
+        processMonitor.onSessionExpired = { [weak self] sessionId, exitTime in
+            guard let self, let session = self.sessions[sessionId] else { return }
+            if session.lastActivity > exitTime { return }  // fresh activity during grace
+            self.removeSession(sessionId)
+        }
         // Restore persisted sessions before process scan (deduped by scan)
         restoreSessions()
 
+        discoveryService.onDiscovered = { [weak self] in self?.integrateDiscovered($0) }
+
         // Initial scan for already-running Claude sessions
         Task.detached {
-            let claudeSessions = Self.findActiveClaudeSessions()
+            let claudeSessions = SessionDiscoveryService.findActiveClaudeSessions()
             await MainActor.run { [weak self] in
                 self?.integrateDiscovered(claudeSessions)
             }
         }
         // Start watching ~/.claude/projects/ for new session files
-        startProjectsWatcher()
-    }
-
-    /// FSEventStream on ~/.claude/projects/ — fires when .jsonl files are created/modified
-    private func startProjectsWatcher() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let projectsPath = "\(home)/.claude/projects"
-        guard FileManager.default.fileExists(atPath: projectsPath) else { return }
-
-        var context = FSEventStreamContext()
-        context.info = Unmanaged.passUnretained(self).toOpaque()
-
-        let stream = FSEventStreamCreate(
-            nil,
-            { (_, info, _, _, _, _) in
-                guard let info = info else { return }
-                let appState = Unmanaged<AppState>.fromOpaque(info).takeUnretainedValue()
-                // Debounce: re-scan Claude processes on filesystem change
-                appState.handleProjectsDirChange()
-            },
-            &context,
-            [projectsPath] as CFArray,
-            FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
-            2.0,  // 2-second latency (coalesces rapid writes)
-            FSEventStreamCreateFlags(kFSEventStreamCreateFlagUseCFTypes)
-        )
-
-        guard let stream = stream else { return }
-        FSEventStreamSetDispatchQueue(stream, .main)
-        FSEventStreamStart(stream)
-        self.fsEventStream = stream
-        log.info("Projects watcher started on \(projectsPath)")
-    }
-
-    /// Called by FSEventStream when ~/.claude/projects/ changes (nonisolated for C callback compatibility)
-    nonisolated private func handleProjectsDirChange() {
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            // Debounce: skip if scanned within the last 3 seconds
-            guard Date().timeIntervalSince(self.lastFSScanTime) > 3 else { return }
-            self.lastFSScanTime = Date()
-            Task.detached {
-                let claudeSessions = Self.findActiveClaudeSessions()
-                await MainActor.run { [weak self] in
-                    self?.integrateDiscovered(claudeSessions)
-                }
-            }
-        }
+        discoveryService.startWatching()
     }
 
     /// Merge discovered sessions into current state (skip already-known ones)
@@ -921,16 +679,10 @@ final class AppState {
         for info in discovered {
             // Session already known — try to attach PID monitor if missing
             if sessions[info.sessionId] != nil {
-                if processMonitors[info.sessionId] == nil, let pid = info.pid {
-                    monitorProcess(sessionId: info.sessionId, pid: pid)
-                    // If process is alive and session was idle, reactivate it
-                    if sessions[info.sessionId]?.status == .idle {
-                        sessions[info.sessionId]?.status = .processing
-                    }
-                    // Switch focus if current active session is idle
-                    if activeSessionId == nil || sessions[activeSessionId ?? ""]?.status == .idle {
-                        activeSessionId = info.sessionId
-                    }
+                if !processMonitor.isMonitoring(info.sessionId), let pid = info.pid {
+                    processMonitor.monitor(sessionId: info.sessionId, pid: pid)
+                    // Don't override status — process stays alive while waiting for user input.
+                    // Hook events (Stop/UserPromptSubmit) are the source of truth for status.
                 }
                 refreshProviderTitle(for: info.sessionId, providerSessionId: info.sessionId)
                 continue
@@ -939,21 +691,28 @@ final class AppState {
             // Dedup: if a hook-created session already exists with same source + cwd + pid,
             // skip the discovered one to avoid duplicate entries (e.g. Codex hooks vs
             // file-based discovery produce different session IDs for the same process).
-            // Only dedup when PID matches (or discovered has no PID), so concurrent
-            // sessions in the same repo aren't incorrectly merged.
+            // Only reject match when both PIDs are alive and different — stale PIDs
+            // from restored sessions should not prevent dedup.
             let duplicateKey = sessions.first(where: { (_, existing) in
                 guard existing.source == info.source,
                       existing.cwd != nil, existing.cwd == info.cwd else { return false }
-                // If we have PIDs for both, they must match
                 if let discoveredPid = info.pid, let existingPid = existing.cliPid,
-                   discoveredPid != existingPid { return false }
+                   discoveredPid != existingPid {
+                    // Only reject if the existing PID is still alive (not stale from persistence)
+                    return kill(existingPid, 0) != 0
+                }
                 return true
             })?.key
 
             if let existingKey = duplicateKey {
-                // Still attach PID monitor to the existing session if missing
-                if let pid = info.pid, processMonitors[existingKey] == nil {
-                    monitorProcess(sessionId: existingKey, pid: pid)
+                // Attach PID monitor and update stale cliPid on the existing session
+                if let pid = info.pid {
+                    if sessions[existingKey]?.cliPid != pid {
+                        sessions[existingKey]?.cliPid = pid
+                    }
+                    if !processMonitor.isMonitoring(existingKey) {
+                        processMonitor.monitor(sessionId: existingKey, pid: pid)
+                    }
                 }
                 refreshProviderTitle(for: existingKey, providerSessionId: info.sessionId)
                 continue
@@ -963,8 +722,10 @@ final class AppState {
             session.cwd = info.cwd
             session.model = info.model
             session.ttyPath = info.tty
+            session.termBundleId = info.termBundleId
             session.recentMessages = info.recentMessages
             session.source = info.source
+            session.cliPid = info.pid
             session.providerSessionId = info.source == "claude" ? info.sessionId : nil
             if let last = info.recentMessages.last(where: { $0.isUser }) {
                 session.lastUserPrompt = last.text
@@ -975,7 +736,7 @@ final class AppState {
             sessions[info.sessionId] = session
             refreshProviderTitle(for: info.sessionId, providerSessionId: info.sessionId)
             if let pid = info.pid {
-                monitorProcess(sessionId: info.sessionId, pid: pid)
+                processMonitor.monitor(sessionId: info.sessionId, pid: pid)
             }
             didAdd = true
         }
@@ -986,187 +747,20 @@ final class AppState {
     }
 
     func stopSessionDiscovery() {
-        if let stream = fsEventStream {
-            FSEventStreamStop(stream)
-            FSEventStreamInvalidate(stream)
-            FSEventStreamRelease(stream)
-            fsEventStream = nil
-        }
-        for key in Array(processMonitors.keys) { stopMonitor(key) }
+        discoveryService.stopWatching()
+        processMonitor.stopAll()
     }
 
     deinit {
         MainActor.assumeIsolated {
-            rotationTimer?.invalidate()
-            cleanupTimer?.invalidate()
-            saveTimer?.invalidate()
-            if let stream = fsEventStream {
-                FSEventStreamStop(stream)
-                FSEventStreamInvalidate(stream)
-                FSEventStreamRelease(stream)
-            }
-            for (_, m) in processMonitors { m.source.cancel() }
+            rotationTask?.cancel()
+            cleanupTask?.cancel()
+            saveTask?.cancel()
+            discoveryService.stopWatching()
+            processMonitor.stopAll()
         }
     }
 
-    private struct DiscoveredSession {
-        let sessionId: String
-        let cwd: String
-        let tty: String?
-        let model: String?
-        let pid: pid_t?
-        let modifiedAt: Date
-        let recentMessages: [ChatMessage]
-        var source: String = "claude"
-    }
-
-    /// Find running `claude` processes, match to transcript files, extract recent messages
-    private nonisolated static func findActiveClaudeSessions() -> [DiscoveredSession] {
-        // Step 1: find running claude processes using native APIs
-        let claudePids = findClaudePids()
-        guard !claudePids.isEmpty else { return [] }
-
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let fm = FileManager.default
-        var results: [DiscoveredSession] = []
-        var seenSessionIds: Set<String> = []
-
-        // Each claude process → its CWD → the single most recent .jsonl
-        for pid in claudePids {
-            guard let cwd = getCwd(for: pid), !cwd.isEmpty else { continue }
-
-            // Skip subagent worktrees — they are child tasks, not independent sessions
-            if cwd.contains("/.claude/worktrees/agent-") || cwd.contains("/.git/worktrees/agent-") {
-                continue
-            }
-
-            // Get process start time to filter stale transcript files
-            let processStart = getProcessStartTime(pid)
-
-            let projectDir = cwd.claudeProjectDirEncoded()
-            let projectPath = "\(home)/.claude/projects/\(projectDir)"
-            guard let files = try? fm.contentsOfDirectory(atPath: projectPath) else { continue }
-
-            // Find the most recently modified .jsonl that was written AFTER this process started
-            var bestFile: String?
-            var bestDate = Date.distantPast
-            for file in files where file.hasSuffix(".jsonl") {
-                let fullPath = "\(projectPath)/\(file)"
-                if let attrs = try? fm.attributesOfItem(atPath: fullPath),
-                   let modified = attrs[.modificationDate] as? Date,
-                   modified > bestDate {
-                    // Skip files from old sessions: must be modified after process started
-                    if let start = processStart, modified < start.addingTimeInterval(-10) {
-                        continue
-                    }
-                    bestDate = modified
-                    bestFile = file
-                }
-            }
-
-            guard let file = bestFile else { continue }
-
-            // Skip stale transcripts: only show sessions active within last 5 minutes
-            // This filters out orphaned processes (terminal closed but process survived)
-            if bestDate.timeIntervalSinceNow < -300 { continue }
-
-            let sessionId = String(file.dropLast(6))
-            guard !seenSessionIds.contains(sessionId) else { continue }
-            seenSessionIds.insert(sessionId)
-
-            let (model, messages) = readRecentFromTranscript(path: "\(projectPath)/\(file)")
-
-            results.append(DiscoveredSession(
-                sessionId: sessionId,
-                cwd: cwd,
-                tty: nil,
-                model: model,
-                pid: pid,
-                modifiedAt: bestDate,
-                recentMessages: messages
-            ))
-        }
-        return results
-    }
-
-    private nonisolated static func findClaudePids() -> [pid_t] {
-        ProcessScanner.findClaudePids()
-    }
-
-    private nonisolated static func getCwd(for pid: pid_t) -> String? {
-        ProcessScanner.cwd(for: pid)
-    }
-
-    private nonisolated static func getProcessStartTime(_ pid: pid_t) -> Date? {
-        ProcessScanner.startTime(for: pid)
-    }
-
-    /// Read model and last 3 user/assistant messages from a transcript file's tail
-    private nonisolated static func readRecentFromTranscript(path: String) -> (String?, [ChatMessage]) {
-        guard let handle = FileHandle(forReadingAtPath: path) else { return (nil, []) }
-        defer { handle.closeFile() }
-
-        // Read last 64KB
-        let fileSize = handle.seekToEndOfFile()
-        let readSize: UInt64 = min(fileSize, 65536)
-        handle.seek(toFileOffset: fileSize - readSize)
-        let data = handle.readDataToEndOfFile()
-        guard let text = String(data: data, encoding: .utf8) else { return (nil, []) }
-
-        var model: String?
-        var userMessages: [(Int, String)] = []
-        var assistantMessages: [(Int, String)] = []
-        var index = 0
-
-        for line in text.components(separatedBy: "\n") {
-            guard !line.isEmpty,
-                  let lineData = line.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
-                  let message = json["message"] as? [String: Any],
-                  let role = message["role"] as? String
-            else { continue }
-
-            if model == nil, let m = message["model"] as? String, !m.isEmpty {
-                model = m
-            }
-
-            // Extract text content
-            var textContent: String?
-            if let content = message["content"] as? String, !content.isEmpty {
-                textContent = content
-            } else if let contentArray = message["content"] as? [[String: Any]] {
-                for item in contentArray {
-                    if item["type"] as? String == "text",
-                       let t = item["text"] as? String, !t.isEmpty {
-                        textContent = t
-                        break
-                    }
-                }
-            }
-
-            if let text = textContent {
-                if role == "user" {
-                    userMessages.append((index, text))
-                } else if role == "assistant" {
-                    assistantMessages.append((index, text))
-                }
-            }
-            index += 1
-        }
-
-        // Build recent messages: take last few user+assistant, sorted by order, keep 3
-        var combined: [(Int, ChatMessage)] = []
-        for (i, text) in userMessages.suffix(3) {
-            combined.append((i, ChatMessage(isUser: true, text: text)))
-        }
-        for (i, text) in assistantMessages.suffix(3) {
-            combined.append((i, ChatMessage(isUser: false, text: text)))
-        }
-        combined.sort { $0.0 < $1.0 }
-        let recent = Array(combined.suffix(3).map { $0.1 })
-
-        return (model, recent)
-    }
 }
 
 /// Encode a path the same way Claude Code does for project directory names:

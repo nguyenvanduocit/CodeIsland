@@ -8,7 +8,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var panelController: PanelWindowController?
     private var hookServer: HookServer?
-    private var hookRecoveryTimer: Timer?
+    private var hookRecoveryTask: Task<Void, Never>?
     private var lastHookCheck: Date = .distantPast
 
     let appState = AppState()
@@ -18,14 +18,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ProcessInfo.processInfo.disableSuddenTermination()
         // Pre-set app icon so Dock/menu bar use the packaged bundle icon.
         NSApp.applicationIconImage = SettingsWindowController.bundleAppIcon()
+
+        // Start HookServer BEFORE installing hooks into CLI configs.
+        // If we write settings.json first, Claude Code picks up the new hooks
+        // immediately but the socket isn't listening yet — PermissionRequest
+        // hooks get no response and Claude Code denies them.
+        hookServer = HookServer(appState: appState)
+        hookServer?.start()
+
         if ConfigInstaller.install() {
             Self.log.info("Hooks installed")
         } else {
             Self.log.warning("Failed to install hooks")
         }
-
-        hookServer = HookServer(appState: appState)
-        hookServer?.start()
 
         panelController = PanelWindowController(appState: appState)
         panelController?.showPanel()
@@ -33,8 +38,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         appState.startSessionDiscovery()
 
         // Hooks auto-recovery: periodic + app activation trigger
-        hookRecoveryTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        hookRecoveryTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(300))
                 self?.checkAndRepairHooks()
             }
         }
@@ -89,7 +95,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        hookRecoveryTimer?.invalidate()
+        hookRecoveryTask?.cancel()
         appState.saveSessions()
         hookServer?.stop()
         appState.stopSessionDiscovery()

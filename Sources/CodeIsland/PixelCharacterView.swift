@@ -30,7 +30,10 @@ struct ClawdView: View {
         .onAppear { alive = true }
         .onChange(of: status) {
             alive = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { alive = true }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(50))
+                alive = true
+            }
         }
     }
 

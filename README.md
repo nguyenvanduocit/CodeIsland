@@ -114,6 +114,8 @@ CodeIsland provides a 7-tab settings panel:
 
 This project was inspired by [claude-island](https://github.com/farouqaldori/claude-island) by [@farouqaldori](https://github.com/farouqaldori). Thanks for the original idea of bringing AI agent status into the macOS notch.
 
+We also monitor [Vibe Island](https://github.com/vibeislandapp/vibe-island) for feature inspiration.
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=wxtsky%2FCodeIsland&type=date&legend=bottom-right">

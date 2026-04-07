@@ -187,10 +187,6 @@ if let idx = args.firstIndex(of: "--source"), idx + 1 < args.count {
 // Quick exit: skip if CODEISLAND_SKIP is set
 guard env["CODEISLAND_SKIP"] == nil else { exit(0) }
 
-// Quick exit: socket doesn't exist or isn't a socket
-var statBuf = stat()
-guard stat(socketPath, &statBuf) == 0, (statBuf.st_mode & S_IFMT) == S_IFSOCK else { exit(0) }
-
 // Safety: arm a short alarm before reading stdin — if the calling process
 // forgot to close its pipe, we bail out instead of blocking forever.
 alarm(5)
@@ -275,6 +271,15 @@ json["_ppid"] = findCLIAncestorPid()
 
 // --- Serialize enriched JSON ---
 guard let enriched = try? JSONSerialization.data(withJSONObject: json) else { exit(1) }
+
+// --- Persist non-blocking events to log (survives app restarts) ---
+if !isBlocking {
+    EventLog.append(json)
+}
+
+// Quick exit: socket doesn't exist or isn't a socket — non-blocking events already logged above
+var statBuf = stat()
+guard stat(socketPath, &statBuf) == 0, (statBuf.st_mode & S_IFMT) == S_IFSOCK else { exit(0) }
 
 // --- Connect to Unix socket ---
 guard let sock = connectSocket(socketPath) else {
