@@ -36,34 +36,11 @@ final class ProcessMonitorService {
         }
     }
 
-    /// Start monitoring using a known PID or fall back to scanning by CWD.
-    /// `onPidFound` is called (on MainActor) when the async scan resolves a PID,
-    /// so the caller can persist it on the session record.
-    func tryMonitor(
-        sessionId: String,
-        cliPid: pid_t?,
-        cwd: String?,
-        onPidFound: ((String, pid_t) -> Void)? = nil
-    ) {
+    /// Start monitoring using a known PID from the bridge.
+    func tryMonitor(sessionId: String, cliPid: pid_t?) {
         guard !isMonitoring(sessionId) else { return }
-
-        // Primary: use PID from bridge
-        if let pid = cliPid, pid > 0, kill(pid, 0) == 0 {
-            monitor(sessionId: sessionId, pid: pid)
-            return
-        }
-
-        // Fallback: scan for Claude Code processes by CWD
-        guard let cwd = cwd else { return }
-        Task.detached {
-            let pid = Self.findPidForCwd(cwd)
-            await MainActor.run { [weak self] in
-                guard let self, let pid else { return }
-                guard !self.isMonitoring(sessionId) else { return }
-                onPidFound?(sessionId, pid)
-                self.monitor(sessionId: sessionId, pid: pid)
-            }
-        }
+        guard let pid = cliPid, pid > 0, kill(pid, 0) == 0 else { return }
+        monitor(sessionId: sessionId, pid: pid)
     }
 
     func stop(sessionId: String) {
@@ -73,15 +50,6 @@ final class ProcessMonitorService {
 
     func stopAll() {
         for key in Array(monitors.keys) { stop(sessionId: key) }
-    }
-
-    // MARK: - Static helpers
-
-    nonisolated static func findPidForCwd(_ cwd: String) -> pid_t? {
-        for pid in ProcessScanner.findClaudePids() {
-            if ProcessScanner.cwd(for: pid) == cwd { return pid }
-        }
-        return nil
     }
 
     // MARK: - Private
