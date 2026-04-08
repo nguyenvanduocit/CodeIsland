@@ -31,11 +31,8 @@ final class AppState {
     private var maxHistory: Int { SettingsManager.shared.maxToolHistory }
     private var cleanupTask: Task<Void, Never>?
     let processMonitor = ProcessMonitorService()
-    let discoveryService = SessionDiscoveryService()
     let completionQueue = CompletionQueueService()
     let requestQueue = RequestQueueService()
-    private var saveTask: Task<Void, Never>?
-    private var modelReadAttempted: Set<String> = []
     /// When true, side effects (sound, completion animation) are suppressed.
     /// Used during startup restoration to avoid noisy replays.
     private var suppressSideEffects = false
@@ -80,12 +77,7 @@ final class AppState {
             sessions[sessionId] = SessionSnapshot()
         }
         extractMetadata(into: &sessions, sessionId: sessionId, event: event)
-        processMonitor.tryMonitor(
-            sessionId: sessionId,
-            cliPid: sessions[sessionId]?.cliPid,
-            cwd: sessions[sessionId]?.cwd,
-            onPidFound: { [weak self] sid, pid in self?.sessions[sid]?.cliPid = pid }
-        )
+        processMonitor.tryMonitor(sessionId: sessionId, cliPid: sessions[sessionId]?.cliPid)
         // Same process, new session_id → remove the stale entry
         if isNew, let pid = sessions[sessionId]?.cliPid, pid > 0 {
             for (key, _) in sessions where key != sessionId && sessions[key]?.cliPid == pid {
@@ -191,26 +183,19 @@ final class AppState {
             }
         }
 
-        // 3. Remove sessions whose process is dead (any status — prevents phantom counts)
+        // 3. Remove sessions whose process is dead
         for (key, session) in sessions {
             if processMonitor.isMonitoring(key) { continue }
-
-            if let pid = session.cliPid, pid > 0 {
-                if kill(pid, 0) != 0 {
-                    // PID dead — remove after brief grace (10s)
-                    let inactiveSeconds = -session.lastActivity.timeIntervalSinceNow
-                    if inactiveSeconds > 10 { removeSession(key) }
-                } else if !claudePids.contains(pid) {
-                    // PID alive but NOT Claude — PID was reused by another process
-                    removeSession(key)
-                } else {
-                    // PID alive and IS Claude but not monitored — reattach
-                    processMonitor.monitor(sessionId: key, pid: pid)
-                }
+            guard let pid = session.cliPid, pid > 0 else {
+                removeSession(key)
+                continue
+            }
+            if kill(pid, 0) != 0 {
+                removeSession(key)
+            } else if !claudePids.contains(pid) {
+                removeSession(key)
             } else {
-                // No PID at all — safety net: remove after 5 min inactive
-                let inactiveMinutes = Int(-session.lastActivity.timeIntervalSinceNow / 60)
-                if inactiveMinutes >= 5 { removeSession(key) }
+                processMonitor.monitor(sessionId: key, pid: pid)
             }
         }
         // refreshDerivedState is called inside removeSession for each removal
@@ -397,20 +382,6 @@ final class AppState {
             lastInputSessionId = sessionId
         }
 
-        // Model transcript read: done AFTER reduceEvent so extractMetadata has filled in cwd
-        // Use raw sessionId for transcript lookup (file path uses original session ID)
-        let rawSessionId = event.sessionId ?? "default"
-        if sessions[sessionId]?.model == nil && !modelReadAttempted.contains(sessionId) {
-            modelReadAttempted.insert(sessionId)
-            let cwd = sessions[sessionId]?.cwd
-            if let model = SessionDiscoveryService.readModelFromTranscript(sessionId: rawSessionId, cwd: cwd) {
-                sessions[sessionId]?.model = model
-            }
-        }
-
-        // Messages are managed by the reducer (UserPromptSubmit → user msg, Stop → assistant msg).
-        // Transcript reads are only used at discovery/restore time for initial population.
-
         // If session was waiting but received an activity event, the question/permission
         // was answered externally (e.g. user replied in terminal). Clear pending items.
         if wasWaiting {
@@ -457,7 +428,6 @@ final class AppState {
             }
         }
 
-        scheduleSave()
         startRotationIfNeeded()
         refreshDerivedState()
     }
@@ -468,14 +438,7 @@ final class AppState {
             guard !suppressSideEffects else { break }
             SoundManager.shared.handleEvent(eventName)
         case .tryMonitorSession(let sid):
-            processMonitor.tryMonitor(
-                sessionId: sid,
-                cliPid: sessions[sid]?.cliPid,
-                cwd: sessions[sid]?.cwd,
-                onPidFound: { [weak self] sessionId, pid in
-                    self?.sessions[sessionId]?.cliPid = pid
-                }
-            )
+            processMonitor.tryMonitor(sessionId: sid, cliPid: sessions[sid]?.cliPid)
         case .stopMonitor(let sid):
             processMonitor.stop(sessionId: sid)
         case .removeSession(let sid):
@@ -548,12 +511,7 @@ final class AppState {
             sessions[sessionId] = SessionSnapshot()
         }
         extractMetadata(into: &sessions, sessionId: sessionId, event: event)
-        processMonitor.tryMonitor(
-            sessionId: sessionId,
-            cliPid: sessions[sessionId]?.cliPid,
-            cwd: sessions[sessionId]?.cwd,
-            onPidFound: { [weak self] sid, pid in self?.sessions[sid]?.cliPid = pid }
-        )
+        processMonitor.tryMonitor(sessionId: sessionId, cliPid: sessions[sessionId]?.cliPid)
 
         let payload = event.askUserPayload ?? QuestionPayload(question: "Question", options: nil)
 
@@ -640,72 +598,18 @@ final class AppState {
         return (bestNonIdle ?? bestAny)?.key
     }
 
-    // MARK: - Session Discovery (FSEventStream + process scan)
+    // MARK: - Session Discovery
 
-    /// Start continuous monitoring: initial process scan + FSEventStream on ~/.claude/projects/
-    // MARK: - Session Persistence
-
-    private func scheduleSave() {
-        saveTask?.cancel()
-        saveTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2))
-            guard !Task.isCancelled else { return }
-            self?.saveSessions()
+    func startSessionDiscovery() {
+        startCleanupLoop()
+        setupServices()
+        processMonitor.onSessionExpired = { [weak self] sessionId, exitTime in
+            guard let self, let session = self.sessions[sessionId] else { return }
+            if session.lastActivity > exitTime { return }
+            self.removeSession(sessionId)
         }
-    }
 
-    func saveSessions() {
-        SessionPersistence.save(sessions)
-    }
-
-    private func restoreSessions() {
-        let loaded = SessionPersistence.load()
-        let cutoff = Date().addingTimeInterval(-30 * 60) // 30 minutes
-        let claudePids = Set(ProcessScanner.findClaudePids())
-
-        // Filter by cutoff and valid source, then deduplicate by PID.
-        var bestByPid: [Int32: (sessionId: String, snapshot: SessionSnapshot)] = [:]
-        var noPidEntries: [(sessionId: String, snapshot: SessionSnapshot)] = []
-        for (sessionId, snapshot) in loaded where snapshot.lastActivity > cutoff {
-            guard SessionSnapshot.normalizedSupportedSource(snapshot.source) != nil else { continue }
-            if let pid = snapshot.cliPid, pid > 0 {
-                if let existing = bestByPid[pid] {
-                    if snapshot.lastActivity > existing.snapshot.lastActivity {
-                        bestByPid[pid] = (sessionId, snapshot)
-                    }
-                } else {
-                    bestByPid[pid] = (sessionId, snapshot)
-                }
-            } else {
-                noPidEntries.append((sessionId, snapshot))
-            }
-        }
-        let deduped = Array(bestByPid.values) + noPidEntries
-
-        for (sessionId, snapshot) in deduped {
-            guard sessions[sessionId] == nil else { continue }
-            guard SessionSnapshot.normalizedSupportedSource(snapshot.source) != nil else { continue }
-
-            // Skip sessions whose process is dead — don't show zombies at startup
-            if let pid = snapshot.cliPid, pid > 0 {
-                guard claudePids.contains(pid) else { continue }
-                sessions[sessionId] = snapshot
-                refreshProviderTitle(for: sessionId)
-                processMonitor.monitor(sessionId: sessionId, pid: pid)
-            } else {
-                // No PID — only restore if a matching Claude process is found by CWD
-                guard let cwd = snapshot.cwd,
-                      let pid = ProcessMonitorService.findPidForCwd(cwd) else { continue }
-                var restored = snapshot
-                restored.cliPid = pid
-                sessions[sessionId] = restored
-                refreshProviderTitle(for: sessionId)
-                processMonitor.monitor(sessionId: sessionId, pid: pid)
-            }
-        }
-        SessionPersistence.clear()
-
-        // Replay events logged while app was not running — suppress sounds/animations
+        // Replay events logged while app was not running
         suppressSideEffects = true
         for eventData in EventLog.readAndClear() {
             if let event = HookEvent(from: eventData) {
@@ -720,105 +624,7 @@ final class AppState {
         refreshDerivedState()
     }
 
-    func startSessionDiscovery() {
-        startCleanupLoop()
-        setupServices()
-        processMonitor.onSessionExpired = { [weak self] sessionId, exitTime in
-            guard let self, let session = self.sessions[sessionId] else { return }
-            if session.lastActivity > exitTime { return }  // fresh activity during grace
-            self.removeSession(sessionId)
-        }
-        // Restore persisted sessions before process scan (deduped by scan)
-        restoreSessions()
-
-        discoveryService.onDiscovered = { [weak self] in self?.integrateDiscovered($0) }
-
-        // Initial scan for already-running Claude sessions
-        Task.detached {
-            let claudeSessions = SessionDiscoveryService.findActiveClaudeSessions()
-            await MainActor.run { [weak self] in
-                self?.integrateDiscovered(claudeSessions)
-            }
-        }
-        // Start watching ~/.claude/projects/ for new session files
-        discoveryService.startWatching()
-    }
-
-    /// Merge discovered sessions into current state (skip already-known ones)
-    private func integrateDiscovered(_ discovered: [DiscoveredSession]) {
-        var didAdd = false
-        for info in discovered {
-            // Session already known — try to attach PID monitor if missing
-            if sessions[info.sessionId] != nil {
-                if !processMonitor.isMonitoring(info.sessionId), let pid = info.pid {
-                    processMonitor.monitor(sessionId: info.sessionId, pid: pid)
-                    // Don't override status — process stays alive while waiting for user input.
-                    // Hook events (Stop/UserPromptSubmit) are the source of truth for status.
-                }
-                refreshProviderTitle(for: info.sessionId, providerSessionId: info.sessionId)
-                continue
-            }
-
-            // Dedup: if a hook-created session already exists with same source + cwd + pid,
-            // skip the discovered one to avoid duplicate entries (e.g. Codex hooks vs
-            // file-based discovery produce different session IDs for the same process).
-            // Only reject match when both PIDs are alive and different — stale PIDs
-            // from restored sessions should not prevent dedup.
-            let duplicateKey = sessions.first(where: { (_, existing) in
-                guard existing.source == info.source,
-                      existing.cwd != nil, existing.cwd == info.cwd else { return false }
-                if let discoveredPid = info.pid, let existingPid = existing.cliPid,
-                   discoveredPid != existingPid {
-                    // Only reject if the existing PID is still alive (not stale from persistence)
-                    return kill(existingPid, 0) != 0
-                }
-                return true
-            })?.key
-
-            if let existingKey = duplicateKey {
-                // Attach PID monitor and update stale cliPid on the existing session
-                if let pid = info.pid {
-                    if sessions[existingKey]?.cliPid != pid {
-                        sessions[existingKey]?.cliPid = pid
-                    }
-                    if !processMonitor.isMonitoring(existingKey) {
-                        processMonitor.monitor(sessionId: existingKey, pid: pid)
-                    }
-                }
-                refreshProviderTitle(for: existingKey, providerSessionId: info.sessionId)
-                continue
-            }
-
-            var session = SessionSnapshot(startTime: info.modifiedAt)
-            session.cwd = info.cwd
-            session.model = info.model
-            session.ttyPath = info.tty
-            session.termBundleId = info.termBundleId
-            session.recentMessages = info.recentMessages
-            session.source = info.source
-            session.cliPid = info.pid
-            session.providerSessionId = info.source == "claude" ? info.sessionId : nil
-            if let last = info.recentMessages.last(where: { $0.isUser }) {
-                session.lastUserPrompt = last.text
-            }
-            if let last = info.recentMessages.last(where: { !$0.isUser }) {
-                session.lastAssistantMessage = last.text
-            }
-            sessions[info.sessionId] = session
-            refreshProviderTitle(for: info.sessionId, providerSessionId: info.sessionId)
-            if let pid = info.pid {
-                processMonitor.monitor(sessionId: info.sessionId, pid: pid)
-            }
-            didAdd = true
-        }
-        if didAdd && activeSessionId == nil {
-            activeSessionId = sessions.keys.sorted().first
-        }
-        refreshDerivedState()
-    }
-
     func stopSessionDiscovery() {
-        discoveryService.stopWatching()
         processMonitor.stopAll()
     }
 
@@ -826,8 +632,6 @@ final class AppState {
         MainActor.assumeIsolated {
             rotationTask?.cancel()
             cleanupTask?.cancel()
-            saveTask?.cancel()
-            discoveryService.stopWatching()
             processMonitor.stopAll()
         }
     }

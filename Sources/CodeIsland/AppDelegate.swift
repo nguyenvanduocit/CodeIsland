@@ -109,7 +109,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         hookRecoveryTask?.cancel()
         diagnostics.stop()
-        appState.saveSessions()
         hookServer?.stop()
         appState.stopSessionDiscovery()
     }
