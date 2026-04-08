@@ -10,10 +10,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hookServer: HookServer?
     private var hookRecoveryTask: Task<Void, Never>?
     private var lastHookCheck: Date = .distantPast
+    private let diagnostics = DiagnosticsService()
 
     let appState = AppState()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let startupState = Signposts.beginStartupPhase("AppStartup")
+
         ProcessInfo.processInfo.disableAutomaticTermination("CodeIsland must stay running")
         ProcessInfo.processInfo.disableSuddenTermination()
         // Pre-set app icon so Dock/menu bar use the packaged bundle icon.
@@ -23,8 +26,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // If we write settings.json first, Claude Code picks up the new hooks
         // immediately but the socket isn't listening yet — PermissionRequest
         // hooks get no response and Claude Code denies them.
+        let hookState = Signposts.beginStartupPhase("HookServerStart")
         hookServer = HookServer(appState: appState)
         hookServer?.start()
+        Signposts.endStartupPhase("HookServerStart", hookState)
 
         if ConfigInstaller.install() {
             Self.log.info("Hooks installed")
@@ -32,10 +37,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             Self.log.warning("Failed to install hooks")
         }
 
+        let panelState = Signposts.beginStartupPhase("PanelSetup")
         panelController = PanelWindowController(appState: appState)
         panelController?.showPanel()
+        Signposts.endStartupPhase("PanelSetup", panelState)
 
+        let discoveryState = Signposts.beginStartupPhase("SessionDiscovery")
         appState.startSessionDiscovery()
+        Signposts.endStartupPhase("SessionDiscovery", discoveryState)
+
+        diagnostics.start()
+        Signposts.endStartupPhase("AppStartup", startupState)
 
         // Hooks auto-recovery: periodic + app activation trigger
         hookRecoveryTask = Task { [weak self] in
@@ -96,6 +108,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         hookRecoveryTask?.cancel()
+        diagnostics.stop()
         appState.saveSessions()
         hookServer?.stop()
         appState.stopSessionDiscovery()

@@ -8,15 +8,13 @@ struct AppearancePage: View {
     @AppStorage(SettingsKey.maxVisibleSessions) private var maxVisibleSessions = SettingsDefaults.maxVisibleSessions
     @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
     @AppStorage(SettingsKey.aiMessageLines) private var aiMessageLines = SettingsDefaults.aiMessageLines
-    @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
 
     var body: some View {
         Form {
             Section(l10n["preview"]) {
                 AppearancePreview(
                     fontSize: contentFontSize,
-                    lineLimit: aiMessageLines,
-                    showDetails: showAgentDetails
+                    lineLimit: aiMessageLines
                 )
             }
 
@@ -47,7 +45,6 @@ struct AppearancePage: View {
                     Text(l10n["5_lines"]).tag(5)
                     Text(l10n["unlimited"]).tag(0)
                 }
-                Toggle(l10n["show_agent_details"], isOn: $showAgentDetails)
             }
         }
         .formStyle(.grouped)
@@ -58,7 +55,6 @@ struct AppearancePage: View {
 private struct AppearancePreview: View {
     let fontSize: Int
     let lineLimit: Int
-    let showDetails: Bool
 
     private var fs: CGFloat { CGFloat(fontSize) }
     private let green = Color(red: 0.3, green: 0.85, blue: 0.4)
@@ -67,16 +63,8 @@ private struct AppearancePreview: View {
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
             // Column 1: Mascot
-            VStack(spacing: 3) {
-                MascotView(source: "claude", status: .processing, size: 32)
-                if showDetails {
-                    HStack(spacing: 1) {
-                        MiniAgentIcon(active: true, size: 8)
-                        MiniAgentIcon(active: false, size: 8)
-                    }
-                }
-            }
-            .frame(width: 36)
+            MascotView(source: "claude", status: .processing, size: 32)
+                .frame(width: 36)
 
             // Column 2: Content
             VStack(alignment: .leading, spacing: 6) {
@@ -139,6 +127,5 @@ private struct AppearancePreview: View {
         )
         .animation(.easeInOut(duration: 0.25), value: fontSize)
         .animation(.easeInOut(duration: 0.25), value: lineLimit)
-        .animation(.easeInOut(duration: 0.25), value: showDetails)
     }
 }

@@ -8,7 +8,7 @@ enum SettingsKey {
     // General - System
     static let launchAtLogin = "launchAtLogin"
     static let displayChoice = "displayChoice"             // "auto", "builtin", "main"
-    static let panelHorizontalOffset = "panelHorizontalOffset"
+
 
     // General - Behavior
     static let hideInFullscreen = "hideInFullscreen"
@@ -20,7 +20,6 @@ enum SettingsKey {
     static let maxVisibleSessions = "maxVisibleSessions"
     static let contentFontSize = "contentFontSize"
     static let aiMessageLines = "aiMessageLines"
-    static let showAgentDetails = "showAgentDetails"
 
     // Sound
     static let soundEnabled = "soundEnabled"
@@ -42,7 +41,7 @@ enum SettingsKey {
 
 struct SettingsDefaults {
     static let displayChoice = "auto"
-    static let panelHorizontalOffset = 0.0
+
     static let hideInFullscreen = true
     static let hideWhenNoSession = false
     static let smartSuppress = true
@@ -51,7 +50,6 @@ struct SettingsDefaults {
     static let maxVisibleSessions = 5
     static let contentFontSize = 11
     static let aiMessageLines = 1
-    static let showAgentDetails = false
 
     static let soundEnabled = false
     static let soundVolume = 50
@@ -77,7 +75,7 @@ class SettingsManager {
     private init() {
         defaults.register(defaults: [
             SettingsKey.displayChoice: SettingsDefaults.displayChoice,
-            SettingsKey.panelHorizontalOffset: SettingsDefaults.panelHorizontalOffset,
+
             SettingsKey.hideInFullscreen: SettingsDefaults.hideInFullscreen,
             SettingsKey.hideWhenNoSession: SettingsDefaults.hideWhenNoSession,
             SettingsKey.smartSuppress: SettingsDefaults.smartSuppress,
@@ -86,7 +84,6 @@ class SettingsManager {
             SettingsKey.maxVisibleSessions: SettingsDefaults.maxVisibleSessions,
             SettingsKey.contentFontSize: SettingsDefaults.contentFontSize,
             SettingsKey.aiMessageLines: SettingsDefaults.aiMessageLines,
-            SettingsKey.showAgentDetails: SettingsDefaults.showAgentDetails,
             SettingsKey.soundEnabled: SettingsDefaults.soundEnabled,
             SettingsKey.soundVolume: SettingsDefaults.soundVolume,
             SettingsKey.soundSessionStart: SettingsDefaults.soundSessionStart,
@@ -117,10 +114,6 @@ class SettingsManager {
         set { defaults.set(newValue, forKey: SettingsKey.displayChoice) }
     }
 
-    var panelHorizontalOffset: Double {
-        get { defaults.double(forKey: SettingsKey.panelHorizontalOffset) }
-        set { defaults.set(newValue, forKey: SettingsKey.panelHorizontalOffset) }
-    }
 
     var hideInFullscreen: Bool {
         get { defaults.bool(forKey: SettingsKey.hideInFullscreen) }
@@ -152,10 +145,6 @@ class SettingsManager {
         set { defaults.set(newValue, forKey: SettingsKey.contentFontSize) }
     }
 
-    var showAgentDetails: Bool {
-        get { defaults.bool(forKey: SettingsKey.showAgentDetails) }
-        set { defaults.set(newValue, forKey: SettingsKey.showAgentDetails) }
-    }
 
     var maxToolHistory: Int {
         get { defaults.integer(forKey: SettingsKey.maxToolHistory) }

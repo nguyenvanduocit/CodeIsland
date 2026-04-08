@@ -11,22 +11,15 @@ final class CompletionQueueService {
     private var completionShownAt: Date?
     private static let minimumDisplayDuration: TimeInterval = 2.0
 
-    // Callbacks for state mutations
-    var onSurfaceChange: ((IslandSurface) -> Void)?
-    var onActiveSessionChange: ((String) -> Void)?
-
-    // Query callbacks
-    var sessionExists: ((String) -> Bool)?
-    var getSession: ((String) -> SessionSnapshot?)?
-    var currentSurface: (() -> IslandSurface)?
+    weak var appState: AppState?
 
     private var isShowingCompletion: Bool {
-        if case .completionCard = currentSurface?() { return true }
+        if case .completionCard = appState?.surface { return true }
         return false
     }
 
     var justCompletedSessionId: String? {
-        if case .completionCard(let id) = currentSurface?() { return id }
+        if case .completionCard(let id) = appState?.surface { return id }
         return nil
     }
 
@@ -36,7 +29,7 @@ final class CompletionQueueService {
 
         // If already expanded (user hovering session list, or showing approval/question/completion),
         // just queue — don't interrupt the current view
-        if currentSurface?().isExpanded == true {
+        if appState?.surface.isExpanded == true {
             queue.append(sessionId)
         } else {
             showCompletion(sessionId)
@@ -63,7 +56,7 @@ final class CompletionQueueService {
 
     private func shouldSuppressAppLevel(for sessionId: String) -> Bool {
         guard UserDefaults.standard.bool(forKey: SettingsKey.smartSuppress) else { return false }
-        guard let session = getSession?(sessionId),
+        guard let session = appState?.sessions[sessionId],
               (session.termApp != nil || session.termBundleId != nil) else { return false }
         return TerminalVisibilityDetector.isTerminalFrontmostForSession(session)
     }
@@ -76,14 +69,14 @@ final class CompletionQueueService {
         }
 
         // Terminal IS frontmost — check tab-level on background thread
-        guard let session = getSession?(sessionId) else { return }
+        guard let session = appState?.sessions[sessionId] else { return }
         let sessionCopy = session
         Task.detached {
             let tabVisible = TerminalVisibilityDetector.isSessionTabVisible(sessionCopy)
             await MainActor.run { [weak self] in
-                guard let self else { return }
-                guard self.sessionExists?(sessionId) == true else { return }
-                switch self.currentSurface?() {
+                guard let self, let appState = self.appState else { return }
+                guard appState.sessions[sessionId] != nil else { return }
+                switch appState.surface {
                 case .approvalCard, .questionCard: return
                 default: break
                 }
@@ -97,8 +90,8 @@ final class CompletionQueueService {
     }
 
     private func doShowCompletion(_ sessionId: String) {
-        onActiveSessionChange?(sessionId)
-        onSurfaceChange?(.completionCard(sessionId: sessionId))
+        appState?.activeSessionId = sessionId
+        appState?.surface = .completionCard(sessionId: sessionId)
         completionHasBeenEntered = false
         completionShownAt = Date()
 
@@ -115,7 +108,7 @@ final class CompletionQueueService {
         guard !queue.isEmpty else { return }
         if let next = queue.first {
             queue.removeFirst()
-            if sessionExists?(next) == true {
+            if appState?.sessions[next] != nil {
                 showCompletion(next)
                 return
             }
@@ -127,7 +120,7 @@ final class CompletionQueueService {
     func showNextOrCollapse() {
         while let next = queue.first {
             queue.removeFirst()
-            if sessionExists?(next) == true {
+            if appState?.sessions[next] != nil {
                 withAnimation(NotchAnimation.pop) {
                     showCompletion(next)
                 }
@@ -135,7 +128,7 @@ final class CompletionQueueService {
             }
         }
         withAnimation(NotchAnimation.close) {
-            onSurfaceChange?(.collapsed)
+            appState?.surface = .collapsed
         }
     }
 }

@@ -114,46 +114,54 @@ class HookServer {
             return
         }
 
-        if let rawSource = event.rawJSON["_source"] as? String,
+        if let rawSource = event.metadata.source,
            SessionSnapshot.normalizedSupportedSource(rawSource) == nil {
             sendResponse(connection: connection, data: HookResponse.empty)
             return
         }
 
         if event.eventName == "PermissionRequest" {
-            let sessionId = event.sessionId ?? "default"
-
             // Auto-approve safe internal tools without showing UI
             if let toolName = event.toolName, Self.autoApproveTools.contains(toolName) {
                 sendResponse(connection: connection, data: HookResponse.permission(.allow))
                 return
             }
 
+            // Resolve tracking key upfront — used by all paths below
+            let trackingKey = resolveTrackingKey(sessions: appState.sessions, event: event)
+
+            // Auto-approve: bypass mode (event or stored session) or local "Always" memory
+            if appState.shouldAutoApprovePermission(event: event, sessionId: trackingKey) {
+                appState.touchSession(event: event, sessionId: trackingKey)
+                sendResponse(connection: connection, data: HookResponse.permission(.allow))
+                return
+            }
+
             // AskUserQuestion is a question, not a permission — route to QuestionBar
             if event.toolName == "AskUserQuestion" {
-                monitorPeerDisconnect(connection: connection, sessionId: sessionId)
+                monitorPeerDisconnect(connection: connection, trackingKey: trackingKey)
                 Task {
                     let responseBody = await withCheckedContinuation { continuation in
-                        appState.handleAskUserQuestion(event, continuation: continuation)
+                        _ = appState.handleAskUserQuestion(event, continuation: continuation)
                     }
                     self.sendResponse(connection: connection, data: responseBody)
                 }
                 return
             }
-            monitorPeerDisconnect(connection: connection, sessionId: sessionId)
+            monitorPeerDisconnect(connection: connection, trackingKey: trackingKey)
             Task {
                 let responseBody = await withCheckedContinuation { continuation in
-                    appState.handlePermissionRequest(event, continuation: continuation)
+                    _ = appState.handlePermissionRequest(event, continuation: continuation)
                 }
                 self.sendResponse(connection: connection, data: responseBody)
             }
         } else if event.eventName == "Notification",
                   QuestionPayload.from(event: event) != nil {
-            let questionSessionId = event.sessionId ?? "default"
-            monitorPeerDisconnect(connection: connection, sessionId: questionSessionId)
+            let trackingKey = resolveTrackingKey(sessions: appState.sessions, event: event)
+            monitorPeerDisconnect(connection: connection, trackingKey: trackingKey)
             Task {
                 let responseBody = await withCheckedContinuation { continuation in
-                    appState.handleQuestion(event, continuation: continuation)
+                    _ = appState.handleQuestion(event, continuation: continuation)
                 }
                 self.sendResponse(connection: connection, data: responseBody)
             }
@@ -173,7 +181,7 @@ class HookServer {
     ///
     /// We now rely on `stateUpdateHandler` transitioning to `cancelled`/`failed` —
     /// which only happens on real socket teardown, not half-close.
-    private func monitorPeerDisconnect(connection: NWConnection, sessionId: String) {
+    private func monitorPeerDisconnect(connection: NWConnection, trackingKey: String) {
         let context = ConnectionContext()
         connectionContexts[ObjectIdentifier(connection)] = context
 
@@ -183,7 +191,7 @@ class HookServer {
                 switch state {
                 case .cancelled, .failed:
                     if !context.responded {
-                        self.appState.handlePeerDisconnect(sessionId: sessionId)
+                        self.appState.handlePeerDisconnect(trackingKey: trackingKey)
                     }
                     self.connectionContexts.removeValue(forKey: ObjectIdentifier(connection))
                 default:

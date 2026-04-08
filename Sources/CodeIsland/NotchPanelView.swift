@@ -9,7 +9,6 @@ struct NotchPanelView: View {
     let screenWidth: CGFloat
 
     @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
-    @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
     @AppStorage(SettingsKey.smartSuppress) private var smartSuppress = SettingsDefaults.smartSuppress
     @AppStorage(SettingsKey.hideWhenNoSession) private var hideWhenNoSession = SettingsDefaults.hideWhenNoSession
 
@@ -157,7 +156,7 @@ struct NotchPanelView: View {
             .background(
                 NotchPanelShape(
                     topExtension: shouldShowExpanded ? 14 : 3,
-                    bottomRadius: shouldShowExpanded ? 24 : 12,
+                    bottomRadius: shouldShowExpanded ? 14 : 12,
                     minHeight: notchHeight
                 )
                 .fill(.black)

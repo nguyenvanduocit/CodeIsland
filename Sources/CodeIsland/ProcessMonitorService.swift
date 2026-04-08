@@ -88,14 +88,7 @@ final class ProcessMonitorService {
 
     private func handleProcessExit(sessionId: String, exitedPid: pid_t) {
         stop(sessionId: sessionId)
-        let exitTime = Date()
-        log.debug("Process \(exitedPid) exited for session \(sessionId), starting grace period")
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
-            guard let self else { return }
-            // New monitor was attached during the grace period (new process took over)
-            if self.monitors[sessionId] != nil { return }
-            self.onSessionExpired?(sessionId, exitTime)
-        }
+        log.debug("Process \(exitedPid) exited for session \(sessionId)")
+        onSessionExpired?(sessionId, Date())
     }
 }

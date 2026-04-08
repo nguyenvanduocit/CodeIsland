@@ -14,7 +14,8 @@ extension EnvironmentValues {
     }
 }
 
-/// Routes a CLI source identifier to the correct pixel mascot view.
+/// Routes a CLI source identifier to the correct mascot view.
+/// Uses sprite-sheet animation by default; ClawdView/BuddyView remain as fallback options.
 struct MascotView: View {
     let source: String
     let status: AgentStatus
@@ -22,7 +23,7 @@ struct MascotView: View {
     @AppStorage(SettingsKey.mascotSpeed) private var speedPct = SettingsDefaults.mascotSpeed
 
     var body: some View {
-        ClawdView(status: status, size: size)
+        AgentSpriteMascotView(status: status, emotion: .neutral, size: size)
             .environment(\.mascotSpeed, Double(speedPct) / 100.0)
     }
 }

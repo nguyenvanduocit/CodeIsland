@@ -439,8 +439,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         let size = panelSize(for: screen)
         let screenFrame = screen.frame
         let centeredX = screenFrame.midX - size.width / 2
-        let dragOffset = CGFloat(SettingsManager.shared.panelHorizontalOffset)
-        let x = clampedX(centeredX + dragOffset, panelWidth: size.width, on: screen)
+        let x = clampedX(centeredX, panelWidth: size.width, on: screen)
         let y = screenFrame.maxY - size.height
         return NSRect(x: x, y: y, width: size.width, height: size.height)
     }
@@ -481,12 +480,6 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                     panel.setFrameOrigin(NSPoint(x: newX, y: fixedY))
                 }
             case .leftMouseUp:
-                if self.isDraggingPanel, let panel = self.panel {
-                    let screen = self.chosenScreen()
-                    let size = panel.frame.size
-                    let offset = panel.frame.origin.x - self.centeredX(for: size, screen: screen)
-                    SettingsManager.shared.panelHorizontalOffset = Double(offset)
-                }
                 self.dragStartMouseX = nil
                 self.dragStartPanelX = nil
                 self.isDraggingPanel = false

@@ -41,7 +41,8 @@ struct SessionListView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.top, 4)
+        .padding(.bottom, 6)
 
         if needsScroll {
             ThinScrollView(maxHeight: CGFloat(maxVisibleSessions) * 90) {
@@ -382,7 +383,6 @@ private struct SessionCard: View {
     @State private var hovering = false
     @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
     @AppStorage(SettingsKey.aiMessageLines) private var aiMessageLines = SettingsDefaults.aiMessageLines
-    @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
     private var fontSize: CGFloat { CGFloat(contentFontSize) }
     private var aiLineLimit: Int? { aiMessageLines > 0 ? aiMessageLines : nil }
     private var statusNameColor: Color {
@@ -397,56 +397,36 @@ private struct SessionCard: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            // Column 1: Character + subagent icons
-            VStack(spacing: 3) {
-                MascotView(source: session.source, status: session.status, size: 32)
-                if showAgentDetails && !session.subagents.isEmpty {
-                    let sorted = session.subagents.values.sorted { $0.startTime < $1.startTime }
-                    // Grid: 4 per row, 8px icons
-                    let rows = stride(from: 0, to: sorted.count, by: 4).map {
-                        Array(sorted[$0..<min($0 + 4, sorted.count)])
+        VStack(alignment: .leading, spacing: 6) {
+            // Header: mascot + project name + session info + status
+            HStack(alignment: .center, spacing: 6) {
+                MascotView(source: session.source, status: session.status, size: 18)
+
+                SessionIdentityLine(
+                    session: session,
+                    sessionId: sessionId,
+                    projectFontSize: fontSize + 2,
+                    projectColor: statusNameColor,
+                    sessionFontSize: fontSize,
+                    sessionColor: .white.opacity(0.76),
+                    dividerColor: .white.opacity(0.28),
+                    cardHovering: hovering
+                )
+
+                SessionStatusBar(session: session, fontSize: fontSize)
+
+                Spacer(minLength: 4)
+
+HStack(spacing: 4) {
+                    if session.interrupted {
+                        SessionTag("INT", color: Color(red: 1.0, green: 0.6, blue: 0.2))
                     }
-                    VStack(spacing: 1) {
-                        ForEach(rows, id: \.first!.agentId) { row in
-                            HStack(spacing: 1) {
-                                ForEach(row, id: \.agentId) { sub in
-                                    MiniAgentIcon(active: sub.status != .idle, size: 8)
-                                }
-                            }
-                        }
+                    if let usage = session.tokenUsage, usage.totalTokens > 0 {
+                        SessionTag("✦ \(usage.formattedTotal)", color: tokenColor(usage))
+                            .help(tokenTooltip(usage))
                     }
                 }
             }
-            .frame(width: 36)
-
-            // Column 2: Content
-            VStack(alignment: .leading, spacing: 6) {
-                // Header: project name + optional session label + short ID
-                HStack(alignment: .center, spacing: 8) {
-                    SessionIdentityLine(
-                        session: session,
-                        sessionId: sessionId,
-                        projectFontSize: fontSize + 2,
-                        projectColor: statusNameColor,
-                        sessionFontSize: fontSize,
-                        sessionColor: .white.opacity(0.76),
-                        dividerColor: .white.opacity(0.28),
-                        cardHovering: hovering
-                    )
-
-                    // Inline status: model, mode, tools, agents
-                    SessionStatusBar(session: session, fontSize: fontSize)
-
-                    Spacer(minLength: 4)
-
-                    HStack(spacing: 4) {
-                        if session.interrupted {
-                            SessionTag("INT", color: Color(red: 1.0, green: 0.6, blue: 0.2))
-                        }
-                        SessionTag(timeAgo(session.startTime))
-                    }
-                }
 
             // Chat history + live status
             if !session.recentMessages.isEmpty || session.status != .idle {
@@ -491,8 +471,7 @@ private struct SessionCard: View {
                 }
                 .padding(.leading, 4)
             }
-            } // end Column 2 VStack
-        } // end HStack
+        } // end VStack
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
@@ -528,12 +507,26 @@ private struct SessionCard: View {
         ChatMessageTextFormatter.literalText(text)
     }
 
-    private func timeAgo(_ date: Date) -> String {
-        let seconds = Int(-date.timeIntervalSinceNow)
-        if seconds < 60 { return "<1m" }
-        if seconds < 3600 { return "\(seconds / 60)m" }
-        if seconds < 86400 { return "\(seconds / 3600)h" }
-        return "\(seconds / 86400)d"
+    private func tokenColor(_ usage: TokenUsage) -> Color {
+        let total = usage.totalTokens
+        if total > 800_000 { return Color(red: 1.0, green: 0.3, blue: 0.3) }
+        if total > 500_000 { return Color(red: 1.0, green: 0.6, blue: 0.2) }
+        if total > 200_000 { return Color(red: 1.0, green: 0.85, blue: 0.3) }
+        return .white.opacity(0.7)
+    }
+
+    private func tokenTooltip(_ usage: TokenUsage) -> String {
+        var lines = [
+            "↑ \(usage.formattedInput) input",
+            "↓ \(usage.formattedOutput) output",
+        ]
+        if usage.cacheReadTokens > 0 {
+            lines.append("⟳ \(usage.formattedCache) cache")
+        }
+        if let cost = usage.formattedCost {
+            lines.append(cost)
+        }
+        return lines.joined(separator: "\n")
     }
 }
 

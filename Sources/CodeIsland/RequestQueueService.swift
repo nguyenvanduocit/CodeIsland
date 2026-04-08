@@ -10,28 +10,28 @@ final class RequestQueueService {
     var pendingPermission: PermissionRequest? { permissionQueue.first }
     var pendingQuestion: QuestionRequest? { questionQueue.first }
 
-    // Callbacks for state mutations
-    var onSurfaceChange: ((IslandSurface) -> Void)?
-    var onActiveSessionChange: ((String) -> Void)?
-    var onSessionStatusChange: ((String, AgentStatus, String?, String?) -> Void)?
-    var onPlaySound: ((String) -> Void)?
-    var onActiveSessionBestChange: ((String?) -> Void)?
+    weak var appState: AppState?
 
     // MARK: - Permission Queue
 
     func enqueuePermission(request: PermissionRequest) {
-        let sessionId = request.event.sessionId ?? "default"
+        let key = request.trackingKey
 
         // Clear any pending questions for THIS session (mutually exclusive within a session)
-        drainQuestions(forSession: sessionId)
+        drainQuestions(forTrackingKey: key)
 
-        onSessionStatusChange?(sessionId, .waitingApproval, request.event.toolName, request.event.toolDescription)
+        if var snap = appState?.sessions[key] {
+            snap.status = .waitingApproval
+            snap.currentTool = request.event.toolName
+            snap.toolDescription = request.event.toolDescription
+            appState?.sessions[key] = snap
+        }
         permissionQueue.append(request)
 
         if permissionQueue.count == 1 {
-            onActiveSessionChange?(sessionId)
-            onSurfaceChange?(.approvalCard(sessionId: sessionId))
-            onPlaySound?("PermissionRequest")
+            appState?.activeSessionId = key
+            appState?.surface = .approvalCard(sessionId: key)
+            SoundManager.shared.handleEvent("PermissionRequest")
         }
     }
 
@@ -59,30 +59,36 @@ final class RequestQueueService {
         } else {
             responseData = HookResponse.permission(.allow)
         }
+        if always, let toolName = pending.event.toolName {
+            appState?.addAutoApprovedTool(toolName, forSession: pending.trackingKey)
+        }
         pending.continuation.resume(returning: responseData)
-        return pending.event.sessionId ?? "default"
+        return pending.trackingKey
     }
 
     func deny() -> String? {
         guard !permissionQueue.isEmpty else { return nil }
         let pending = permissionQueue.removeFirst()
         pending.continuation.resume(returning: HookResponse.permission(.deny))
-        return pending.event.sessionId ?? "default"
+        return pending.trackingKey
     }
 
     // MARK: - Question Queue
 
     func enqueueQuestion(request: QuestionRequest) {
-        let sessionId = request.event.sessionId ?? "default"
-        drainPermissions(forSession: sessionId)
+        let key = request.trackingKey
+        drainPermissions(forTrackingKey: key)
 
-        onSessionStatusChange?(sessionId, .waitingQuestion, nil, nil)
+        if var snap = appState?.sessions[key] {
+            snap.status = .waitingQuestion
+            appState?.sessions[key] = snap
+        }
         questionQueue.append(request)
 
         if questionQueue.count == 1 {
-            onActiveSessionChange?(sessionId)
-            onSurfaceChange?(.questionCard(sessionId: sessionId))
-            onPlaySound?("PermissionRequest")
+            appState?.activeSessionId = key
+            appState?.surface = .questionCard(sessionId: key)
+            SoundManager.shared.handleEvent("PermissionRequest")
         }
     }
 
@@ -114,7 +120,7 @@ final class RequestQueueService {
             responseData = (try? JSONSerialization.data(withJSONObject: obj)) ?? HookResponse.empty
         }
         pending.continuation.resume(returning: responseData)
-        return pending.event.sessionId ?? "default"
+        return pending.trackingKey
     }
 
     func skip() -> String? {
@@ -128,30 +134,30 @@ final class RequestQueueService {
             responseData = (try? JSONSerialization.data(withJSONObject: obj)) ?? HookResponse.empty
         }
         pending.continuation.resume(returning: responseData)
-        return pending.event.sessionId ?? "default"
+        return pending.trackingKey
     }
 
     // MARK: - Drain
 
-    func drainPermissions(forSession sessionId: String) {
+    func drainPermissions(forTrackingKey key: String) {
         permissionQueue.removeAll { item in
-            guard item.event.sessionId == sessionId else { return false }
+            guard item.trackingKey == key else { return false }
             item.continuation.resume(returning: HookResponse.permission(.deny))
             return true
         }
     }
 
-    func drainQuestions(forSession sessionId: String) {
+    func drainQuestions(forTrackingKey key: String) {
         questionQueue.removeAll { item in
-            guard item.event.sessionId == sessionId else { return false }
+            guard item.trackingKey == key else { return false }
             item.continuation.resume(returning: HookResponse.empty)
             return true
         }
     }
 
-    func drainAll(forSession sessionId: String) {
-        drainQuestions(forSession: sessionId)
-        drainPermissions(forSession: sessionId)
+    func drainAll(forTrackingKey key: String) {
+        drainQuestions(forTrackingKey: key)
+        drainPermissions(forTrackingKey: key)
     }
 
     // MARK: - Navigation
@@ -160,16 +166,16 @@ final class RequestQueueService {
     @discardableResult
     func showNextPending() -> IslandSurface {
         if let next = permissionQueue.first {
-            let sid = next.event.sessionId ?? "default"
-            onActiveSessionChange?(sid)
-            let surface = IslandSurface.approvalCard(sessionId: sid)
-            onSurfaceChange?(surface)
+            let key = next.trackingKey
+            appState?.activeSessionId = key
+            let surface = IslandSurface.approvalCard(sessionId: key)
+            appState?.surface = surface
             return surface
         } else if let next = questionQueue.first {
-            let sid = next.event.sessionId ?? "default"
-            onActiveSessionChange?(sid)
-            let surface = IslandSurface.questionCard(sessionId: sid)
-            onSurfaceChange?(surface)
+            let key = next.trackingKey
+            appState?.activeSessionId = key
+            let surface = IslandSurface.questionCard(sessionId: key)
+            appState?.surface = surface
             return surface
         }
         return .collapsed

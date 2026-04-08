@@ -82,7 +82,6 @@ final class L10n {
         "3_lines": "3 Lines",
         "5_lines": "5 Lines",
         "unlimited": "Unlimited",
-        "show_agent_details": "Show Agent Activity Details",
 
         // Mascots
         "preview_status": "Preview Status",
@@ -215,7 +214,6 @@ final class L10n {
         "3_lines": "3 行",
         "5_lines": "5 行",
         "unlimited": "不限制",
-        "show_agent_details": "显示代理活动详情",
 
         // Mascots
         "preview_status": "预览状态",

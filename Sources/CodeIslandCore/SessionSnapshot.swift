@@ -5,7 +5,7 @@ public enum SessionTitleSource: String, Sendable, Codable {
     case claudeAiTitle
 }
 
-public struct SessionSnapshot {
+public struct SessionSnapshot: Sendable, Codable {
     public static let supportedSources: Set<String> = [
         "claude",
     ]
@@ -41,6 +41,16 @@ public struct SessionSnapshot {
     public var sessionTitle: String?
     public var sessionTitleSource: SessionTitleSource?
     public var providerSessionId: String?
+    public var tokenUsage: TokenUsage?
+
+    // CodingKeys excludes transient runtime fields: toolHistory, subagents
+    private enum CodingKeys: String, CodingKey {
+        case status, currentTool, toolDescription, lastActivity, cwd, model, permissionMode
+        case errorStreak, transcriptSize, startTime, lastUserPrompt, lastAssistantMessage
+        case recentMessages, termApp, itermSessionId, ttyPath, kittyWindowId, tmuxPane
+        case tmuxClientTty, termBundleId, cliPid, transcriptPath, source, interrupted
+        case sessionTitle, sessionTitleSource, providerSessionId, tokenUsage
+    }
 
     public init(startTime: Date = Date()) {
         self.startTime = startTime
@@ -206,7 +216,7 @@ public struct SessionSnapshot {
     }
 }
 
-public struct SessionSummary {
+public struct SessionSummary: Sendable, Codable {
     public let status: AgentStatus
     public let primarySource: String
     public let activeSessionCount: Int
@@ -280,15 +290,43 @@ public enum SideEffect: Equatable {
     case setActiveSession(sessionId: String?)
 }
 
+// MARK: - Tracking Key Resolution
+
+/// Resolve a unique tracking key for a session event.
+/// When two processes resume the same session_id, each gets a distinct key (`sessionId/pid`).
+public func resolveTrackingKey(
+    sessions: [String: SessionSnapshot],
+    event: HookEvent
+) -> String {
+    let rawSessionId = event.sessionId ?? "default"
+    guard let pid = event.metadata.ppid, pid > 0 else { return rawSessionId }
+
+    let pidKey = "\(rawSessionId)/\(pid)"
+
+    // Already have a PID-specific entry → use it
+    if sessions[pidKey] != nil { return pidKey }
+
+    // Base entry exists with a different PID → fork into PID-specific key
+    if let existing = sessions[rawSessionId],
+       let existingPid = existing.cliPid, existingPid > 0, existingPid != pid_t(pid) {
+        return pidKey
+    }
+
+    // No collision → use raw session ID
+    return rawSessionId
+}
+
 // MARK: - Pure Reducer
 
 /// Pure reducer: mutates sessions, returns side effects for the caller to execute.
+/// `trackingKey` overrides the dictionary key (use `resolveTrackingKey` to compute it).
 public func reduceEvent(
     sessions: inout [String: SessionSnapshot],
     event: HookEvent,
+    trackingKey: String? = nil,
     maxHistory: Int
 ) -> [SideEffect] {
-    let sessionId = event.sessionId ?? "default"
+    let sessionId = trackingKey ?? event.sessionId ?? "default"
     let eventName = event.eventName
     var effects: [SideEffect] = []
 
@@ -330,7 +368,7 @@ public func reduceEvent(
         sessions[sessionId]?.currentTool = nil
         sessions[sessionId]?.toolDescription = nil
         sessions[sessionId]?.lastAssistantMessage = nil  // clear so collapsed bar shows user prompt
-        if let prompt = event.rawJSON["prompt"] as? String, !prompt.isEmpty {
+        if let prompt = event.prompt, !prompt.isEmpty {
             // Detect <task-notification> — system-injected when background agent completes
             if let info = TaskNotificationInfo.parse(prompt) {
                 let displayText = info.summary ?? "Task \(info.status)"
@@ -356,7 +394,7 @@ public func reduceEvent(
         sessions[sessionId]?.currentTool = nil
         sessions[sessionId]?.toolDescription = nil
         sessions[sessionId]?.subagents.removeAll()
-        if let msg = event.rawJSON["last_assistant_message"] as? String, !msg.isEmpty {
+        if let msg = event.lastAssistantMessage, !msg.isEmpty {
             sessions[sessionId]?.lastAssistantMessage = msg
             sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: msg))
         }
@@ -368,9 +406,9 @@ public func reduceEvent(
         // API error (rate limit, auth, prompt too long). Session goes idle with error context.
         sessions[sessionId]?.status = .idle
         sessions[sessionId]?.currentTool = nil
-        sessions[sessionId]?.toolDescription = event.rawJSON["error_details"] as? String
+        sessions[sessionId]?.toolDescription = event.errorDetails
         sessions[sessionId]?.subagents.removeAll()
-        if let msg = event.rawJSON["last_assistant_message"] as? String, !msg.isEmpty {
+        if let msg = event.lastAssistantMessage, !msg.isEmpty {
             sessions[sessionId]?.lastAssistantMessage = msg
             sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: msg))
         }
@@ -407,7 +445,7 @@ public func reduceEvent(
         let currentStreak = sessions[sessionId]?.errorStreak ?? 0
         sessions[sessionId]?.errorStreak = currentStreak + 1
         // is_interrupt = user pressed Ctrl+C during tool execution
-        if event.rawJSON["is_interrupt"] as? Bool == true {
+        if event.isInterrupt {
             sessions[sessionId]?.interrupted = true
         }
         if !isWaiting {
@@ -430,7 +468,7 @@ public func reduceEvent(
         if !isWaiting {
             sessions[sessionId]?.status = .running
             sessions[sessionId]?.currentTool = "Agent"
-            sessions[sessionId]?.toolDescription = event.rawJSON["agent_type"] as? String
+            sessions[sessionId]?.toolDescription = event.agentType
         }
 
     case "SubagentStop":
@@ -483,7 +521,7 @@ public func reduceEvent(
     // ── Environment changes ────────────────────────────────────────
     case "CwdChanged":
         // Schema: { old_cwd: string, new_cwd: string }
-        if let newCwd = event.rawJSON["new_cwd"] as? String, !newCwd.isEmpty {
+        if let newCwd = event.newCwd, !newCwd.isEmpty {
             sessions[sessionId]?.cwd = newCwd
         }
 
@@ -517,49 +555,50 @@ public func reduceEvent(
 // MARK: - Private Helpers
 
 public func extractMetadata(into sessions: inout [String: SessionSnapshot], sessionId: String, event: HookEvent) {
-    if let cwd = event.rawJSON["cwd"] as? String, !cwd.isEmpty {
+    let m = event.metadata
+    if let cwd = m.cwd, !cwd.isEmpty {
         sessions[sessionId]?.cwd = cwd
     } else if sessions[sessionId]?.cwd == nil,
-              let roots = event.rawJSON["workspace_roots"] as? [String],
+              let roots = m.workspaceRoots,
               let first = roots.first, !first.isEmpty {
         sessions[sessionId]?.cwd = first
     }
-    if let model = event.rawJSON["model"] as? String, !model.isEmpty {
+    if let model = m.model, !model.isEmpty {
         sessions[sessionId]?.model = model
     }
-    if let mode = event.rawJSON["permission_mode"] as? String {
+    if let mode = m.permissionMode {
         sessions[sessionId]?.permissionMode = mode
     }
     // Terminal info (injected by hook script)
-    if let app = event.rawJSON["_term_app"] as? String, !app.isEmpty, app != "unknown" {
+    if let app = m.termApp, !app.isEmpty, app != "unknown" {
         sessions[sessionId]?.termApp = app
     }
-    if let ses = event.rawJSON["_iterm_session"] as? String, !ses.isEmpty {
+    if let ses = m.itermSession, !ses.isEmpty {
         sessions[sessionId]?.itermSessionId = ses
     }
-    if let tty = event.rawJSON["_tty"] as? String, !tty.isEmpty {
+    if let tty = m.tty, !tty.isEmpty {
         sessions[sessionId]?.ttyPath = tty
     }
     // Extended terminal info (from native bridge binary)
-    if let kitty = event.rawJSON["_kitty_window"] as? String, !kitty.isEmpty {
+    if let kitty = m.kittyWindow, !kitty.isEmpty {
         sessions[sessionId]?.kittyWindowId = kitty
     }
-    if let pane = event.rawJSON["_tmux_pane"] as? String, !pane.isEmpty {
+    if let pane = m.tmuxPane, !pane.isEmpty {
         sessions[sessionId]?.tmuxPane = pane
     }
-    if let tmuxTty = event.rawJSON["_tmux_client_tty"] as? String, !tmuxTty.isEmpty {
+    if let tmuxTty = m.tmuxClientTty, !tmuxTty.isEmpty {
         sessions[sessionId]?.tmuxClientTty = tmuxTty
     }
-    if let bundle = event.rawJSON["_term_bundle"] as? String, !bundle.isEmpty {
+    if let bundle = m.termBundle, !bundle.isEmpty {
         sessions[sessionId]?.termBundleId = bundle
     }
-    if let ppid = event.rawJSON["_ppid"] as? Int, ppid > 0 {
+    if let ppid = m.ppid, ppid > 0 {
         sessions[sessionId]?.cliPid = pid_t(ppid)
     }
-    if let source = SessionSnapshot.normalizedSupportedSource(event.rawJSON["_source"] as? String) {
+    if let source = SessionSnapshot.normalizedSupportedSource(m.source) {
         sessions[sessionId]?.source = source
     }
-    if let tp = event.rawJSON["transcript_path"] as? String, !tp.isEmpty {
+    if let tp = m.transcriptPath, !tp.isEmpty {
         sessions[sessionId]?.transcriptPath = tp
     }
 }
@@ -576,7 +615,7 @@ private func handleSubagentEvent(
 ) -> Bool {
     switch eventName {
     case "SubagentStart":
-        let agentType = event.rawJSON["agent_type"] as? String ?? "Agent"
+        let agentType = event.agentType ?? "Agent"
         sessions[sessionId]?.subagents[agentId] = SubagentState(
             agentId: agentId,
             agentType: agentType
@@ -625,4 +664,43 @@ private func handleSubagentEvent(
     default:
         return false  // Fall through to normal session handling
     }
+}
+
+// MARK: - Token Usage
+
+public struct TokenUsage: Sendable, Codable, Equatable {
+    public var inputTokens: Int = 0
+    public var outputTokens: Int = 0
+    public var cacheReadTokens: Int = 0
+    public var cacheCreationTokens: Int = 0
+    public var costUSD: Double = 0
+
+    /// Context window usage = input + cache (matches CC's context percentage calculation)
+    public var totalTokens: Int { inputTokens + cacheReadTokens + cacheCreationTokens }
+
+    public var formattedTotal: String {
+        formatTokenCount(totalTokens)
+    }
+
+    public var formattedInput: String { formatTokenCount(inputTokens) }
+    public var formattedOutput: String { formatTokenCount(outputTokens) }
+    public var formattedCache: String { formatTokenCount(cacheReadTokens) }
+
+    public var formattedCost: String? {
+        guard costUSD > 0 else { return nil }
+        if costUSD < 0.01 { return String(format: "<$0.01") }
+        return String(format: "$%.2f", costUSD)
+    }
+
+    public init() {}
+}
+
+private func formatTokenCount(_ count: Int) -> String {
+    if count < 1_000 { return "\(count)" }
+    if count < 1_000_000 {
+        let k = Double(count) / 1_000
+        return k < 10 ? String(format: "%.1fk", k) : String(format: "%.0fk", k)
+    }
+    let m = Double(count) / 1_000_000
+    return m < 10 ? String(format: "%.1fM", m) : String(format: "%.0fM", m)
 }

@@ -40,6 +40,36 @@
 
 ## Done
 
+### [T-006: Typed HookEvent thay rawJSON](tasks/T-006-typed-hook-events.md)
+> EventMetadata struct + typed fields thay rawJSON: [String: Any]. All consumers updated.
+- **priority**: high
+- **effort**: M
+- **completed**: 2026-04-08
+
+### [T-007: SessionSnapshot conform Sendable + Codable](tasks/T-007-sendable-codable-snapshot.md)
+> SessionSnapshot + all nested types Codable/Sendable. PersistedSession removed, direct encode/decode.
+- **priority**: high
+- **effort**: S
+- **completed**: 2026-04-08
+
+### [T-008: Test coverage cho reduceEvent()](tasks/T-008-reducer-tests.md)
+> 41 Swift Testing tests covering all event types, edge cases, actionable state preservation.
+- **priority**: high
+- **effort**: M
+- **completed**: 2026-04-08
+
+### [T-009: Event-driven wiring thay callbacks](tasks/T-009-event-driven-wiring.md)
+> Services use weak appState reference. 9 callbacks removed from CompletionQueue + RequestQueue.
+- **priority**: medium
+- **effort**: M
+- **completed**: 2026-04-08
+
+### [T-010: Sprite mascot system từ notchi](tasks/T-010-sprite-mascot-system.md)
+> 17 sprite PNGs, MascotState/EmotionState models, SpriteSheetView + motion helpers, MascotView wired.
+- **priority**: medium
+- **effort**: L
+- **completed**: 2026-04-08
+
 ### [T-001: Tách NotchPanelView thành các file riêng](tasks/T-001-split-notch-panel-view.md)
 > 1786 dòng → 368 dòng + 6 file mới. Dead code xóa (PixelText, inlineMarkdown).
 
