@@ -97,13 +97,13 @@ private struct ThinScrollView<Content: View>: NSViewRepresentable {
     }
 }
 
-private struct SessionIdForkButton: View {
+private struct SessionIdCopyButton: View {
     let session: SessionSnapshot
     let sessionId: String
     var fontSize: CGFloat = 10
 
     @State private var hovering = false
-    @State private var forked = false
+    @State private var copied = false
     @State private var resetTask: Task<Void, Never>?
 
     private var compactLabel: String {
@@ -111,19 +111,19 @@ private struct SessionIdForkButton: View {
     }
 
     var body: some View {
-        Button(action: forkSession) {
+        Button(action: copySessionId) {
             HStack(spacing: 4) {
                 Text(compactLabel)
                     .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                Image(systemName: forked ? "checkmark" : "arrow.branch")
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
                     .font(.system(size: max(8, fontSize - 1), weight: .semibold))
             }
-            .foregroundStyle(forked ? Color(red: 0.3, green: 0.85, blue: 0.4) : .white.opacity(hovering ? 0.68 : 0.42))
+            .foregroundStyle(copied ? Color(red: 0.3, green: 0.85, blue: 0.4) : .white.opacity(hovering ? 0.68 : 0.42))
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
             .background(
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(Color.white.opacity(hovering || forked ? 0.08 : 0.001))
+                    .fill(Color.white.opacity(hovering || copied ? 0.08 : 0.001))
             )
         }
         .buttonStyle(.plain)
@@ -133,17 +133,73 @@ private struct SessionIdForkButton: View {
         .onDisappear {
             resetTask?.cancel()
         }
-        .help("Fork session \(sessionId)")
+        .help("Copy session ID")
     }
 
-    private func forkSession() {
-        TerminalActivator.forkSession(session: session, sessionId: sessionId)
-        forked = true
+    private func copySessionId() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(sessionId, forType: .string)
+        copied = true
         resetTask?.cancel()
         resetTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             guard !Task.isCancelled else { return }
-            forked = false
+            copied = false
+        }
+    }
+}
+
+private struct SessionCardMenu: View {
+    let session: SessionSnapshot
+    let sessionId: String
+    let fontSize: CGFloat
+
+    @State private var hovering = false
+
+    var body: some View {
+        Menu {
+            Button {
+                TerminalActivator.forkSession(session: session, sessionId: sessionId)
+            } label: {
+                Label("Fork Session", systemImage: "arrow.branch")
+            }
+
+            Button(role: .destructive) {
+                if let pid = session.cliPid, pid > 0 {
+                    kill(pid, SIGTERM)
+                }
+            } label: {
+                Label("Kill Process", systemImage: "xmark.circle")
+            }
+            .disabled(session.cliPid == nil || session.cliPid == 0)
+
+            Divider()
+
+            Button {
+                let text = session.recentMessages.map { msg in
+                    switch msg.kind {
+                    case .user: return "> \(msg.text)"
+                    case .assistant: return "$ \(msg.text)"
+                    case .taskNotification: return "• \(msg.text)"
+                    }
+                }.joined(separator: "\n\n")
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+            } label: {
+                Label("Export Chat", systemImage: "square.and.arrow.up")
+            }
+            .disabled(session.recentMessages.isEmpty)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: fontSize, weight: .semibold))
+                .foregroundStyle(.white.opacity(hovering ? 0.68 : 0.42))
+                .frame(width: 20, height: 20)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .onHover { h in
+            withAnimation(NotchAnimation.micro) { hovering = h }
         }
     }
 }
@@ -183,14 +239,14 @@ private struct SessionIdentityLine: View {
                     .font(.system(size: sessionFontSize, weight: .semibold, design: .monospaced))
                     .foregroundStyle(dividerColor)
 
-                SessionIdForkButton(
+                SessionIdCopyButton(
                     session: session,
                     sessionId: displaySessionId,
                     fontSize: sessionFontSize
                 )
                 .fixedSize()
             } else {
-                SessionIdForkButton(
+                SessionIdCopyButton(
                     session: session,
                     sessionId: displaySessionId,
                     fontSize: sessionFontSize
@@ -417,7 +473,7 @@ private struct SessionCard: View {
 
                 Spacer(minLength: 4)
 
-HStack(spacing: 4) {
+                HStack(spacing: 4) {
                     if session.interrupted {
                         SessionTag("INT", color: Color(red: 1.0, green: 0.6, blue: 0.2))
                     }
@@ -426,6 +482,8 @@ HStack(spacing: 4) {
                             .help(tokenTooltip(usage))
                     }
                 }
+
+                SessionCardMenu(session: session, sessionId: sessionId, fontSize: fontSize)
             }
 
             // Chat history + live status

@@ -43,6 +43,11 @@ final class AppState {
     /// Tools auto-approved via "Always" button, keyed by session tracking key
     private var autoApprovedTools: [String: Set<String>] = [:]
 
+    /// Sessions whose process recently exited — prevents race where late socket events
+    /// recreate a session that was just removed by the process monitor.
+    /// Entries expire after 30 seconds via cleanup loop.
+    private var recentlyExitedSessions: [String: Date] = [:]
+
     /// Check if a PermissionRequest should be auto-approved.
     /// Sources: session's stored permissionMode, event metadata, local "Always" memory.
     func shouldAutoApprovePermission(event: HookEvent, sessionId: String) -> Bool {
@@ -69,6 +74,9 @@ final class AppState {
     private func ensureSession(for event: HookEvent, sessionId: String) -> Bool {
         let isNew = sessions[sessionId] == nil
         if isNew {
+            // Don't recreate sessions whose process just exited — late socket events
+            // can arrive after the process monitor already removed the session.
+            if recentlyExitedSessions[sessionId] != nil { return false }
             sessions[sessionId] = SessionSnapshot()
         }
         extractMetadata(into: &sessions, sessionId: sessionId, event: event)
@@ -138,6 +146,10 @@ final class AppState {
     }
 
     private func cleanupIdleSessions() {
+        // Expire recently-exited session markers (30s is plenty to absorb late socket events)
+        let cutoff = Date().addingTimeInterval(-30)
+        recentlyExitedSessions = recentlyExitedSessions.filter { $0.value > cutoff }
+
         // Refresh transcript file sizes and token usage
         refreshTokenUsage()
         for (sessionId, session) in sessions {
@@ -208,6 +220,9 @@ final class AppState {
     /// Every removal path (cleanup timer, process exit, reducer effect) goes through here
     /// so leaked continuations / connections are impossible.
     private func removeSession(_ sessionId: String) {
+        // Remember this session just exited — prevents late socket events from recreating it
+        recentlyExitedSessions[sessionId] = Date()
+
         // Resume ALL pending continuations for this session
         drainPermissions(forSession: sessionId)
         drainQuestions(forSession: sessionId)
@@ -351,6 +366,12 @@ final class AppState {
         }
 
         let sessionId = resolveTrackingKey(sessions: sessions, event: event)
+
+        // SessionStart = legitimate new/resumed session — allow even if recently exited
+        if event.eventName == "SessionStart" {
+            recentlyExitedSessions.removeValue(forKey: sessionId)
+        }
+
         ensureSession(for: event, sessionId: sessionId)
 
         // Debug: log subagent state before reduce
@@ -469,7 +490,11 @@ final class AppState {
 
     func handlePermissionRequest(_ event: HookEvent, continuation: CheckedContinuation<Data, Never>) -> String {
         let sessionId = resolveTrackingKey(sessions: sessions, event: event)
-        ensureSession(for: event, sessionId: sessionId)
+        if !ensureSession(for: event, sessionId: sessionId) && sessions[sessionId] == nil {
+            // Session recently exited — deny and don't recreate
+            continuation.resume(returning: HookResponse.permission(.deny, reason: "Session exited"))
+            return sessionId
+        }
         sessions[sessionId]?.lastActivity = Date()
         requestQueue.enqueuePermission(request: PermissionRequest(event: event, trackingKey: sessionId, continuation: continuation))
         refreshDerivedState()
@@ -500,7 +525,11 @@ final class AppState {
 
     func handleQuestion(_ event: HookEvent, continuation: CheckedContinuation<Data, Never>) -> String {
         let sessionId = resolveTrackingKey(sessions: sessions, event: event)
-        ensureSession(for: event, sessionId: sessionId)
+        if !ensureSession(for: event, sessionId: sessionId) && sessions[sessionId] == nil {
+            // Session recently exited — dismiss and don't recreate
+            continuation.resume(returning: HookResponse.empty)
+            return sessionId
+        }
         guard let question = QuestionPayload.from(event: event) else {
             continuation.resume(returning: HookResponse.empty)
             return sessionId
