@@ -111,6 +111,13 @@ Last synced commit: `c016c4a` (v1.0.9)
 Unsynced from v1.0.7: global shortcuts, tool status in compact bar, in-app auto-update, CI/CD pipeline.
 Unsynced from v1.0.8: Copilot CLI support (not needed — Claude Code only).
 
+**Scouted but not yet synced (v1.0.10–v1.0.16, April 7–9 2026):**
+- v1.0.10–v1.0.15: mostly CI/DMG/icon build fixes — skip (not relevant to SPM-only build)
+- v1.0.15: settings window sidebar transparency fix — low priority (T-006 in Todo already tracks sidebar spacing)
+- v1.0.16: Warp terminal misdetection fix (T-011), stuck session / hook exec PID fix (T-012), Ghostty+tmux tab focus (T-013), menu bar icon for auto-hide (T-014), clickable session card (T-015)
+- v1.0.16: developer ID signing + notarization — skip (build/release only)
+- Open PR #42: remote SSH monitoring — skip for now (not merged; also targets Codex sessions)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

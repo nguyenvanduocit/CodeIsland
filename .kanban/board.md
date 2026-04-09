@@ -1,9 +1,66 @@
 # Kanban Board
-<!-- Updated: 2026-04-08 -->
+<!-- Updated: 2026-04-09 -->
 
 ## Backlog
 
 ## Todo
+
+### T-011: Fix Warp terminal triggering Terminal.app on session completion
+> Terminal detection should use bundle ID matching, not string contains on TERM_PROGRAM; fixes Warp users seeing Terminal.app pop open.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland v1.0.16 — fix: Warp terminal no longer triggers Terminal.app on completion (#40)
+#### Criteria
+- [ ] `TerminalVisibilityDetector.swift` uses `NSRunningApplication.bundleIdentifier` matching instead of `TERM_PROGRAM` string contains
+- [ ] Fallback paths return `false` when terminal identity is uncertain
+- [ ] Ghostty requires dual-criteria validation; WezTerm/tmux/kitty simplified
+- [ ] `swift build && swift test` passes
+
+### T-012: Fix stuck session auto-reset and hook exec PID tracking
+> Sessions stuck "thinking" for 2+ min auto-reset; hook bridge uses exec to inherit PID correctly.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland v1.0.16 — fix: hook exec PID tracking, stuck detection, smart suppress; fix: reset stuck sessions with monitor but no active tool after 2 min
+#### Criteria
+- [ ] Hook install script uses `exec` so bridge binary replaces bash and inherits PID
+- [ ] `ProcessMonitorService` or equivalent triggers idle reset after 2 min of no tool activity
+- [ ] Four stuck-detection scenarios handled: monitor+tool, monitor+no-tool, no-monitor+tool, no-monitor+no-tool
+- [ ] `swift build && swift test` passes
+
+### T-013: Fix Ghostty tab focus for tmux sessions
+> Clicking "jump to terminal" in a Ghostty+tmux setup focuses the correct tab, not just the app.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland v1.0.16 — PR #43: fix: focus Ghostty tab for tmux sessions
+#### Criteria
+- [ ] `TerminalActivator.swift` derives tmux window key (session name, window index) when tmux is detected
+- [ ] Raw `TMUX` env var preserved from hook payload and passed to tmux subprocesses
+- [ ] Ghostty AppleScript runs via `/usr/bin/osascript` out-of-process
+- [ ] Falls back to existing CWD/session-ID matching if tmux window match fails
+- [ ] `swift build && swift test` passes
+
+### T-014: Menu bar icon when panel is auto-hidden
+> When auto-hide is on and panel is invisible, a menu bar icon provides access to Settings and Quit.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland v1.0.16 — PR #39: feat: add menu bar icon for auto-hide
+#### Criteria
+- [ ] `NSStatusItem` created when auto-hide setting is enabled
+- [ ] Menu bar icon hidden when auto-hide is disabled
+- [ ] Icon menu has "Settings..." and "Quit" options
+- [ ] Icon shows/hides dynamically when setting is toggled at runtime
+- [ ] `swift build && swift test` passes
+
+### T-015: Make entire session card clickable to jump to terminal
+> Clicking anywhere on a session card navigates to that terminal, not just the small icon.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland v1.0.16 — feat: click entire session card to jump to terminal (#37)
+#### Criteria
+- [ ] Session card wrapped in `Button { jumpToTerminal() }` in `SessionListView.swift`
+- [ ] Terminal icon remains as non-interactive visual badge
+- [ ] NSPanel compatibility verified (Button, not gesture, for panel context)
+- [ ] `swift build && swift test` passes
 
 ### T-006: Port sidebar settings row text spacing fix
 > Add `.padding(.leading, 2)` to settings sidebar label text to fix icon-text alignment.
