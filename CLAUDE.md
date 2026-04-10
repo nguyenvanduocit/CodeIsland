@@ -117,6 +117,7 @@ Unsynced from v1.0.8: Copilot CLI support (not needed — Claude Code only).
 - v1.0.16: Warp terminal misdetection fix (T-011), stuck session / hook exec PID fix (T-012), Ghostty+tmux tab focus (T-013), menu bar icon for auto-hide (T-014), clickable session card (T-015)
 - v1.0.16: developer ID signing + notarization — skip (build/release only)
 - Open PR #42: remote SSH monitoring — skip for now (not merged; also targets Codex sessions)
+- Open PR #50: cmux terminal surface-level precise jump — watch, not merged yet
 
 **Scouted but not yet synced (v1.0.17, April 9 2026):**
 - v1.0.17: PID reuse guard + session lifecycle overhaul (T-016), compact bar project name + instant switch + rotation interval setting (T-017)
