@@ -1,9 +1,34 @@
 # Kanban Board
-<!-- Updated: 2026-04-09 -->
+<!-- Updated: 2026-04-10 -->
 
 ## Backlog
 
 ## Todo
+
+### T-016: v1.0.17 session lifecycle and PID reliability fixes
+> PID reuse guard, reliable exit detection, model-retry backfill, and session cleanup bugfixes from upstream v1.0.17.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland v1.0.17 — commits dbc1cdf, 51526db (Apr 9, 2026)
+#### Criteria
+- [ ] `ProcessIdentity` struct tracks PID + process start time to guard against PID reuse on process restart
+- [ ] In-flight Stop hook race condition fixed (session not removed if Stop event arrives mid-cleanup)
+- [ ] Dead-monitor session cleanup uses grace period instead of waiting 10 minutes
+- [ ] `modelReadAttempted` Set cleared on session removal (prevent memory leak)
+- [ ] Model detection backfill retries with cooldown instead of permanently giving up on first miss
+- [ ] `swift build && swift test` passes
+
+### T-017: v1.0.17 compact bar UX — project name, instant switch, rotation interval
+> Show project name while working; instantly switch to next session when active one stops; configurable rotation interval.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland v1.0.17 — commit dbc1cdf (Apr 9, 2026)
+#### Criteria
+- [ ] Compact bar shows project/CWD name during all non-idle states (working, waiting, compacting)
+- [ ] When an active session stops, bar immediately switches to the next running session without delay
+- [ ] Settings → Behavior page has rotation interval picker: 3s / 5s / 8s / 10s (default 5s)
+- [ ] Rotation interval setting persisted via `Settings.swift` / UserDefaults
+- [ ] `swift build && swift test` passes
 
 ### T-011: Fix Warp terminal triggering Terminal.app on session completion
 > Terminal detection should use bundle ID matching, not string contains on TERM_PROGRAM; fixes Warp users seeing Terminal.app pop open.

@@ -118,6 +118,11 @@ Unsynced from v1.0.8: Copilot CLI support (not needed — Claude Code only).
 - v1.0.16: developer ID signing + notarization — skip (build/release only)
 - Open PR #42: remote SSH monitoring — skip for now (not merged; also targets Codex sessions)
 
+**Scouted but not yet synced (v1.0.17, April 9 2026):**
+- v1.0.17: PID reuse guard + session lifecycle overhaul (T-016), compact bar project name + instant switch + rotation interval setting (T-017)
+- v1.0.17: multi-source discovery (Qoder/CodeBuddy/Cursor/Copilot) — skip (Claude Code only)
+- v1.0.17: legacy hook cleanup (removes vibe-island entries) — skip (our bridge is different)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
