@@ -124,6 +124,13 @@ Unsynced from v1.0.8: Copilot CLI support (not needed — Claude Code only).
 - v1.0.17: multi-source discovery (Qoder/CodeBuddy/Cursor/Copilot) — skip (Claude Code only)
 - v1.0.17: legacy hook cleanup (removes vibe-island entries) — skip (our bridge is different)
 
+**Scouted (April 11 2026) — post-v1.0.17 activity:**
+- Open PR #59 (2026-04-10): batched AskUserQuestion support — queues multiple questions, adds confirm-all step (T-018, watch for merge)
+- Open issue #57 (2026-04-10): permission requests auto-rejected when multiple arrive in burst — no upstream fix yet (T-019)
+- Open PR #42: remote SSH monitoring — skip (not merged; targets non-Claude tools)
+- Open PR #50: cmux terminal precise jump — still open, watch (same as before)
+- vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

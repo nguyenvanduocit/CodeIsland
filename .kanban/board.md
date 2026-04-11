@@ -1,9 +1,36 @@
 # Kanban Board
-<!-- Updated: 2026-04-10 -->
+<!-- Updated: 2026-04-11 -->
 
 ## Backlog
 
 ## Todo
+
+### T-018: Watch upstream PR #59 — batched AskUserQuestion support
+> Multiple AskUserQuestion calls arrive in a burst; this open PR queues them and adds a confirm-all step.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland PR #59 (open, not yet merged) — 2026-04-10
+#### Criteria
+- [ ] Monitor wxtsky/CodeIsland PR #59 for merge
+- [ ] `QuestionPayload` (or a new wrapper) supports a list/queue of pending questions
+- [ ] `AppState` aggregates incoming `AskUserQuestion` events into the queue instead of replacing
+- [ ] `QuestionBarView` / `ApprovalBarView` renders multi-question UI with per-item answer selection
+- [ ] Explicit "Submit answers" confirmation step before writing response back to socket
+- [ ] Regression tests added for queue state transitions (pending → answered → submitted)
+- [ ] `swift build && swift test` passes
+
+### T-019: Fix permission requests auto-rejected when multiple arrive in quick succession
+> When several PermissionRequest events arrive before the user can click, earlier ones are silently dropped/rejected.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #57 (open, no upstream fix yet) — 2026-04-10
+#### Criteria
+- [ ] Reproduce locally: trigger 3+ tool permission requests in rapid succession
+- [ ] `HookServer` / `RequestQueueService` queues pending requests rather than replacing
+- [ ] `ApprovalBarView` shows a counter badge when multiple requests are queued (e.g. "1 of 3")
+- [ ] Responding to one request advances to the next rather than dismissing all
+- [ ] Auto-approve rules still apply per-tool before showing UI
+- [ ] `swift build && swift test` passes
 
 ### T-016: v1.0.17 session lifecycle and PID reliability fixes
 > PID reuse guard, reliable exit detection, model-retry backfill, and session cleanup bugfixes from upstream v1.0.17.
