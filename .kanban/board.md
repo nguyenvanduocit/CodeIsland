@@ -147,6 +147,20 @@
 
 ## Doing
 
+### [T-011: Cherry-pick features tu reference projects](tasks/T-011-reference-sync-apr09.md)
+> Replicate 7 features tu upstream, open-vibe-island, notchi — adapt theo kien truc minh.
+- **priority**: high
+- **effort**: L
+#### Criteria
+- [x] T-011a: Hook exec PID fix
+- [x] T-011b: Structured tool status display
+- [x] T-011c: PID liveness check
+- [x] T-011d: Click session card → jump terminal
+- [x] T-011e: Stale subagent cleanup
+- [x] T-011f: Dynamic approval buttons
+- [ ] ~~T-011g: Auto-scroll activity feed~~ (skipped — no expandable messages in our UI)
+- [x] `swift build && swift test` passes on all changes
+
 ## Done
 
 ### [T-006: Typed HookEvent thay rawJSON](tasks/T-006-typed-hook-events.md)
@@ -173,21 +187,21 @@
 - **effort**: M
 - **completed**: 2026-04-08
 
-### [T-010: Sprite mascot system từ notchi](tasks/T-010-sprite-mascot-system.md)
+### [T-010: Sprite mascot system tu notchi](tasks/T-010-sprite-mascot-system.md)
 > 17 sprite PNGs, MascotState/EmotionState models, SpriteSheetView + motion helpers, MascotView wired.
 - **priority**: medium
 - **effort**: L
 - **completed**: 2026-04-08
 
-### [T-001: Tách NotchPanelView thành các file riêng](tasks/T-001-split-notch-panel-view.md)
-> 1786 dòng → 368 dòng + 6 file mới. Dead code xóa (PixelText, inlineMarkdown).
+### [T-001: Tach NotchPanelView thanh cac file rieng](tasks/T-001-split-notch-panel-view.md)
+> 1786 dong → 368 dong + 6 file moi. Dead code xoa (PixelText, inlineMarkdown).
 
 - **priority**: critical
 - **effort**: L
 - **completed**: 2026-04-07
 
-### [T-002: Tách AppState thành 4 services](tasks/T-002-split-appstate.md)
-> 1186 dòng → 745 dòng. 4 services: ProcessMonitorService, SessionDiscoveryService, CompletionQueueService, RequestQueueService.
+### [T-002: Tach AppState thanh 4 services](tasks/T-002-split-appstate.md)
+> 1186 dong → 745 dong. 4 services: ProcessMonitorService, SessionDiscoveryService, CompletionQueueService, RequestQueueService.
 
 - **priority**: critical
 - **effort**: L
@@ -200,8 +214,8 @@
 - **effort**: M
 - **completed**: 2026-04-07
 
-### [T-004: Tách SettingsView thành 9 files](tasks/T-004-split-settings-view.md)
-> 1009 dòng → 119 dòng + 9 file mới (AppLogoView + 7 pages + shared). Dead code xóa (PageHeader).
+### [T-004: Tach SettingsView thanh 9 files](tasks/T-004-split-settings-view.md)
+> 1009 dong → 119 dong + 9 file moi (AppLogoView + 7 pages + shared). Dead code xoa (PageHeader).
 
 - **priority**: medium
 - **effort**: S

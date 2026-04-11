@@ -18,6 +18,12 @@ class SoundManager {
 
     private var soundCache: [String: NSSound] = [:]
 
+    /// Per-session+event cooldown to prevent rapid-fire notifications.
+    /// Keyed by "sessionId:eventName" so distinct event types don't suppress each other
+    /// (e.g. a PreToolUse sound won't suppress a subsequent Stop completion chime).
+    private static let cooldown: TimeInterval = 2.0
+    private var lastSoundTimes: [String: Date] = [:]
+
     private init() {
         // Pre-load all sounds into cache
         for entry in Self.eventSounds {
@@ -27,12 +33,30 @@ class SoundManager {
         }
     }
 
-    /// Called from AppState.handleEvent() to trigger appropriate sounds
-    func handleEvent(_ eventName: String) {
+    /// Called from AppState.executeEffect() to trigger appropriate sounds.
+    /// `sessionId` enables per-session cooldown; `interactive` suppresses non-interactive sessions.
+    func handleEvent(_ eventName: String, sessionId: String? = nil, interactive: Bool = true) {
+        guard interactive else { return }
         guard defaults.bool(forKey: SettingsKey.soundEnabled) else { return }
         guard let entry = Self.eventSounds.first(where: { $0.event == eventName }) else { return }
         guard defaults.bool(forKey: entry.key) else { return }
+        // Per-session+event cooldown: collapse rapid-fire same-type events
+        if let sid = sessionId {
+            let cooldownKey = "\(sid):\(eventName)"
+            let now = Date()
+            if let lastPlayed = lastSoundTimes[cooldownKey],
+               now.timeIntervalSince(lastPlayed) < Self.cooldown {
+                return
+            }
+            lastSoundTimes[cooldownKey] = now
+        }
         play(entry.sound)
+    }
+
+    /// Clear all cooldowns for a removed session
+    func clearCooldown(for sessionId: String) {
+        let prefix = "\(sessionId):"
+        lastSoundTimes = lastSoundTimes.filter { !$0.key.hasPrefix(prefix) }
     }
 
     /// Play boot sound on app launch

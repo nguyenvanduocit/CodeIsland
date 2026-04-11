@@ -20,15 +20,14 @@ public struct EventMetadata {
     public let model: String?
     public let permissionMode: String?
     public let termApp: String?
-    public let itermSession: String?
     public let tty: String?
-    public let kittyWindow: String?
     public let tmuxPane: String?
     public let tmuxClientTty: String?
     public let termBundle: String?
     public let ppid: Int?
     public let source: String?
     public let transcriptPath: String?
+    public let interactive: Bool?
 
     init(from json: [String: Any]) {
         cwd = json["cwd"] as? String
@@ -36,15 +35,14 @@ public struct EventMetadata {
         model = json["model"] as? String
         permissionMode = json["permission_mode"] as? String
         termApp = json["_term_app"] as? String
-        itermSession = json["_iterm_session"] as? String
         tty = json["_tty"] as? String
-        kittyWindow = json["_kitty_window"] as? String
         tmuxPane = json["_tmux_pane"] as? String
         tmuxClientTty = json["_tmux_client_tty"] as? String
         termBundle = json["_term_bundle"] as? String
         ppid = json["_ppid"] as? Int
         source = json["_source"] as? String
         transcriptPath = json["transcript_path"] as? String
+        interactive = json["_interactive"] as? Bool
     }
 }
 
@@ -67,6 +65,7 @@ public struct HookEvent {
     public let notificationOptions: [String]?
     public let askUserPayload: QuestionPayload?
     public let toolDescription: String?
+    public let permissionSuggestions: [[String: Any]]?
 
     public init?(from data: Data) {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -93,22 +92,13 @@ public struct HookEvent {
         let toolInput: [String: Any]? = jsonField(json, "tool_input", "toolInput")
         self.toolInput = toolInput
 
-        // Derive toolDescription
-        if let input = toolInput {
-            if let command = input["command"] as? String { self.toolDescription = command }
-            else if let filePath = input["file_path"] as? String { self.toolDescription = (filePath as NSString).lastPathComponent }
-            else if let pattern = input["pattern"] as? String { self.toolDescription = pattern }
-            else if let p = input["prompt"] as? String { self.toolDescription = String(p.prefix(40)) }
-            else if let msg = json["message"] as? String { self.toolDescription = msg }
-            else if let at = json["agent_type"] as? String { self.toolDescription = at }
-            else if let p = json["prompt"] as? String { self.toolDescription = String(p.prefix(40)) }
-            else { self.toolDescription = nil }
-        } else {
-            if let msg = json["message"] as? String { self.toolDescription = msg }
-            else if let at = json["agent_type"] as? String { self.toolDescription = at }
-            else if let p = json["prompt"] as? String { self.toolDescription = String(p.prefix(40)) }
-            else { self.toolDescription = nil }
-        }
+        // Parse permission suggestions (PermissionRequest events)
+        self.permissionSuggestions = jsonField(json, "permission_suggestions", "permissionSuggestions")
+
+        // Derive toolDescription — tool-specific extraction for useful context
+        self.toolDescription = Self.deriveToolDescription(
+            toolName: self.toolName, toolInput: toolInput, json: json
+        )
 
         // Parse AskUserQuestion payload from tool_input
         if let input = toolInput {
@@ -135,6 +125,62 @@ public struct HookEvent {
         }
     }
 
+    /// Derive a human-readable tool description from tool input, tailored per tool type.
+    private static func deriveToolDescription(
+        toolName: String?, toolInput: [String: Any]?, json: [String: Any]
+    ) -> String? {
+        if let input = toolInput, let tool = toolName {
+            switch tool {
+            case "Bash":
+                if let desc = input["description"] as? String, !desc.isEmpty { return desc }
+                if let cmd = input["command"] as? String {
+                    let line = cmd.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? cmd
+                    return String(line.prefix(60))
+                }
+            case "Read":
+                if let fp = input["file_path"] as? String {
+                    let name = (fp as NSString).lastPathComponent
+                    if let offset = input["offset"] as? Int { return "\(name):\(offset)" }
+                    return name
+                }
+            case "Edit", "Write":
+                if let fp = input["file_path"] as? String {
+                    return (fp as NSString).lastPathComponent
+                }
+            case "Grep":
+                if let pattern = input["pattern"] as? String {
+                    let dir = (input["path"] as? String).map { " in \(($0 as NSString).lastPathComponent)" } ?? ""
+                    return "\(pattern)\(dir)"
+                }
+            case "Glob":
+                if let pattern = input["pattern"] as? String { return pattern }
+            case "WebSearch":
+                if let query = input["query"] as? String { return query }
+            case "WebFetch":
+                if let url = input["url"] as? String {
+                    if let host = URL(string: url)?.host { return host }
+                    return String(url.prefix(40))
+                }
+            case "Agent", "Task":
+                if let desc = input["description"] as? String, !desc.isEmpty { return desc }
+                if let prompt = input["prompt"] as? String { return String(prompt.prefix(40)) }
+            case "TodoWrite":
+                return "Updating tasks"
+            default:
+                // Generic: try common fields
+                if let fp = input["file_path"] as? String { return (fp as NSString).lastPathComponent }
+                if let pattern = input["pattern"] as? String { return pattern }
+                if let cmd = input["command"] as? String { return String(cmd.prefix(60)) }
+                if let prompt = input["prompt"] as? String { return String(prompt.prefix(40)) }
+            }
+        }
+        // Fallback for events without toolInput
+        if let msg = json["message"] as? String { return msg }
+        if let at = json["agent_type"] as? String { return at }
+        if let p = json["prompt"] as? String { return String(p.prefix(40)) }
+        return nil
+    }
+
     /// Validate and sanitize session ID (alphanumeric, hyphens, underscores, max 256 chars)
     public static func sanitizeSessionId(_ raw: String?) -> String? {
         guard let raw, !raw.isEmpty, raw.count <= 256 else { return nil }
@@ -155,24 +201,6 @@ public struct SubagentState: Sendable, Codable {
 
     public init(agentId: String, agentType: String) {
         self.agentId = agentId
-        self.agentType = agentType
-    }
-}
-
-public struct ToolHistoryEntry: Identifiable, Sendable, Codable {
-    public let id: UUID
-    public let tool: String
-    public let description: String?
-    public let timestamp: Date
-    public let success: Bool
-    public let agentType: String?  // nil = main thread
-
-    public init(tool: String, description: String?, timestamp: Date, success: Bool, agentType: String?) {
-        self.id = UUID()
-        self.tool = tool
-        self.description = description
-        self.timestamp = timestamp
-        self.success = success
         self.agentType = agentType
     }
 }

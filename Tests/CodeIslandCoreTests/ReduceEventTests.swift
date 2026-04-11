@@ -16,14 +16,14 @@ import Foundation
     @Test func sessionIsCreatedAutomaticallyForUnknownSessionId() {
         var sessions: [String: SessionSnapshot] = [:]
         let event = makeEvent(["hook_event_name": "Notification", "session_id": "new-session"])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["new-session"] != nil)
     }
 
     @Test func missingSessionIdUsesDefaultKey() {
         var sessions: [String: SessionSnapshot] = [:]
         let event = makeEvent(["hook_event_name": "Notification"])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["default"] != nil)
     }
 
@@ -37,21 +37,19 @@ import Foundation
             "cwd": "/home/user/project",
             "model": "claude-sonnet-4-6",
             "permission_mode": "default",
-            "_term_app": "iTerm2",
-            "_iterm_session": "iterm-abc",
+            "_term_app": "ghostty",
             "_tty": "/dev/ttys001",
-            "_term_bundle": "com.googlecode.iterm2",
+            "_term_bundle": "com.mitchellh.ghostty",
             "_ppid": 12345,
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         let s = sessions["s1"]!
         #expect(s.cwd == "/home/user/project")
         #expect(s.model == "claude-sonnet-4-6")
         #expect(s.permissionMode == "default")
-        #expect(s.termApp == "iTerm2")
-        #expect(s.itermSessionId == "iterm-abc")
+        #expect(s.termApp == "ghostty")
         #expect(s.ttyPath == "/dev/ttys001")
-        #expect(s.termBundleId == "com.googlecode.iterm2")
+        #expect(s.termBundleId == "com.mitchellh.ghostty")
         #expect(s.cliPid == 12345)
     }
 
@@ -62,7 +60,7 @@ import Foundation
             "session_id": "s1",
             "workspace_roots": ["/workspace/root"],
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.cwd == "/workspace/root")
     }
 
@@ -75,7 +73,7 @@ import Foundation
             "session_id": "s1",
             "prompt": "hello world",
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .processing)
         #expect(sessions["s1"]?.lastUserPrompt == "hello world")
         #expect(sessions["s1"]?.currentTool == nil)
@@ -91,7 +89,7 @@ import Foundation
             "session_id": "s1",
             "prompt": "what is 2+2",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         let messages = sessions["s1"]?.recentMessages ?? []
         #expect(messages.count == 1)
         #expect(messages.last?.isUser == true)
@@ -109,7 +107,7 @@ import Foundation
             "session_id": "s1",
             "prompt": "new prompt",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         let messages = sessions["s1"]?.recentMessages ?? []
         // Old trailing user message should be replaced, not appended
         #expect(messages.count == 1)
@@ -124,7 +122,7 @@ import Foundation
             "session_id": "s1",
             "prompt": xml,
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.lastUserPrompt == "Build done")
         let msgs = sessions["s1"]?.recentMessages ?? []
         #expect(msgs.last?.isTaskNotification == true)
@@ -142,7 +140,7 @@ import Foundation
             "hook_event_name": "Stop",
             "session_id": "s1",
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .idle)
         #expect(sessions["s1"]?.currentTool == nil)
         #expect(effects.contains(.enqueueCompletion(sessionId: "s1")))
@@ -155,7 +153,7 @@ import Foundation
             "session_id": "s1",
             "last_assistant_message": "Here is the result",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.lastAssistantMessage == "Here is the result")
         let msgs = sessions["s1"]?.recentMessages ?? []
         #expect(msgs.last?.isUser == false)
@@ -168,7 +166,7 @@ import Foundation
         sessions["s1"]?.subagents["agent-1"] = SubagentState(agentId: "agent-1", agentType: "researcher")
 
         let event = makeEvent(["hook_event_name": "Stop", "session_id": "s1"])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.subagents.isEmpty == true)
     }
 
@@ -184,7 +182,7 @@ import Foundation
             "session_id": "s1",
             "error_details": "Rate limit exceeded",
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .idle)
         #expect(sessions["s1"]?.toolDescription == "Rate limit exceeded")
         #expect(effects.contains(.enqueueCompletion(sessionId: "s1")))
@@ -197,7 +195,7 @@ import Foundation
             "session_id": "s1",
             "last_assistant_message": "Partial response",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.lastAssistantMessage == "Partial response")
     }
 
@@ -211,7 +209,7 @@ import Foundation
             "tool_name": "Bash",
             "tool_input": ["command": "ls -la"],
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .running)
         #expect(sessions["s1"]?.currentTool == "Bash")
         #expect(effects.contains(.playSound("PreToolUse")))
@@ -227,7 +225,7 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Bash",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .waitingApproval)
     }
 
@@ -241,13 +239,13 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Read",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .waitingQuestion)
     }
 
     // MARK: - PostToolUse
 
-    @Test func postToolUseRecordsHistoryAndClearsTool() {
+    @Test func postToolUseClearsToolAndResetsErrorStreak() {
         var sessions: [String: SessionSnapshot] = [:]
         sessions["s1"] = SessionSnapshot()
         sessions["s1"]?.status = .running
@@ -259,13 +257,10 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Bash",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .processing)
         #expect(sessions["s1"]?.currentTool == nil)
         #expect(sessions["s1"]?.errorStreak == 0)
-        #expect(sessions["s1"]?.toolHistory.count == 1)
-        #expect(sessions["s1"]?.toolHistory.first?.tool == "Bash")
-        #expect(sessions["s1"]?.toolHistory.first?.success == true)
     }
 
     @Test func postToolUsePreservesWaitingState() {
@@ -279,7 +274,7 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Write",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .waitingApproval)
     }
 
@@ -296,10 +291,9 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Bash",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.errorStreak == 2)
         #expect(sessions["s1"]?.status == .processing)
-        #expect(sessions["s1"]?.toolHistory.first?.success == false)
     }
 
     @Test func postToolUseFailureWithIsInterruptSetsInterrupted() {
@@ -313,7 +307,7 @@ import Foundation
             "tool_name": "Bash",
             "is_interrupt": true,
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.interrupted == true)
     }
 
@@ -327,7 +321,7 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Bash",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .waitingApproval)
     }
 
@@ -344,7 +338,7 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Bash",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .processing)
         #expect(sessions["s1"]?.currentTool == nil)
     }
@@ -359,7 +353,7 @@ import Foundation
             "session_id": "s1",
             "tool_name": "Bash",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .waitingApproval)
     }
 
@@ -374,7 +368,7 @@ import Foundation
             "agent_id": "agent-42",
             "agent_type": "researcher",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         let subagent = sessions["s1"]?.subagents["agent-42"]
         #expect(subagent != nil)
         #expect(subagent?.agentType == "researcher")
@@ -389,7 +383,7 @@ import Foundation
             "agent_type": "executor",
             // no agent_id — falls through to main session handling
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .running)
         #expect(sessions["s1"]?.currentTool == "Agent")
     }
@@ -406,7 +400,7 @@ import Foundation
             "session_id": "s1",
             "agent_id": "agent-42",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.subagents["agent-42"] == nil)
     }
 
@@ -421,9 +415,47 @@ import Foundation
             "session_id": "s1",
             // no agent_id
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .processing)
         #expect(sessions["s1"]?.currentTool == nil)
+    }
+
+    // MARK: - Stale subagent cleanup
+
+    @Test func staleSubagentsRemovedOnEvent() {
+        var sessions: [String: SessionSnapshot] = [:]
+        sessions["s1"] = SessionSnapshot()
+        // Add a subagent with a startTime 4 minutes ago (stale)
+        var stale = SubagentState(agentId: "old-agent", agentType: "researcher")
+        stale.startTime = Date().addingTimeInterval(-4 * 60)
+        sessions["s1"]?.subagents["old-agent"] = stale
+        // Add a fresh subagent
+        sessions["s1"]?.subagents["new-agent"] = SubagentState(agentId: "new-agent", agentType: "worker")
+
+        // Any event should trigger cleanup
+        let event = makeEvent([
+            "hook_event_name": "PreToolUse",
+            "session_id": "s1",
+            "tool_name": "Bash",
+        ])
+        _ = reduceEvent(sessions: &sessions, event: event)
+        #expect(sessions["s1"]?.subagents["old-agent"] == nil, "Stale subagent should be removed")
+        #expect(sessions["s1"]?.subagents["new-agent"] != nil, "Fresh subagent should remain")
+    }
+
+    @Test func userPromptSubmitClearsAllSubagents() {
+        var sessions: [String: SessionSnapshot] = [:]
+        sessions["s1"] = SessionSnapshot()
+        sessions["s1"]?.subagents["agent-1"] = SubagentState(agentId: "agent-1", agentType: "researcher")
+        sessions["s1"]?.subagents["agent-2"] = SubagentState(agentId: "agent-2", agentType: "worker")
+
+        let event = makeEvent([
+            "hook_event_name": "UserPromptSubmit",
+            "session_id": "s1",
+            "prompt": "next task",
+        ])
+        _ = reduceEvent(sessions: &sessions, event: event)
+        #expect(sessions["s1"]?.subagents.isEmpty == true, "All subagents should be cleared on new prompt")
     }
 
     // MARK: - SessionStart
@@ -440,7 +472,7 @@ import Foundation
             "session_id": "s1",
             "cwd": "/new/project",
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         // Session is reset
         #expect(sessions["s1"]?.status == .idle)
         #expect(sessions["s1"]?.currentTool == nil)
@@ -460,7 +492,7 @@ import Foundation
             "session_id": "new-session",
             "_ppid": 9999,
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(effects.contains(.removeSession(sessionId: "old-session")))
     }
 
@@ -474,7 +506,7 @@ import Foundation
             "hook_event_name": "SessionEnd",
             "session_id": "s1",
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(effects.contains(.removeSession(sessionId: "s1")))
         // Should only return removeSession, nothing else
         #expect(effects.count == 1)
@@ -488,7 +520,7 @@ import Foundation
             "hook_event_name": "PreCompact",
             "session_id": "s1",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .processing)
         #expect(sessions["s1"]?.toolDescription == "Compacting context\u{2026}")
     }
@@ -504,7 +536,7 @@ import Foundation
             "hook_event_name": "PostCompact",
             "session_id": "s1",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .processing)
         #expect(sessions["s1"]?.toolDescription == nil)
     }
@@ -518,7 +550,7 @@ import Foundation
             "hook_event_name": "PostCompact",
             "session_id": "s1",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .waitingQuestion)
     }
 
@@ -534,7 +566,7 @@ import Foundation
             "session_id": "s1",
             "new_cwd": "/new/path",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.cwd == "/new/path")
     }
 
@@ -548,7 +580,7 @@ import Foundation
             "session_id": "s1",
             "new_cwd": "",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.cwd == "/existing/path")
     }
 
@@ -564,7 +596,7 @@ import Foundation
             "session_id": "s1",
             "message": "Agent needs attention",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         #expect(sessions["s1"]?.status == .idle)
     }
 
@@ -583,7 +615,7 @@ import Foundation
             "tool_name": "Read",
             "tool_input": ["file_path": "/some/file.txt"],
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event)
         // Main session status unchanged
         #expect(sessions["s1"]?.status == .processing)
         // Subagent updated
@@ -591,7 +623,7 @@ import Foundation
         #expect(sessions["s1"]?.subagents["agent-1"]?.currentTool == "Read")
     }
 
-    @Test func postToolUseWithAgentIdRecordsToolInMainHistory() {
+    @Test func postToolUseWithAgentIdUpdatesSubagentStatus() {
         var sessions: [String: SessionSnapshot] = [:]
         sessions["s1"] = SessionSnapshot()
         sessions["s1"]?.subagents["agent-1"] = SubagentState(agentId: "agent-1", agentType: "worker")
@@ -604,31 +636,9 @@ import Foundation
             "agent_id": "agent-1",
             "tool_name": "Bash",
         ])
-        _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
-        // Tool recorded in main session's tool history with agentType
-        #expect(sessions["s1"]?.toolHistory.count == 1)
-        #expect(sessions["s1"]?.toolHistory.first?.agentType == "worker")
-        #expect(sessions["s1"]?.toolHistory.first?.success == true)
+        _ = reduceEvent(sessions: &sessions, event: event)
         // Subagent moves to processing
         #expect(sessions["s1"]?.subagents["agent-1"]?.status == .processing)
-    }
-
-    // MARK: - Tool history max limit
-
-    @Test func toolHistoryRespectsMaxHistory() {
-        var sessions: [String: SessionSnapshot] = [:]
-        sessions["s1"] = SessionSnapshot()
-
-        for i in 0..<5 {
-            sessions["s1"]?.currentTool = "Tool\(i)"
-            let event = makeEvent([
-                "hook_event_name": "PostToolUse",
-                "session_id": "s1",
-                "tool_name": "Tool\(i)",
-            ])
-            _ = reduceEvent(sessions: &sessions, event: event, maxHistory: 3)
-        }
-        #expect(sessions["s1"]?.toolHistory.count == 3)
     }
 
     // MARK: - Tracking key resolution (same session_id, different PIDs)
@@ -688,7 +698,7 @@ import Foundation
             "prompt": "from A",
         ])
         let keyA = resolveTrackingKey(sessions: sessions, event: eventA)
-        _ = reduceEvent(sessions: &sessions, event: eventA, trackingKey: keyA, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: eventA, trackingKey: keyA)
 
         // Process B (PID 200) sends event with same session_id
         let eventB = makeEvent([
@@ -698,7 +708,7 @@ import Foundation
             "prompt": "from B",
         ])
         let keyB = resolveTrackingKey(sessions: sessions, event: eventB)
-        _ = reduceEvent(sessions: &sessions, event: eventB, trackingKey: keyB, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: eventB, trackingKey: keyB)
 
         // Two separate entries
         #expect(keyA == "shared")
@@ -720,7 +730,7 @@ import Foundation
             "prompt": "first",
         ])
         let key1 = resolveTrackingKey(sessions: sessions, event: event1)
-        _ = reduceEvent(sessions: &sessions, event: event1, trackingKey: key1, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event1, trackingKey: key1)
 
         let event2 = makeEvent([
             "hook_event_name": "PreToolUse",
@@ -729,7 +739,7 @@ import Foundation
             "tool_name": "Bash",
         ])
         let key2 = resolveTrackingKey(sessions: sessions, event: event2)
-        _ = reduceEvent(sessions: &sessions, event: event2, trackingKey: key2, maxHistory: 10)
+        _ = reduceEvent(sessions: &sessions, event: event2, trackingKey: key2)
 
         #expect(key1 == "s1")
         #expect(key2 == "s1")
@@ -746,7 +756,7 @@ import Foundation
             "tool_name": "Bash",
             "cwd": "/my/project",
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(effects.contains(.tryMonitorSession(sessionId: "s1")))
     }
 
@@ -757,7 +767,7 @@ import Foundation
             "hook_event_name": "Notification",
             "session_id": "s1",
         ])
-        let effects = reduceEvent(sessions: &sessions, event: event, maxHistory: 10)
+        let effects = reduceEvent(sessions: &sessions, event: event)
         #expect(!effects.contains(.tryMonitorSession(sessionId: "s1")))
     }
 }

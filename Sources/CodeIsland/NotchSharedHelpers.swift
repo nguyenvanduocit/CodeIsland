@@ -148,3 +148,37 @@ func stripDirectives(_ text: String) -> String {
     let cleaned = result.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     return cleaned
 }
+
+// MARK: - Decay Text
+
+/// Holds a text value visible for at least `minDuration` seconds after the source goes nil.
+/// New non-nil values replace immediately; nil triggers a delayed fade-out.
+@Observable
+@MainActor
+final class DecayState {
+    private(set) var displayedText: String?
+    private var decayTask: Task<Void, Never>?
+    private let minDuration: Duration
+
+    init(minDuration: Duration = .seconds(2)) {
+        self.minDuration = minDuration
+    }
+
+    func update(_ newValue: String?) {
+        if let text = newValue {
+            decayTask?.cancel()
+            decayTask = nil
+            displayedText = text
+        } else if displayedText != nil && decayTask == nil {
+            let duration = minDuration
+            decayTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: duration)
+                guard !Task.isCancelled, let self else { return }
+                withAnimation(.easeOut(duration: 0.3)) {
+                    self.displayedText = nil
+                }
+                self.decayTask = nil
+            }
+        }
+    }
+}

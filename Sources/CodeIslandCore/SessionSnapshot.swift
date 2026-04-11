@@ -17,7 +17,6 @@ public struct SessionSnapshot: Sendable, Codable {
     public var cwd: String?
     public var model: String?
     public var permissionMode: String?
-    public var toolHistory: [ToolHistoryEntry] = []
     public var errorStreak: Int = 0
     public var transcriptSize: Int64 = 0
     public var subagents: [String: SubagentState] = [:]
@@ -27,14 +26,13 @@ public struct SessionSnapshot: Sendable, Codable {
     /// Recent chat messages (max 3) for preview
     public var recentMessages: [ChatMessage] = []
     // Terminal info for window activation
-    public var termApp: String?        // "iTerm.app", "Apple_Terminal", etc.
-    public var itermSessionId: String?  // iTerm2 session ID for direct activation
+    public var termApp: String?        // "ghostty", etc.
     public var ttyPath: String?         // /dev/ttys00X
-    public var kittyWindowId: String?   // Kitty window ID for precise focus
     public var tmuxPane: String?        // tmux pane identifier (%0, %1, etc.)
     public var tmuxClientTty: String?   // tmux client TTY for real terminal detection
     public var termBundleId: String?    // __CFBundleIdentifier for precise terminal ID
     public var cliPid: pid_t?            // CLI process PID (from bridge _ppid)
+    public var processStartTime: Date?  // Process creation time for PID-reuse guard
     public var transcriptPath: String?   // Path to the JSONL transcript file
     public var source: String = "claude"
     public var interrupted: Bool = false
@@ -42,14 +40,17 @@ public struct SessionSnapshot: Sendable, Codable {
     public var sessionTitleSource: SessionTitleSource?
     public var providerSessionId: String?
     public var tokenUsage: TokenUsage?
+    public var interactive: Bool = true  // false for non-interactive `claude -p` sessions
+    public var processingStartedAt: Date?  // set on UserPromptSubmit, cleared on Stop
 
     // CodingKeys excludes transient runtime fields: toolHistory, subagents
     private enum CodingKeys: String, CodingKey {
         case status, currentTool, toolDescription, lastActivity, cwd, model, permissionMode
         case errorStreak, transcriptSize, startTime, lastUserPrompt, lastAssistantMessage
-        case recentMessages, termApp, itermSessionId, ttyPath, kittyWindowId, tmuxPane
-        case tmuxClientTty, termBundleId, cliPid, transcriptPath, source, interrupted
-        case sessionTitle, sessionTitleSource, providerSessionId, tokenUsage
+        case recentMessages, termApp, ttyPath, tmuxPane
+        case tmuxClientTty, termBundleId, cliPid, processStartTime, transcriptPath, source, interrupted
+        case sessionTitle, sessionTitleSource, providerSessionId, tokenUsage, interactive
+        case processingStartedAt
     }
 
     public init(startTime: Date = Date()) {
@@ -71,14 +72,6 @@ public struct SessionSnapshot: Sendable, Codable {
         recentMessages.append(msg)
         if recentMessages.count > maxCount {
             recentMessages.removeFirst(recentMessages.count - maxCount)
-        }
-    }
-
-    public mutating func recordTool(_ tool: String, description: String?, success: Bool, agentType: String?, maxHistory: Int) {
-        let entry = ToolHistoryEntry(tool: tool, description: description, timestamp: Date(), success: success, agentType: agentType)
-        toolHistory.append(entry)
-        if toolHistory.count > maxHistory {
-            toolHistory.removeFirst()
         }
     }
 
@@ -134,6 +127,14 @@ public struct SessionSnapshot: Sendable, Codable {
 
     public var isClaude: Bool { source == "claude" }
 
+    /// Session appears active but may be stuck (not idle, not awaiting user input)
+    public var isStuckCandidate: Bool {
+        status != .idle && status != .waitingApproval && status != .waitingQuestion
+    }
+
+    /// Whether terminal info is available for window activation
+    public var hasTerminalInfo: Bool { termApp != nil || termBundleId != nil }
+
     /// Always false — Claude Code is CLI-only, no native app mode.
     /// True when the session runs inside an IDE's integrated terminal.
     /// We can't query IDE tab/pane state, so notification suppression should be skipped.
@@ -160,13 +161,7 @@ public struct SessionSnapshot: Sendable, Codable {
         // Check bundle ID for terminal identification (more reliable than TERM_PROGRAM)
         if let bid = termBundleId {
             let lower = bid.lowercased()
-            if lower.contains("cmux") { return "cmux" }
-            if lower.contains("warp") { return "Warp" }
             if lower == "com.mitchellh.ghostty" { return "Ghostty" }
-            if lower.contains("iterm2") { return "iTerm2" }
-            if lower.contains("kitty") { return "Kitty" }
-            if lower.contains("alacritty") { return "Alacritty" }
-            if lower.contains("wezterm") { return "WezTerm" }
             // IDE integrated terminals
             if lower.contains("vscode") || lower.contains("vscodium") { return "VS Code" }
             if lower == "com.trae.app" { return "Trae" }
@@ -188,17 +183,12 @@ public struct SessionSnapshot: Sendable, Codable {
             if lower.contains("panic.nova") { return "Nova" }
             if lower.contains("android.studio") { return "Android Studio" }
             if lower.contains("antigravity") { return "Antigravity" }
+            return bid
         }
         // Fallback to TERM_PROGRAM
         guard let app = termApp else { return nil }
         let lower = app.lowercased()
-        if lower.contains("cmux") { return "cmux" }
         if lower == "ghostty" { return "Ghostty" }
-        if lower.contains("iterm") { return "iTerm2" }
-        if lower.contains("warp") { return "Warp" }
-        if lower.contains("alacritty") { return "Alacritty" }
-        if lower.contains("kitty") { return "Kitty" }
-        if lower.contains("terminal") { return "Terminal" }
         return app
     }
 
@@ -323,8 +313,7 @@ public func resolveTrackingKey(
 public func reduceEvent(
     sessions: inout [String: SessionSnapshot],
     event: HookEvent,
-    trackingKey: String? = nil,
-    maxHistory: Int
+    trackingKey: String? = nil
 ) -> [SideEffect] {
     let sessionId = trackingKey ?? event.sessionId ?? "default"
     let eventName = event.eventName
@@ -338,6 +327,18 @@ public func reduceEvent(
     // Always update metadata from every event
     extractMetadata(into: &sessions, sessionId: sessionId, event: event)
 
+    // Clean up stale subagents (SubagentStop may not fire reliably)
+    if let currentSubagents = sessions[sessionId]?.subagents, !currentSubagents.isEmpty {
+        let staleTimeout: TimeInterval = 3 * 60
+        let now = Date()
+        let fresh = currentSubagents.filter { _, sub in
+            now.timeIntervalSince(sub.startTime) < staleTimeout
+        }
+        if fresh.count != currentSubagents.count {
+            sessions[sessionId]?.subagents = fresh
+        }
+    }
+
     // Route subagent-specific events
     if let agentId = event.agentId {
         let handled = handleSubagentEvent(
@@ -346,7 +347,6 @@ public func reduceEvent(
             agentId: agentId,
             eventName: eventName,
             event: event,
-            maxHistory: maxHistory,
             effects: &effects
         )
         if handled { return effects }
@@ -367,7 +367,9 @@ public func reduceEvent(
         sessions[sessionId]?.status = .processing
         sessions[sessionId]?.currentTool = nil
         sessions[sessionId]?.toolDescription = nil
+        sessions[sessionId]?.processingStartedAt = Date()
         sessions[sessionId]?.lastAssistantMessage = nil  // clear so collapsed bar shows user prompt
+        sessions[sessionId]?.subagents.removeAll()  // new turn — clear stale subagents
         if let prompt = event.prompt, !prompt.isEmpty {
             // Detect <task-notification> — system-injected when background agent completes
             if let info = TaskNotificationInfo.parse(prompt) {
@@ -394,6 +396,7 @@ public func reduceEvent(
         sessions[sessionId]?.currentTool = nil
         sessions[sessionId]?.toolDescription = nil
         sessions[sessionId]?.subagents.removeAll()
+        sessions[sessionId]?.processingStartedAt = nil
         if let msg = event.lastAssistantMessage, !msg.isEmpty {
             sessions[sessionId]?.lastAssistantMessage = msg
             sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: msg))
@@ -408,6 +411,7 @@ public func reduceEvent(
         sessions[sessionId]?.currentTool = nil
         sessions[sessionId]?.toolDescription = event.errorDetails
         sessions[sessionId]?.subagents.removeAll()
+        sessions[sessionId]?.processingStartedAt = nil
         if let msg = event.lastAssistantMessage, !msg.isEmpty {
             sessions[sessionId]?.lastAssistantMessage = msg
             sessions[sessionId]?.addRecentMessage(ChatMessage(isUser: false, text: msg))
@@ -425,10 +429,6 @@ public func reduceEvent(
 
     case "PostToolUse":
         // Schema: { tool_name: string, tool_input: any, tool_response: any, tool_use_id: string }
-        if let tool = sessions[sessionId]?.currentTool {
-            let desc = sessions[sessionId]?.toolDescription
-            sessions[sessionId]?.recordTool(tool, description: desc, success: true, agentType: nil, maxHistory: maxHistory)
-        }
         sessions[sessionId]?.errorStreak = 0
         if !isWaiting {
             sessions[sessionId]?.status = .processing
@@ -438,10 +438,6 @@ public func reduceEvent(
 
     case "PostToolUseFailure":
         // Schema: { tool_name: string, tool_input: any, error: string, is_interrupt?: bool, tool_use_id: string }
-        if let tool = sessions[sessionId]?.currentTool {
-            let desc = sessions[sessionId]?.toolDescription
-            sessions[sessionId]?.recordTool(tool, description: desc, success: false, agentType: nil, maxHistory: maxHistory)
-        }
         let currentStreak = sessions[sessionId]?.errorStreak ?? 0
         sessions[sessionId]?.errorStreak = currentStreak + 1
         // is_interrupt = user pressed Ctrl+C during tool execution
@@ -573,16 +569,10 @@ public func extractMetadata(into sessions: inout [String: SessionSnapshot], sess
     if let app = m.termApp, !app.isEmpty, app != "unknown" {
         sessions[sessionId]?.termApp = app
     }
-    if let ses = m.itermSession, !ses.isEmpty {
-        sessions[sessionId]?.itermSessionId = ses
-    }
     if let tty = m.tty, !tty.isEmpty {
         sessions[sessionId]?.ttyPath = tty
     }
     // Extended terminal info (from native bridge binary)
-    if let kitty = m.kittyWindow, !kitty.isEmpty {
-        sessions[sessionId]?.kittyWindowId = kitty
-    }
     if let pane = m.tmuxPane, !pane.isEmpty {
         sessions[sessionId]?.tmuxPane = pane
     }
@@ -594,6 +584,9 @@ public func extractMetadata(into sessions: inout [String: SessionSnapshot], sess
     }
     if let ppid = m.ppid, ppid > 0 {
         sessions[sessionId]?.cliPid = pid_t(ppid)
+    }
+    if let interactive = m.interactive {
+        sessions[sessionId]?.interactive = interactive
     }
     if let source = SessionSnapshot.normalizedSupportedSource(m.source) {
         sessions[sessionId]?.source = source
@@ -610,7 +603,6 @@ private func handleSubagentEvent(
     agentId: String,
     eventName: String,
     event: HookEvent,
-    maxHistory: Int,
     effects: inout [SideEffect]
 ) -> Bool {
     switch eventName {
@@ -637,11 +629,6 @@ private func handleSubagentEvent(
         return true
 
     case "PostToolUse":
-        if let tool = sessions[sessionId]?.subagents[agentId]?.currentTool {
-            let agentType = sessions[sessionId]?.subagents[agentId]?.agentType
-            let desc = sessions[sessionId]?.subagents[agentId]?.toolDescription
-            sessions[sessionId]?.recordTool(tool, description: desc, success: true, agentType: agentType, maxHistory: maxHistory)
-        }
         sessions[sessionId]?.subagents[agentId]?.status = .processing
         sessions[sessionId]?.subagents[agentId]?.currentTool = nil
         sessions[sessionId]?.subagents[agentId]?.toolDescription = nil
@@ -650,11 +637,6 @@ private func handleSubagentEvent(
         return true
 
     case "PostToolUseFailure":
-        if let tool = sessions[sessionId]?.subagents[agentId]?.currentTool {
-            let agentType = sessions[sessionId]?.subagents[agentId]?.agentType
-            let desc = sessions[sessionId]?.subagents[agentId]?.toolDescription
-            sessions[sessionId]?.recordTool(tool, description: desc, success: false, agentType: agentType, maxHistory: maxHistory)
-        }
         sessions[sessionId]?.subagents[agentId]?.status = .processing
         sessions[sessionId]?.subagents[agentId]?.currentTool = nil
         sessions[sessionId]?.subagents[agentId]?.toolDescription = nil

@@ -8,7 +8,6 @@ struct BehaviorPage: View {
     @AppStorage(SettingsKey.hideWhenNoSession) private var hideWhenNoSession = SettingsDefaults.hideWhenNoSession
     @AppStorage(SettingsKey.smartSuppress) private var smartSuppress = SettingsDefaults.smartSuppress
     @AppStorage(SettingsKey.collapseOnMouseLeave) private var collapseOnMouseLeave = SettingsDefaults.collapseOnMouseLeave
-    @AppStorage(SettingsKey.maxToolHistory) private var maxToolHistory = SettingsDefaults.maxToolHistory
 
     var body: some View {
         Form {
@@ -39,17 +38,6 @@ struct BehaviorPage: View {
                 )
             }
 
-            Section(l10n["sessions"]) {
-                Picker(selection: $maxToolHistory) {
-                    Text("10").tag(10)
-                    Text("20").tag(20)
-                    Text("50").tag(50)
-                    Text("100").tag(100)
-                } label: {
-                    Text(l10n["tool_history_limit"])
-                    Text(l10n["tool_history_limit_desc"])
-                }
-            }
         }
         .formStyle(.grouped)
     }

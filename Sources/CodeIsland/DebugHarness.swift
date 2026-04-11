@@ -74,8 +74,6 @@ enum DebugHarness {
         s.toolDescription = "src/components/App.tsx"
         s.lastUserPrompt = "Fix the login button styling"
         s.addRecentMessage(ChatMessage(isUser: true, text: "Fix the login button styling"))
-        s.recordTool("Read", description: "package.json", success: true, agentType: nil, maxHistory: 20)
-        s.recordTool("Grep", description: "className.*login", success: true, agentType: nil, maxHistory: 20)
         s.termApp = "Ghostty"
 
         state.sessions["preview-working"] = s
@@ -134,10 +132,6 @@ enum DebugHarness {
         s.lastAssistantMessage = "Done. Added the --verbose flag to the CLI parser with short alias -v. It enables detailed logging output throughout the pipeline."
         s.addRecentMessage(ChatMessage(isUser: true, text: "Add --verbose flag"))
         s.addRecentMessage(ChatMessage(isUser: false, text: "Done. Added the --verbose flag to the CLI parser with short alias -v."))
-        s.recordTool("Read", description: "src/cli.rs", success: true, agentType: nil, maxHistory: 20)
-        s.recordTool("Edit", description: "src/cli.rs", success: true, agentType: nil, maxHistory: 20)
-        s.recordTool("Edit", description: "src/logger.rs", success: true, agentType: nil, maxHistory: 20)
-        s.recordTool("Bash", description: "cargo test", success: true, agentType: nil, maxHistory: 20)
         s.termApp = "Ghostty"
 
         state.sessions["preview-completion"] = s
@@ -200,11 +194,6 @@ enum DebugHarness {
         s1.subagents["agent-3"] = SubagentState(agentId: "agent-3", agentType: "Explore")
         // Mark one as completed
         s1.subagents["agent-3"]?.status = .idle
-        s1.recordTool("Bash", description: "find . -name '*.ts'", success: true, agentType: nil, maxHistory: 20)
-        s1.recordTool("Read", description: "tsconfig.json", success: true, agentType: nil, maxHistory: 20)
-        s1.recordTool("Edit", description: "tsconfig.json", success: true, agentType: nil, maxHistory: 20)
-        s1.recordTool("Bash", description: "tsc --noEmit", success: false, agentType: nil, maxHistory: 20)
-        s1.recordTool("Edit", description: "src/index.ts", success: true, agentType: "general-purpose", maxHistory: 20)
         s1.termApp = "Ghostty"
 
         // Claude session processing
@@ -246,8 +235,6 @@ enum DebugHarness {
         s.lastUserPrompt = "Refactor the networking layer"
         s.addRecentMessage(ChatMessage(isUser: true, text: "Refactor the networking layer"))
         s.addRecentMessage(ChatMessage(isUser: false, text: "I'll start by reading the current implementation..."))
-        s.recordTool("Read", description: "src/Network.swift", success: true, agentType: nil, maxHistory: 20)
-        s.recordTool("Grep", description: "URLSession", success: true, agentType: nil, maxHistory: 20)
         s.subagents["agent-1"] = SubagentState(agentId: "agent-1", agentType: "Explore")
         s.termApp = "Ghostty"
         state.sessions["preview-claude"] = s
@@ -294,9 +281,6 @@ enum DebugHarness {
             if s.status == .running || s.status == .processing {
                 s.currentTool = tools[i % tools.count]
                 s.toolDescription = "src/module\(i).swift"
-            }
-            for j in 0..<(i % 5) {
-                s.recordTool(tools[j % tools.count], description: "file\(j).ts", success: j % 4 != 0, agentType: nil, maxHistory: 20)
             }
             if i % 7 == 0 {
                 s.subagents["agent-\(i)-1"] = SubagentState(agentId: "agent-\(i)-1", agentType: "general-purpose")

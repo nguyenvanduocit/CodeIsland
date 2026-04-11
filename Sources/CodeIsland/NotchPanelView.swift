@@ -9,12 +9,11 @@ struct NotchPanelView: View {
     let screenWidth: CGFloat
 
     @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
-    @AppStorage(SettingsKey.smartSuppress) private var smartSuppress = SettingsDefaults.smartSuppress
     @AppStorage(SettingsKey.hideWhenNoSession) private var hideWhenNoSession = SettingsDefaults.hideWhenNoSession
 
-    /// Delayed hover: prevents accidental expansion when mouse passes through
     @State private var hoverTask: Task<Void, Never>?
     @State private var idleHovered = false
+    @State private var toolDecay = DecayState(minDuration: .seconds(2))
 
     private var isActive: Bool { !appState.sessions.isEmpty }
     /// First launch / no-session state should still render a visible marker so the app
@@ -33,6 +32,13 @@ struct NotchPanelView: View {
     /// Mascot size — fits within the menu bar height
     private var mascotSize: CGFloat { min(27, notchHeight - 6) }
 
+    /// Live tool text from active session — feeds the decay timer
+    private var liveToolText: String? {
+        guard let sid = appState.lastInputSessionId,
+              let session = appState.sessions[sid] else { return nil }
+        return session.toolDescription ?? session.currentTool
+    }
+
     /// Minimum wing width needed to display compact bar content
     private var compactWingWidth: CGFloat { mascotSize + 14 }
 
@@ -42,9 +48,7 @@ struct NotchPanelView: View {
         if showIdleIndicator { return idleHovered ? notchW + compactWingWidth * 2 + 80 : notchW + compactWingWidth * 2 }
         if !isActive { return hasNotch ? notchW - 20 : notchW }
         if shouldShowExpanded { return min(max(notchW + 200, 580), maxWidth) }
-        let wing = compactWingWidth
-        let extra: CGFloat = appState.status == .idle ? 0 : 20
-        return notchW + wing * 2 + extra
+        return notchW + compactWingWidth * 2
     }
 
     var body: some View {
@@ -58,17 +62,16 @@ struct NotchPanelView: View {
                             Spacer(minLength: 0)
                         } else if let sid = appState.lastInputSessionId,
                                   let session = appState.sessions[sid],
-                                  let msg = session.toolDescription
-                                            ?? session.currentTool
+                                  let msg = toolDecay.displayedText
                                             ?? session.lastAssistantMessage
                                             ?? session.lastUserPrompt {
                             Text(msg.replacingOccurrences(of: "\n", with: " "))
                                 .font(.system(size: 12, weight: .regular, design: .monospaced))
-                                .foregroundStyle(.white.opacity(0.6))
+                                .foregroundStyle(.white.opacity(toolDecay.displayedText != nil ? 0.8 : 0.6))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                                 .frame(maxWidth: .infinity)
-                                .padding(.horizontal, hasNotch ? notchW / 2 : 4)
+                                .padding(.horizontal, 4)
                         } else {
                             Spacer(minLength: hasNotch ? notchW : 0)
                         }
@@ -200,18 +203,15 @@ struct NotchPanelView: View {
                 }
                 // Respect collapseOnMouseLeave setting
                 if !hovering && !SettingsManager.shared.collapseOnMouseLeave { return }
-                // Smart suppress: don't auto-expand when active session's terminal is foreground
-                if hovering && smartSuppress {
-                    if let delegate = NSApp.delegate as? AppDelegate,
-                       let pc = delegate.panelController,
-                       pc.isActiveTerminalForeground() {
-                        return
-                    }
-                }
 
                 if hovering {
-                    // Delay expansion to avoid accidental triggers
                     hoverTask?.cancel()
+                    hoverTask = nil
+
+                    // Already expanded — nothing to do
+                    guard !appState.surface.isExpanded else { return }
+
+                    // Delay expansion to avoid accidental triggers
                     hoverTask = Task { @MainActor in
                         try? await Task.sleep(for: .seconds(0.2))
                         guard !Task.isCancelled else { return }
@@ -219,19 +219,26 @@ struct NotchPanelView: View {
                             appState.surface = .sessionList
                             appState.cancelCompletionQueue()
                             if appState.activeSessionId == nil {
-                                appState.activeSessionId = appState.sessions.keys.sorted().first
+                                appState.activeSessionId = appState.sortedSessionIds.first
                             }
                         }
+                        hoverTask = nil
                     }
                 } else {
-                    // Collapse with brief delay to prevent flicker on accidental mouse-out
                     hoverTask?.cancel()
+                    hoverTask = nil
+
+                    // Not expanded — nothing to collapse
+                    guard appState.surface.isExpanded else { return }
+
+                    // Collapse with brief delay to absorb jitter
                     hoverTask = Task { @MainActor in
                         try? await Task.sleep(for: .seconds(0.15))
                         guard !Task.isCancelled else { return }
                         withAnimation(NotchAnimation.close) {
                             appState.surface = .collapsed
                         }
+                        hoverTask = nil
                         // Show queued completions that arrived while user was hovering
                         appState.completionQueue.flushIfNeeded()
                     }
@@ -243,6 +250,9 @@ struct NotchPanelView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(NotchAnimation.open, value: appState.surface)
+        .onChange(of: liveToolText) { _, newValue in
+            toolDecay.update(newValue)
+        }
     }
 }
 
@@ -256,7 +266,7 @@ private struct CompactLeftWing: View {
     let mascotSize: CGFloat
 
     private var displaySession: SessionSnapshot? {
-        let sid = appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
+        let sid = appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sortedSessionIds.first
         guard let sid else { return nil }
         return appState.sessions[sid]
     }

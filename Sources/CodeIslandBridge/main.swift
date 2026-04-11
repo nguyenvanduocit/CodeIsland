@@ -269,6 +269,17 @@ if let source = sourceTag {
 // not the ephemeral bash hook script that spawned us.
 json["_ppid"] = findCLIAncestorPid()
 
+// Detect non-interactive mode (claude -p / claude --print)
+// These sessions should not trigger sounds or UI notifications
+if let cliPid = json["_ppid"] as? pid_t, cliPid > 0 {
+    if let args = ProcessScanner.processArgs(for: cliPid) {
+        let hasNonInteractiveFlag = args.contains("-p") || args.contains("--print")
+        if hasNonInteractiveFlag {
+            json["_interactive"] = false
+        }
+    }
+}
+
 // --- Serialize enriched JSON ---
 guard let enriched = try? JSONSerialization.data(withJSONObject: json) else { exit(1) }
 

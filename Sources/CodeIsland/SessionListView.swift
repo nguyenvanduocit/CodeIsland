@@ -14,7 +14,7 @@ struct SessionListView: View {
         if let only = onlySessionId, appState.sessions[only] != nil {
             return [only]
         }
-        return appState.sessions.keys.sorted()
+        return appState.sortedSessionIds
     }
 
     var body: some View {
@@ -266,29 +266,30 @@ private struct ProjectNameLink: View {
     let cardHovering: Bool
 
     var body: some View {
-        Text(name)
-            .font(.system(size: fontSize, weight: .bold, design: .monospaced))
-            .foregroundStyle(color)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .overlay(alignment: .bottom) {
-                if cwd != nil {
-                    GeometryReader { geo in
-                        Path { path in
-                            path.move(to: CGPoint(x: 0, y: geo.size.height))
-                            path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
+        Button {
+            if let cwd { NSWorkspace.shared.open(URL(fileURLWithPath: cwd)) }
+        } label: {
+            Text(name)
+                .font(.system(size: fontSize, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .overlay(alignment: .bottom) {
+                    if cwd != nil {
+                        GeometryReader { geo in
+                            Path { path in
+                                path.move(to: CGPoint(x: 0, y: geo.size.height))
+                                path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
+                            }
+                            .stroke(style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                            .foregroundStyle(color.opacity(cardHovering ? 0.5 : 0.2))
                         }
-                        .stroke(style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                        .foregroundStyle(color.opacity(cardHovering ? 0.5 : 0.2))
                     }
                 }
-            }
-            .onTapGesture {
-                if let cwd = cwd {
-                    NSWorkspace.shared.open(URL(fileURLWithPath: cwd))
-                }
-            }
-            .help(cwd != nil ? "\(L10n.shared["open_path"]) \(cwd!)" : "")
+        }
+        .buttonStyle(.plain)
+        .disabled(cwd == nil)
+        .help(cwd != nil ? "\(L10n.shared["open_path"]) \(cwd!)" : "")
     }
 }
 
@@ -340,28 +341,9 @@ private struct SessionStatusBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Model tag
-            if let model = session.shortModelName {
-                StatusChip(icon: "cpu", text: model, color: modelColor(model))
-            }
-
-            // Tool count
-            if !session.toolHistory.isEmpty {
-                StatusDot()
-                let successCount = session.toolHistory.filter(\.success).count
-                let failCount = session.toolHistory.count - successCount
-                HStack(spacing: 2) {
-                    Image(systemName: "wrench")
-                        .font(.system(size: max(7, fontSize - 3), weight: .medium))
-                        .foregroundStyle(dimColor)
-                    Text("\(successCount)")
-                        .foregroundStyle(dimColor)
-                    if failCount > 0 {
-                        Text("/\(failCount)")
-                            .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.35).opacity(0.7))
-                    }
-                }
-                .font(.system(size: max(8, fontSize - 1), weight: .medium, design: .monospaced))
+            // Elapsed time since user sent message
+            if let startedAt = session.processingStartedAt, session.status != .idle {
+                ElapsedTimerView(startedAt: startedAt, fontSize: fontSize)
             }
 
             // Active subagents
@@ -397,29 +379,26 @@ private struct SessionStatusBar: View {
         }
     }
 
-    private func modelColor(_ model: String) -> Color {
-        switch model.lowercased() {
-        case "opus": return Color(red: 0.85, green: 0.6, blue: 1.0)
-        case "sonnet": return Color(red: 0.5, green: 0.8, blue: 1.0)
-        case "haiku": return Color(red: 0.4, green: 0.9, blue: 0.7)
-        default: return Color.white.opacity(0.5)
-        }
-    }
 }
 
-private struct StatusChip: View {
-    let icon: String
-    let text: String
-    let color: Color
+private struct ElapsedTimerView: View {
+    let startedAt: Date
+    let fontSize: CGFloat
 
     var body: some View {
-        HStack(spacing: 2) {
-            Image(systemName: icon)
-                .font(.system(size: 7, weight: .medium))
-            Text(text)
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
+        TimelineView(.periodic(from: startedAt, by: 1)) { context in
+            let elapsed = Int(context.date.timeIntervalSince(startedAt))
+            let minutes = elapsed / 60
+            let seconds = elapsed % 60
+            HStack(spacing: 3) {
+                Image(systemName: "clock")
+                    .font(.system(size: max(7, fontSize - 2), weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.4))
+                Text(minutes > 0 ? "\(minutes)m\(String(format: "%02d", seconds))s" : "\(seconds)s")
+                    .font(.system(size: max(8, fontSize - 1), weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.5))
+            }
         }
-        .foregroundStyle(color)
     }
 }
 
@@ -453,6 +432,9 @@ private struct SessionCard: View {
     }
 
     var body: some View {
+        Button {
+            TerminalActivator.activate(session: session, sessionId: sessionId)
+        } label: {
         VStack(alignment: .leading, spacing: 6) {
             // Header: mascot + project name + session info + status
             HStack(alignment: .center, spacing: 6) {
@@ -537,11 +519,10 @@ private struct SessionCard: View {
                 .fill(hovering ? Color(white: 1, opacity: 0.10) : Color(white: 1, opacity: 0.05))
         )
         .padding(.horizontal, 6)
+        } // end Button label
+        .buttonStyle(.plain)
         .contentShape(Rectangle())
         .onHover { h in withAnimation(NotchAnimation.micro) { hovering = h } }
-        .onTapGesture {
-            TerminalActivator.activate(session: session, sessionId: sessionId)
-        }
     }
 
     /// Collapse consecutive blank lines and trim leading/trailing whitespace
@@ -595,11 +576,18 @@ private struct WorkingIndicator: View {
     let session: SessionSnapshot
     let fontSize: CGFloat
     let aiLineLimit: Int?
+    @State private var toolDecay = DecayState(minDuration: .seconds(2))
 
     private let toolColor = Color(red: 0.3, green: 0.85, blue: 0.4)
     private let agentColor = Color(red: 0.5, green: 0.8, blue: 1.0)
     private let dimColor = Color.white.opacity(0.5)
     private let prefixColor = Color(red: 0.85, green: 0.47, blue: 0.34)
+
+    /// Live tool text from session — nil when no tool running
+    private var liveToolText: String? {
+        guard let tool = session.currentTool else { return nil }
+        return session.toolDescription ?? tool
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -609,49 +597,69 @@ private struct WorkingIndicator: View {
                 .sorted { $0.startTime < $1.startTime }
             if !activeSubagents.isEmpty {
                 ForEach(activeSubagents, id: \.agentId) { sub in
-                    HStack(spacing: 4) {
-                        Text("⊢")
-                            .font(.system(size: fontSize, weight: .bold, design: .monospaced))
-                            .foregroundStyle(agentColor.opacity(0.6))
-                        Text(sub.agentType)
-                            .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                            .foregroundStyle(agentColor.opacity(0.8))
-                        if let tool = sub.currentTool {
-                            Text("→")
-                                .font(.system(size: fontSize - 1, design: .monospaced))
-                                .foregroundStyle(dimColor)
-                            Text(sub.toolDescription ?? tool)
-                                .font(.system(size: fontSize, design: .monospaced))
-                                .foregroundStyle(.white.opacity(0.65))
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    }
+                    SubagentRow(sub: sub, fontSize: fontSize, agentColor: agentColor, dimColor: dimColor)
                 }
             }
 
-            // Main thread: current tool or last message preview
-            if let tool = session.currentTool {
+            // Main thread: current tool or decayed last tool
+            if let displayed = toolDecay.displayedText {
                 HStack(spacing: 4) {
                     Text("$")
                         .font(.system(size: fontSize, weight: .bold, design: .monospaced))
                         .foregroundStyle(prefixColor)
-                    Text(tool)
+                    Text(displayed)
                         .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                        .foregroundStyle(toolColor.opacity(0.8))
-                    if let desc = session.toolDescription, desc != tool {
-                        Text(desc)
-                            .font(.system(size: fontSize, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.65))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
+                        .foregroundStyle(toolColor.opacity(session.currentTool != nil ? 0.8 : 0.5))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
             // No "thinking" — mascot icon already indicates active status
         }
+        .onChange(of: liveToolText) { _, newValue in
+            toolDecay.update(newValue)
+        }
     }
 
+}
+
+// MARK: - Subagent Row
+
+private struct SubagentRow: View {
+    let sub: SubagentState
+    let fontSize: CGFloat
+    let agentColor: Color
+    let dimColor: Color
+    @State private var toolDecay = DecayState(minDuration: .seconds(2))
+
+    private var liveToolText: String? {
+        guard let tool = sub.currentTool else { return nil }
+        return sub.toolDescription ?? tool
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("├")
+                .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                .foregroundStyle(agentColor.opacity(0.4))
+            Text(sub.agentType)
+                .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                .foregroundStyle(agentColor.opacity(0.8))
+            if let displayed = toolDecay.displayedText {
+                Text("→")
+                    .font(.system(size: fontSize - 1, design: .monospaced))
+                    .foregroundStyle(dimColor)
+                Text(displayed)
+                    .font(.system(size: fontSize, design: .monospaced))
+                    .foregroundStyle(.white.opacity(sub.currentTool != nil ? 0.65 : 0.4))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+        .onChange(of: liveToolText) { _, newValue in
+            toolDecay.update(newValue)
+        }
+    }
 }
 
 // MARK: - Task Notification Row

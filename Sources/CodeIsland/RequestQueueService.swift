@@ -35,23 +35,34 @@ final class RequestQueueService {
         }
     }
 
-    func approve(always: Bool) -> String? {
+    func approve(always: Bool, suggestionIndex: Int? = nil) -> String? {
         guard !permissionQueue.isEmpty else { return nil }
         let pending = permissionQueue.removeFirst()
         let responseData: Data
         if always {
-            let toolName = pending.event.toolName ?? ""
+            // Use permission_suggestions from Claude Code if available
+            let updatedPermissions: [[String: Any]]
+            if let suggestions = pending.event.permissionSuggestions,
+               let idx = suggestionIndex, idx < suggestions.count {
+                updatedPermissions = [suggestions[idx]]
+            } else if let suggestions = pending.event.permissionSuggestions, !suggestions.isEmpty {
+                updatedPermissions = [suggestions[0]]
+            } else {
+                // Fallback: construct addRules for this tool
+                let toolName = pending.event.toolName ?? ""
+                updatedPermissions = [[
+                    "type": "addRules",
+                    "rules": [["toolName": toolName, "ruleContent": "*"]],
+                    "behavior": "allow",
+                    "destination": "session"
+                ]]
+            }
             let obj: [String: Any] = [
                 "hookSpecificOutput": [
                     "hookEventName": "PermissionRequest",
                     "decision": [
                         "behavior": "allow",
-                        "updatedPermissions": [[
-                            "type": "addRules",
-                            "rules": [["toolName": toolName, "ruleContent": "*"]],
-                            "behavior": "allow",
-                            "destination": "session"
-                        ]]
+                        "updatedPermissions": updatedPermissions
                     ] as [String: Any]
                 ] as [String: Any]
             ]

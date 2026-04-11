@@ -57,7 +57,7 @@ final class CompletionQueueService {
     private func shouldSuppressAppLevel(for sessionId: String) -> Bool {
         guard UserDefaults.standard.bool(forKey: SettingsKey.smartSuppress) else { return false }
         guard let session = appState?.sessions[sessionId],
-              (session.termApp != nil || session.termBundleId != nil) else { return false }
+              session.hasTerminalInfo else { return false }
         return TerminalVisibilityDetector.isTerminalFrontmostForSession(session)
     }
 
