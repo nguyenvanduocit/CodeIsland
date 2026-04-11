@@ -5,19 +5,11 @@ import os.log
 private let log = Logger(subsystem: "com.codeisland", category: "TerminalActivator")
 
 /// Activates the terminal window/tab running a specific Claude Code session.
-/// Supports tab-level switching for: Ghostty, iTerm2, Terminal.app, WezTerm, kitty.
-/// Falls back to app-level activation for: Alacritty, Warp, Hyper, Tabby, Rio.
+/// Supports Ghostty only. Falls back to app-level activation for anything else.
 struct TerminalActivator {
 
     private static let knownTerminals: [(name: String, bundleId: String)] = [
-        ("cmux", "com.cmuxterm.app"),
         ("Ghostty", "com.mitchellh.ghostty"),
-        ("iTerm2", "com.googlecode.iterm2"),
-        ("WezTerm", "com.github.wez.wezterm"),
-        ("kitty", "net.kovidgoyal.kitty"),
-        ("Alacritty", "org.alacritty"),
-        ("Warp", "dev.warp.Warp-Stable"),
-        ("Terminal", "com.apple.Terminal"),
     ]
 
     /// Fallback: source-based app jump for CLIs with NO terminal mode.
@@ -83,54 +75,18 @@ struct TerminalActivator {
                 termApp = raw
             }
         }
-        let lower = termApp.lowercased()
 
-        // --- tmux: switch pane first, then fall through to terminal-specific activation ---
+        // --- tmux: switch pane first, then fall through to terminal activation ---
         if let pane = session.tmuxPane, !pane.isEmpty {
             activateTmux(pane: pane)
         }
 
-        // In tmux, use the client TTY (outer terminal) for tab matching,
-        // since ttyPath is the inner tmux pty which won't match the terminal's tab.
-        let inTmux = session.tmuxPane != nil && !(session.tmuxPane ?? "").isEmpty
-        let effectiveTty = inTmux
-            ? (session.tmuxClientTty ?? session.ttyPath)
-            : session.ttyPath
-
-        // --- Tab-level switching (5 terminals) ---
-
-        if lower.contains("iterm") {
-            if let itermId = session.itermSessionId, !itermId.isEmpty {
-                activateITerm(sessionId: itermId)
-            } else {
-                bringToFront("iTerm2")
-            }
-            return
-        }
-
-        if lower == "ghostty" {
+        if termApp.lowercased() == "ghostty" {
             let displayId = session.displaySessionId(sessionId: sessionId ?? "")
             activateGhostty(cwd: session.cwd, sessionId: displayId, source: session.source)
-            return
+        } else {
+            bringToFront(termApp)
         }
-
-        if lower.contains("terminal") || lower.contains("apple_terminal") {
-            activateTerminalApp(ttyPath: effectiveTty)
-            return
-        }
-
-        if lower.contains("wezterm") || lower.contains("wez") {
-            activateWezTerm(ttyPath: effectiveTty, cwd: session.cwd)
-            return
-        }
-
-        if lower.contains("kitty") {
-            activateKitty(windowId: session.kittyWindowId, cwd: session.cwd, source: session.source)
-            return
-        }
-
-        // --- App-level only (Alacritty, Warp, Hyper, Tabby, Rio, etc.) ---
-        bringToFront(termApp)
     }
 
     // MARK: - Ghostty (AppleScript: match by CWD + session ID in title)
@@ -185,108 +141,6 @@ struct TerminalActivator {
         runAppleScript(script)
     }
 
-    // MARK: - iTerm2 (AppleScript: match by session ID)
-
-    private static func activateITerm(sessionId: String) {
-        if let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.googlecode.iterm2" }) {
-            if app.isHidden { app.unhide() }
-            app.activate()
-        }
-        let script = """
-        try
-            tell application "iTerm2"
-                repeat with aWindow in windows
-                    if miniaturized of aWindow then set miniaturized of aWindow to false
-                    repeat with aTab in tabs of aWindow
-                        repeat with aSession in sessions of aTab
-                            if unique ID of aSession is "\(escapeAppleScript(sessionId))" then
-                                set miniaturized of aWindow to false
-                                select aTab
-                                select aSession
-                                return
-                            end if
-                        end repeat
-                    end repeat
-                end repeat
-            end tell
-        end try
-        """
-        runAppleScript(script)
-    }
-
-    // MARK: - Terminal.app (AppleScript: match by TTY)
-
-    private static func activateTerminalApp(ttyPath: String?) {
-        guard let tty = ttyPath, !tty.isEmpty else { bringToFront("Terminal"); return }
-        let escaped = escapeAppleScript(tty)
-        let script = """
-        tell application "Terminal"
-            repeat with w in windows
-                repeat with t in tabs of w
-                    if tty of t is "\(escaped)" then
-                        if miniaturized of w then set miniaturized of w to false
-                        set selected tab of w to t
-                        set index of w to 1
-                    end if
-                end repeat
-            end repeat
-            activate
-        end tell
-        """
-        runAppleScript(script)
-    }
-
-    // MARK: - WezTerm (CLI: wezterm cli list + activate-tab)
-
-    private static func activateWezTerm(ttyPath: String?, cwd: String?) {
-        bringToFront("WezTerm")
-        guard let bin = findBinary("wezterm") else { return }
-        Task.detached(priority: .userInitiated) {
-            guard let json = runProcess(bin, args: ["cli", "list", "--format", "json"]),
-                  let panes = try? JSONSerialization.jsonObject(with: json) as? [[String: Any]] else { return }
-
-            // Find tab: prefer TTY match, fallback to CWD
-            var tabId: Int?
-            if let tty = ttyPath {
-                tabId = panes.first(where: { ($0["tty_name"] as? String) == tty })?["tab_id"] as? Int
-            }
-            if tabId == nil, let cwd = cwd {
-                let cwdUrl = "file://" + cwd
-                tabId = panes.first(where: {
-                    guard let paneCwd = $0["cwd"] as? String else { return false }
-                    return paneCwd == cwdUrl || paneCwd == cwd
-                })?["tab_id"] as? Int
-            }
-
-            if let id = tabId {
-                _ = runProcess(bin, args: ["cli", "activate-tab", "--tab-id", "\(id)"])
-            }
-        }
-    }
-
-    // MARK: - kitty (CLI: kitten @ focus-window/focus-tab)
-
-    private static func activateKitty(windowId: String?, cwd: String?, source: String = "claude") {
-        bringToFront("kitty")
-        guard let bin = findBinary("kitten") else { return }
-
-        // Prefer window ID for precise switching
-        if let windowId = windowId, !windowId.isEmpty {
-            Task.detached(priority: .userInitiated) {
-                _ = runProcess(bin, args: ["@", "focus-window", "--match", "id:\(windowId)"])
-            }
-            return
-        }
-
-        // Fallback to CWD matching, then title with source keyword
-        guard let cwd = cwd, !cwd.isEmpty else { return }
-        Task.detached(priority: .userInitiated) {
-            if runProcess(bin, args: ["@", "focus-tab", "--match", "cwd:\(cwd)"]) == nil {
-                _ = runProcess(bin, args: ["@", "focus-tab", "--match", "title:\(source)"])
-            }
-        }
-    }
-
     // MARK: - tmux (CLI: tmux select-window/select-pane)
 
     private static func activateTmux(pane: String) {
@@ -302,18 +156,7 @@ struct TerminalActivator {
 
     private static func bringToFront(_ termApp: String) {
         let name: String
-        let lower = termApp.lowercased()
-        if lower.contains("cmux") { name = "cmux" }
-        else if lower == "ghostty" { name = "Ghostty" }
-        else if lower.contains("iterm") { name = "iTerm2" }
-        else if lower.contains("terminal") || lower.contains("apple_terminal") { name = "Terminal" }
-        else if lower.contains("wezterm") || lower.contains("wez") { name = "WezTerm" }
-        else if lower.contains("alacritty") || lower.contains("lacritty") { name = "Alacritty" }
-        else if lower.contains("kitty") { name = "kitty" }
-        else if lower.contains("warp") { name = "Warp" }
-        else if lower.contains("hyper") { name = "Hyper" }
-        else if lower.contains("tabby") { name = "Tabby" }
-        else if lower.contains("rio") { name = "Rio" }
+        if termApp.lowercased() == "ghostty" { name = "Ghostty" }
         else { name = termApp }
 
         // Try NSRunningApplication first — handles Space switching and unhide
@@ -342,44 +185,15 @@ struct TerminalActivator {
                 return name
             }
         }
-        return "Terminal"
+        return "Ghostty"
     }
 
-    /// Fork a session: open a new tab in the session's terminal and run `claude --resume <id> --fork-session`
+    /// Fork a session: open a new tab in Ghostty and run `claude --resume <id> --fork-session`
     static func forkSession(session: SessionSnapshot, sessionId: String) {
         let dir = session.cwd ?? FileManager.default.homeDirectoryForCurrentUser.path
         let command = "claude --resume \(sessionId) --fork-session"
         log.info("forkSession: sessionId=\(sessionId) cwd=\(dir) termApp=\(session.termApp ?? "nil") termBundle=\(session.termBundleId ?? "nil")")
-
-        // Resolve terminal (same logic as activate)
-        let termApp: String
-        if let bundleId = session.termBundleId,
-           let resolved = knownTerminals.first(where: { $0.bundleId == bundleId })?.name {
-            termApp = resolved
-        } else {
-            let raw = session.termApp ?? ""
-            if raw.isEmpty || raw.lowercased() == "tmux" || raw.lowercased() == "screen" {
-                termApp = detectRunningTerminal()
-            } else {
-                termApp = raw
-            }
-        }
-        let lower = termApp.lowercased()
-
-        if lower.contains("iterm") {
-            forkInITerm(cwd: dir, command: command)
-        } else if lower == "ghostty" {
-            forkInGhostty(cwd: dir, command: command)
-        } else if lower.contains("terminal") || lower.contains("apple_terminal") {
-            forkInTerminalApp(cwd: dir, command: command)
-        } else if lower.contains("wezterm") || lower.contains("wez") {
-            forkInWezTerm(cwd: dir, command: command)
-        } else if lower.contains("kitty") {
-            forkInKitty(cwd: dir, command: command)
-        } else {
-            // Fallback: Ghostty (our primary target)
-            forkInGhostty(cwd: dir, command: command)
-        }
+        forkInGhostty(cwd: dir, command: command)
     }
 
     private static func forkInGhostty(cwd: String, command: String) {
@@ -396,53 +210,6 @@ struct TerminalActivator {
         end tell
         """
         runAppleScript(script)
-    }
-
-    private static func forkInITerm(cwd: String, command: String) {
-        let escapedCwd = escapeAppleScript(cwd)
-        let escapedCmd = escapeAppleScript(command)
-        let script = """
-        tell application "iTerm2"
-            activate
-            tell current window
-                create tab with default profile
-                tell current session
-                    write text "cd \\"\(escapedCwd)\\" && \(escapedCmd)"
-                end tell
-            end tell
-        end tell
-        """
-        runAppleScript(script)
-    }
-
-    private static func forkInTerminalApp(cwd: String, command: String) {
-        let escapedCwd = escapeAppleScript(cwd)
-        let escapedCmd = escapeAppleScript(command)
-        let script = """
-        tell application "Terminal"
-            activate
-            do script "cd \\"\(escapedCwd)\\" && \(escapedCmd)"
-        end tell
-        """
-        runAppleScript(script)
-    }
-
-    private static func forkInWezTerm(cwd: String, command: String) {
-        guard let bin = findBinary("wezterm") else { return }
-        bringToFront("WezTerm")
-        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-        Task.detached(priority: .userInitiated) {
-            _ = runProcess(bin, args: ["cli", "spawn", "--cwd", cwd, "--", shell, "-ic", command])
-        }
-    }
-
-    private static func forkInKitty(cwd: String, command: String) {
-        guard let bin = findBinary("kitten") else { return }
-        bringToFront("kitty")
-        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-        Task.detached(priority: .userInitiated) {
-            _ = runProcess(bin, args: ["@", "launch", "--type=tab", "--cwd", cwd, shell, "-ic", command])
-        }
     }
 
     /// Check (and prompt) for Accessibility permission. Returns true if granted.

@@ -577,15 +577,6 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         return false
     }
 
-    /// Fast check: is the terminal running the active session the foreground app?
-    /// Main-thread safe — no AppleScript or subprocess calls.
-    func isActiveTerminalForeground() -> Bool {
-        guard let sessionId = appState.activeSessionId,
-              let session = appState.sessions[sessionId],
-              session.termApp != nil else { return false }
-        return TerminalVisibilityDetector.isTerminalFrontmostForSession(session)
-    }
-
     deinit {
         autoScreenPollerTask?.cancel()
         fullscreenPollerTask?.cancel()

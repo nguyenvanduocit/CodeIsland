@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-08 -->
+<!-- Updated: 2026-04-09 -->
 
 ## Backlog
 
@@ -37,6 +37,20 @@
 - [ ] Unit tests added; `swift build && swift test` passes
 
 ## Doing
+
+### [T-011: Cherry-pick features từ reference projects](tasks/T-011-reference-sync-apr09.md)
+> Replicate 7 features từ upstream, open-vibe-island, notchi — adapt theo kiến trúc mình.
+- **priority**: high
+- **effort**: L
+#### Criteria
+- [x] T-011a: Hook exec PID fix
+- [x] T-011b: Structured tool status display
+- [x] T-011c: PID liveness check
+- [x] T-011d: Click session card → jump terminal
+- [x] T-011e: Stale subagent cleanup
+- [x] T-011f: Dynamic approval buttons
+- [ ] ~~T-011g: Auto-scroll activity feed~~ (skipped — no expandable messages in our UI)
+- [x] `swift build && swift test` passes on all changes
 
 ## Done
 

@@ -30,7 +30,7 @@ Models and business logic. Zero UI imports. All types are `Sendable` + `Codable`
 
 | File | Purpose |
 |------|---------|
-| `Models.swift` | `AgentStatus`, `HookEvent` (typed — `EventMetadata` + typed fields, no rawJSON), `SubagentState`, `ToolHistoryEntry`, `ChatMessage`, `HookResponse`, `QuestionPayload` |
+| `Models.swift` | `AgentStatus`, `HookEvent` (typed — `EventMetadata` + typed fields, no rawJSON), `SubagentState`, `ChatMessage`, `HookResponse`, `QuestionPayload` |
 | `SessionSnapshot.swift` | `SessionSnapshot` (Sendable, Codable), `reduceEvent()` pure reducer, `extractMetadata()`, `SideEffect` enum, `TokenUsage`, `deriveSessionSummary()` |
 | `MascotState.swift` | `MascotTask`, `MascotEmotion`, `MascotState` — sprite animation state model (ported from notchi) |
 | `EmotionState.swift` | `EmotionState` — emotion scoring + decay (happy/sad/sob thresholds, 60s decay cycle) |
@@ -72,7 +72,8 @@ This is the core architectural pattern. All session state transitions go through
 - `metadata: EventMetadata` — shared fields (cwd, model, terminal info, etc.)
 - Event-specific: `prompt`, `lastAssistantMessage`, `errorDetails`, `isInterrupt`, `agentType`, `newCwd`, `question`, etc.
 - `askUserPayload: QuestionPayload?` — pre-parsed from AskUserQuestion tool_input
-- `toolDescription: String?` — derived from tool_input at parse time
+- `toolDescription: String?` — derived per tool type at parse time (Bash→description, Read→file:offset, Grep→pattern+dir, etc.)
+- `permissionSuggestions: [[String: Any]]?` — raw permission update suggestions from Claude Code
 
 ### Permission Auto-Approve
 
@@ -107,9 +108,15 @@ Last synced commit: `c016c4a` (v1.0.9)
 | 2026-04-07 | v1.0.7 | `f00f2e7` | Cherry-pick bugfixes | half-close race, startup race, auto-approve tools, CLI version compat, compact bar display |
 | 2026-04-07 | v1.0.8 | `447ed88` | Cherry-pick feature | Horizontal drag (always-on, no setting toggle) |
 | 2026-04-07 | v1.0.9 | `c016c4a` | Cherry-pick bugfix | Ghostty exact matching — avoid misidentifying libghostty apps |
+| 2026-04-09 | post-v1.0.15 | `b995a58` | Selective cherry-pick | Structured tool status display, PID liveness check 30s, stuck detection |
+| 2026-04-09 | post-v1.0.15 | `b18e5b9` | Cherry-pick bugfix | Hook exec PID fix — `exec` replaces bash for correct getppid() |
+| 2026-04-09 | post-v1.0.15 | `668b889` | Cherry-pick UX | Click entire session card to jump terminal (Button wrap) |
 
-Unsynced from v1.0.7: global shortcuts, tool status in compact bar, in-app auto-update, CI/CD pipeline.
+Also ported from **open-vibe-island**: stale subagent cleanup (3min timeout + prompt clear), dynamic permission_suggestions parsing.
+
+Unsynced from v1.0.7: global shortcuts, in-app auto-update, CI/CD pipeline.
 Unsynced from v1.0.8: Copilot CLI support (not needed — Claude Code only).
+Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transition, diagnostics exporter, custom sound per event, StatusItemController KVO refactor, Warp terminal fix, Ghostty tmux focus, notarization/DMG build.
 
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 

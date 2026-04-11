@@ -28,7 +28,6 @@ final class AppState {
         set { completionQueue.completionHasBeenEntered = newValue }
     }
 
-    private var maxHistory: Int { SettingsManager.shared.maxToolHistory }
     private var cleanupTask: Task<Void, Never>?
     let processMonitor = ProcessMonitorService()
     let completionQueue = CompletionQueueService()
@@ -78,6 +77,11 @@ final class AppState {
         }
         extractMetadata(into: &sessions, sessionId: sessionId, event: event)
         processMonitor.tryMonitor(sessionId: sessionId, cliPid: sessions[sessionId]?.cliPid)
+        // Record process creation time for PID-reuse detection
+        if sessions[sessionId]?.processStartTime == nil,
+           let pid = sessions[sessionId]?.cliPid, pid > 0 {
+            sessions[sessionId]?.processStartTime = ProcessScanner.startTime(for: pid)
+        }
         // Same process, new session_id → remove the stale entry
         if isNew, let pid = sessions[sessionId]?.cliPid, pid > 0 {
             for (key, _) in sessions where key != sessionId && sessions[key]?.cliPid == pid {
@@ -115,11 +119,27 @@ final class AppState {
         sessions[sessionId] != nil
     }
 
+    /// Reset a session to idle state, clearing tool info.
+    /// Centralizes the pattern used by cleanup, process exit, and deny.
+    private func resetToIdle(_ sessionId: String) {
+        guard sessions[sessionId]?.status != .idle else { return }
+        sessions[sessionId]?.status = .idle
+        sessions[sessionId]?.currentTool = nil
+        sessions[sessionId]?.toolDescription = nil
+    }
+
     private func startCleanupLoop() {
         cleanupTask = Task { [weak self] in
+            var tick = 0
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(60))
-                self?.cleanupIdleSessions()
+                try? await Task.sleep(for: .seconds(5))
+                tick += 1
+                // Light pass every 5s: liveness checks + stuck detection
+                self?.cleanupLight()
+                // Heavy pass every 30s: full process scan, orphan cleanup, token refresh
+                if tick % 6 == 0 {
+                    self?.cleanupHeavy()
+                }
             }
         }
     }
@@ -137,12 +157,49 @@ final class AppState {
         }
     }
 
-    private func cleanupIdleSessions() {
-        // Expire recently-exited session markers (30s is plenty to absorb late socket events)
+    /// Light cleanup (every 5s): liveness checks on monitored PIDs + stuck session reset.
+    /// Only uses `kill(pid, 0)` — no full process table scan.
+    private func cleanupLight() {
+        // Expire recently-exited session markers
         let cutoff = Date().addingTimeInterval(-30)
         recentlyExitedSessions = recentlyExitedSessions.filter { $0.value > cutoff }
 
-        // Refresh transcript file sizes and token usage
+        var mutated = false
+
+        for (key, session) in sessions {
+            if processMonitor.isMonitoring(key) {
+                // Check monitored PID liveness (DispatchSourceProcess can miss exits)
+                if let pid = processMonitor.pid(for: key),
+                   kill(pid, 0) != 0, errno == ESRCH {
+                    processMonitor.stop(sessionId: key)
+                    resetToIdle(key)
+                    mutated = true
+                    continue
+                }
+                // Stuck monitored: alive process, no active tool for 120s
+                if session.isStuckCandidate,
+                   session.currentTool == nil,
+                   -session.lastActivity.timeIntervalSinceNow > 120 {
+                    resetToIdle(key)
+                    mutated = true
+                }
+            } else {
+                // Stuck unmonitored: no events for threshold period
+                if session.isStuckCandidate {
+                    let threshold: TimeInterval = session.currentTool != nil ? 180 : 60
+                    if -session.lastActivity.timeIntervalSinceNow > threshold {
+                        resetToIdle(key)
+                        mutated = true
+                    }
+                }
+            }
+        }
+
+        if mutated { refreshDerivedState() }
+    }
+
+    /// Heavy cleanup (every 30s): full process scan, orphan kill, PID-reuse detection, token refresh.
+    private func cleanupHeavy() {
         refreshTokenUsage()
         for (sessionId, session) in sessions {
             guard let path = session.transcriptPath, !path.isEmpty else { continue }
@@ -152,53 +209,58 @@ final class AppState {
             }
         }
 
-        // Cache running Claude PIDs for this cleanup cycle (avoids repeated scans)
         let claudePids = Set(ProcessScanner.findClaudePids())
 
-        // 1. Kill orphaned Claude processes (terminal closed but process survived)
-        // Collect first to avoid mutating during iteration
+        // Kill orphaned processes (terminal closed, process survived with ppid <= 1)
         var orphaned: [(String, pid_t)] = []
-        for (sessionId, session) in sessions {
+        for (sessionId, _) in sessions {
             guard let pid = processMonitor.pid(for: sessionId) else { continue }
             var info = proc_bsdinfo()
             let ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size))
             if ret > 0 && info.pbi_ppid <= 1 {
                 orphaned.append((sessionId, pid))
             }
-            _ = session // silence unused warning
         }
         for (sessionId, pid) in orphaned {
             kill(pid, SIGTERM)
             removeSession(sessionId)
         }
 
-        // 2. Remove zombie sessions — detached monitors watching reused PIDs
+        // Check monitored PIDs against Claude process list + PID-reuse detection
+        var deadMonitors: [String] = []
         for (key, _) in sessions {
             guard processMonitor.isMonitoring(key) else { continue }
             guard let pid = processMonitor.pid(for: key) else { continue }
             if !claudePids.contains(pid) {
-                // Monitor is watching a PID that's no longer Claude (reused by another process)
-                processMonitor.stop(sessionId: key)
-                removeSession(key)
+                deadMonitors.append(key)
+            } else if let savedStart = sessions[key]?.processStartTime,
+                      let currentStart = ProcessScanner.startTime(for: pid),
+                      abs(savedStart.timeIntervalSince(currentStart)) > 2 {
+                // Same PID, different process instance (OS reused PID)
+                deadMonitors.append(key)
             }
         }
+        for key in deadMonitors {
+            processMonitor.stop(sessionId: key)
+            resetToIdle(key)
+        }
 
-        // 3. Remove sessions whose process is dead
+        // Unmonitored sessions: try to attach monitor or remove if dead
+        let deadMonitorKeys = Set(deadMonitors)
         for (key, session) in sessions {
-            if processMonitor.isMonitoring(key) { continue }
+            if processMonitor.isMonitoring(key) || deadMonitorKeys.contains(key) { continue }
             guard let pid = session.cliPid, pid > 0 else {
                 removeSession(key)
                 continue
             }
-            if kill(pid, 0) != 0 {
-                removeSession(key)
-            } else if !claudePids.contains(pid) {
+            if kill(pid, 0) != 0 || !claudePids.contains(pid) {
                 removeSession(key)
             } else {
                 processMonitor.monitor(sessionId: key, pid: pid)
             }
         }
-        // refreshDerivedState is called inside removeSession for each removal
+
+        refreshDerivedState()
     }
 
     /// Remove a session, clean up its monitor, and resume any pending continuations.
@@ -212,6 +274,7 @@ final class AppState {
         drainPermissions(forSession: sessionId)
         drainQuestions(forSession: sessionId)
         clearAutoApproveState(forSession: sessionId)
+        SoundManager.shared.clearCooldown(for: sessionId)
 
         if surface.sessionId == sessionId {
             showNextPending()
@@ -280,6 +343,8 @@ final class AppState {
     private(set) var primarySource: String = "claude"
     private(set) var activeSessionCount: Int = 0
     private(set) var totalSessionCount: Int = 0
+    /// Sorted session IDs — cached to avoid re-sorting in view body evaluations
+    private(set) var sortedSessionIds: [String] = []
 
     var currentTool: String? {
         guard let id = activeSessionId, let s = sessions[id] else { return nil }
@@ -311,6 +376,8 @@ final class AppState {
         if primarySource != summary.primarySource { primarySource = summary.primarySource }
         if activeSessionCount != summary.activeSessionCount { activeSessionCount = summary.activeSessionCount }
         if totalSessionCount != summary.totalSessionCount { totalSessionCount = summary.totalSessionCount }
+        let newSorted = sessions.keys.sorted()
+        if sortedSessionIds != newSorted { sortedSessionIds = newSorted }
     }
 
     private func refreshProviderTitle(for trackedSessionId: String, providerSessionId: String? = nil) {
@@ -368,7 +435,7 @@ final class AppState {
         let wasWaiting = sessions[sessionId]?.status == .waitingApproval
             || sessions[sessionId]?.status == .waitingQuestion
 
-        let effects = reduceEvent(sessions: &sessions, event: event, trackingKey: sessionId, maxHistory: maxHistory)
+        let effects = reduceEvent(sessions: &sessions, event: event, trackingKey: sessionId)
 
         // Debug: log subagent state after reduce
         if let snap = sessions[sessionId], !snap.subagents.isEmpty {
@@ -420,23 +487,29 @@ final class AppState {
             refreshProviderTitle(for: sessionId)
         }
 
-        // Handle the "else if activeSessionId == sessionId → mostActive" edge case
-        // (reducer can't check activeSessionId since it's AppState-local)
+        // When a session goes idle, switch to the most active remaining session
         if sessions[sessionId]?.status == .idle && activeSessionId == sessionId {
-            if event.eventName != "Stop" {
-                activeSessionId = mostActiveSessionId()
-            }
+            activeSessionId = mostActiveSessionId()
         }
 
         startRotationIfNeeded()
         refreshDerivedState()
+
+        // Auto-collapse session list when all sessions go idle
+        if activeSessionCount == 0, case .sessionList = surface {
+            withAnimation(NotchAnimation.close) {
+                surface = .collapsed
+            }
+            completionQueue.flushIfNeeded()
+        }
     }
 
     private func executeEffect(_ effect: SideEffect, sessionId: String) {
         switch effect {
         case .playSound(let eventName):
             guard !suppressSideEffects else { break }
-            SoundManager.shared.handleEvent(eventName)
+            let interactive = sessions[sessionId]?.interactive ?? true
+            SoundManager.shared.handleEvent(eventName, sessionId: sessionId, interactive: interactive)
         case .tryMonitorSession(let sid):
             processMonitor.tryMonitor(sessionId: sid, cliPid: sessions[sid]?.cliPid)
         case .stopMonitor(let sid):
@@ -473,12 +546,7 @@ final class AppState {
 
     func denyPermission() {
         guard let sessionId = requestQueue.deny() else { return }
-        if var snap = sessions[sessionId] {
-            snap.status = .idle
-            snap.currentTool = nil
-            snap.toolDescription = nil
-            sessions[sessionId] = snap
-        }
+        resetToIdle(sessionId)
         if activeSessionId == sessionId {
             activeSessionId = mostActiveSessionId()
         }
@@ -575,8 +643,20 @@ final class AppState {
         case .approvalCard, .questionCard:
             surface = next
         case .collapsed:
-            if case .approvalCard = surface { surface = .collapsed }
-            else if case .questionCard = surface { surface = .collapsed }
+            // No more permissions/questions — drain queued completions before collapsing.
+            // Only drain when transitioning FROM an interactive card (approval/question).
+            // If surface is .completionCard or .sessionList, we don't interfere — those
+            // surfaces have their own dismiss lifecycle.
+            let wasInteractive: Bool = {
+                if case .approvalCard = surface { return true }
+                if case .questionCard = surface { return true }
+                return false
+            }()
+            if wasInteractive {
+                completionQueue.flushIfNeeded()
+                if case .completionCard = surface { return }  // flush showed a completion
+            }
+            surface = .collapsed
         default:
             break
         }
@@ -606,8 +686,12 @@ final class AppState {
         processMonitor.onSessionExpired = { [weak self] sessionId, exitTime in
             guard let self, let session = self.sessions[sessionId] else { return }
             if session.lastActivity > exitTime { return }
-            self.removeSession(sessionId)
+            self.resetToIdle(sessionId)
+            self.drainPermissions(forSession: sessionId)
+            self.drainQuestions(forSession: sessionId)
+            self.refreshDerivedState()
         }
+        processMonitor.appState = self
 
         // Replay events logged while app was not running
         suppressSideEffects = true
@@ -619,7 +703,7 @@ final class AppState {
         suppressSideEffects = false
 
         if activeSessionId == nil {
-            activeSessionId = sessions.keys.sorted().first
+            activeSessionId = sortedSessionIds.first
         }
         refreshDerivedState()
     }

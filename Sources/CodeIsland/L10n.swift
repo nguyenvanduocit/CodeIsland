@@ -63,10 +63,6 @@ final class L10n {
         "smart_suppress_desc": "Don't auto-expand panel when agent's terminal tab is in foreground",
         "collapse_on_mouse_leave": "Auto-collapse on Mouse Leave",
         "collapse_on_mouse_leave_desc": "Collapse expanded panel back to notch when mouse moves away",
-        "sessions": "Sessions",
-        "tool_history_limit": "Tool History Limit",
-        "tool_history_limit_desc": "Max number of recent tool calls shown per session",
-
         // Appearance
         "preview": "Preview",
         "panel": "Panel",
@@ -195,10 +191,6 @@ final class L10n {
         "smart_suppress_desc": "Agent 所在终端标签页在前台时不自动展开面板",
         "collapse_on_mouse_leave": "鼠标离开时自动收起",
         "collapse_on_mouse_leave_desc": "鼠标移出展开的面板后自动收回到刘海状态",
-        "sessions": "会话",
-        "tool_history_limit": "工具历史上限",
-        "tool_history_limit_desc": "每个会话显示的最近工具调用数量上限",
-
         // Appearance
         "preview": "预览",
         "panel": "面板",

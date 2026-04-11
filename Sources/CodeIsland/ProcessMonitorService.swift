@@ -12,6 +12,8 @@ final class ProcessMonitorService {
     /// Parameters: sessionId, exitTime (so caller can check for fresh activity).
     var onSessionExpired: ((String, Date) -> Void)?
 
+    weak var appState: AppState?
+
     func isMonitoring(_ sessionId: String) -> Bool { monitors[sessionId] != nil }
     func pid(for sessionId: String) -> pid_t? { monitors[sessionId]?.pid }
 
@@ -57,6 +59,15 @@ final class ProcessMonitorService {
     private func handleProcessExit(sessionId: String, exitedPid: pid_t) {
         stop(sessionId: sessionId)
         log.debug("Process \(exitedPid) exited for session \(sessionId)")
+        // Check if the PID was already replaced by a new alive process
+        // (e.g. auto-update restarted Claude Code). If so, re-attach monitor.
+        if let checkPid = appState?.sessions[sessionId]?.cliPid,
+           checkPid > 0, checkPid != exitedPid,
+           kill(checkPid, 0) == 0 {
+            log.debug("Session \(sessionId) taken over by new PID \(checkPid), re-attaching monitor")
+            monitor(sessionId: sessionId, pid: checkPid)
+            return
+        }
         onSessionExpired?(sessionId, Date())
     }
 }

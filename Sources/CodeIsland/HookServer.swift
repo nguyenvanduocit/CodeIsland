@@ -23,7 +23,12 @@ class HookServer {
     }
 
     func start() {
-        // Clean up stale socket
+        // Probe existing socket before unlinking — avoid stealing from active listener
+        if probeSocket(at: HookServer.socketPath) {
+            log.warning("Another instance is actively listening on \(HookServer.socketPath), skipping start")
+            return
+        }
+        // Clean up stale socket (probe confirmed no active listener)
         unlink(HookServer.socketPath)
 
         let params = NWParameters()
@@ -209,5 +214,39 @@ class HookServer {
         connection.send(content: data, completion: .contentProcessed { _ in
             connection.cancel()
         })
+    }
+
+    /// Probe whether a socket file has an active listener.
+    /// Returns true if another process is listening (don't steal it).
+    private func probeSocket(at path: String) -> Bool {
+        // No socket file → nothing to steal
+        var statBuf = stat()
+        guard stat(path, &statBuf) == 0, (statBuf.st_mode & S_IFMT) == S_IFSOCK else {
+            return false
+        }
+        // Try to connect — if it succeeds, someone is listening
+        let sock = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard sock >= 0 else { return false }
+        defer { close(sock) }
+
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        withUnsafeMutablePointer(to: &addr.sun_path.0) { ptr in
+            path.withCString { _ = strcpy(ptr, $0) }
+        }
+
+        let result = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(sock, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+
+        if result == 0 {
+            // Connection succeeded — active listener exists
+            return true
+        }
+        // ECONNREFUSED = stale socket (no listener), safe to unlink
+        // ENOENT should not happen (we checked stat), but treat as safe
+        return false
     }
 }

@@ -31,9 +31,6 @@ enum SettingsKey {
     static let soundPromptSubmit = "soundPromptSubmit"
     static let soundBoot = "soundBoot"
 
-    // Advanced
-    static let maxToolHistory = "maxToolHistory"
-
     // Mascot
     static let mascotSpeed = "mascotSpeed"
 
@@ -59,8 +56,6 @@ struct SettingsDefaults {
     static let soundApprovalNeeded = true
     static let soundPromptSubmit = false
     static let soundBoot = true
-
-    static let maxToolHistory = 20
 
     static let mascotSpeed = 100  // percentage: 0–300, 0 = silent
 
@@ -92,7 +87,6 @@ class SettingsManager {
             SettingsKey.soundApprovalNeeded: SettingsDefaults.soundApprovalNeeded,
             SettingsKey.soundPromptSubmit: SettingsDefaults.soundPromptSubmit,
             SettingsKey.soundBoot: SettingsDefaults.soundBoot,
-            SettingsKey.maxToolHistory: SettingsDefaults.maxToolHistory,
             SettingsKey.mascotSpeed: SettingsDefaults.mascotSpeed,
         ])
     }
@@ -145,10 +139,5 @@ class SettingsManager {
         set { defaults.set(newValue, forKey: SettingsKey.contentFontSize) }
     }
 
-
-    var maxToolHistory: Int {
-        get { defaults.integer(forKey: SettingsKey.maxToolHistory) }
-        set { defaults.set(newValue, forKey: SettingsKey.maxToolHistory) }
-    }
 
 }
