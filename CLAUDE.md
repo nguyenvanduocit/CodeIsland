@@ -138,6 +138,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Open PR #50: cmux terminal precise jump — still open, watch (same as before)
 - vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
 
+**Scouted (April 12 2026) — v1.0.18 activity:**
+- v1.0.18 released 2026-04-11
+- PR #59 + #60 MERGED → `abfc3b7`: multi-question AskUserQuestion wizard UI + MultiSelect + Back nav + `drainQuestions` (T-018 → promote to implement); remote SSH bundled — skip
+- PR #61 MERGED (bundled in abfc3b7): completion queue fix — already in our `CompletionQueueService` (lines 650-658 in AppState.swift); no action needed
+- PR #50 MERGED → `d599150`: cmux surface-level precise terminal jump (was watching; T-022)
+- `b51fd5f`: terminal activation overhaul — Warp/Alacritty/Hyper window-level matching, IDE shortest-title heuristic, terminal-not-running launch fallback, tmux-detached handling (T-020; absorbs T-011 Warp fix)
+- `b51fd5f` #56: configurable island width 50%-150% slider for non-notch displays (T-021)
+- `b51fd5f` #32: hook config migrated from `~/.claude/hooks/` → `~/.codeisland/` with auto-cleanup (T-023; our ConfigInstaller still uses old paths)
+- `b51fd5f` stuck session: waitingApproval/Question auto-reset after 300s with no monitor — cherry-pick as part of T-016 or T-019
+- PR #64 (third-party CLI extensibility, Trae/StepFun) — skip (non-Claude tools)
+- PR #67 (Turkish translation) — skip (we don't ship L10n)
+- vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

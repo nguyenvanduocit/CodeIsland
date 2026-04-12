@@ -1,22 +1,75 @@
 # Kanban Board
-<!-- Updated: 2026-04-11 -->
+<!-- Updated: 2026-04-12 -->
 
 ## Backlog
 
 ## Todo
 
-### T-018: Watch upstream PR #59 — batched AskUserQuestion support
-> Multiple AskUserQuestion calls arrive in a burst; this open PR queues them and adds a confirm-all step.
+### T-020: Terminal activation improvements — Warp/Alacritty/Hyper/tmux/IDE
+> Upstream b51fd5f added window-level matching for Warp, Alacritty, Hyper; IDE shortest-title heuristic; terminal-not-running launch fallback; tmux-detached handling. Our TerminalActivator.swift supports Ghostty only.
 - **priority**: high
 - **effort**: M
-- **source**: wxtsky/CodeIsland PR #59 (open, not yet merged) — 2026-04-10
+- **source**: wxtsky/CodeIsland commit b51fd5f — 2026-04-11 (absorbs T-011 Warp fix)
 #### Criteria
-- [ ] Monitor wxtsky/CodeIsland PR #59 for merge
-- [ ] `QuestionPayload` (or a new wrapper) supports a list/queue of pending questions
-- [ ] `AppState` aggregates incoming `AskUserQuestion` events into the queue instead of replacing
-- [ ] `QuestionBarView` / `ApprovalBarView` renders multi-question UI with per-item answer selection
-- [ ] Explicit "Submit answers" confirmation step before writing response back to socket
-- [ ] Regression tests added for queue state transitions (pending → answered → submitted)
+- [ ] `TerminalActivator.swift` `knownTerminals` expanded to include Warp, Alacritty, Hyper, iTerm2
+- [ ] Warp/Alacritty/Hyper: window-level matching via System Events AppleScript (bundle-ID routing)
+- [ ] `TerminalVisibilityDetector.swift` uses bundle-ID matching for Warp (fixes T-011: Warp triggering Terminal.app)
+- [ ] IDE window matching: shortest-title heuristic when multiple windows share same project name
+- [ ] Terminal not running: fallback to `NSWorkspace.open(application:)` launch instead of silent failure
+- [ ] tmux detached: skip stale inner TTY, fall back to CWD/app activation
+- [ ] `swift build && swift test` passes
+
+### T-021: Configurable island width for non-notch displays
+> Upstream added a 50%-150% width slider in Settings for users on non-notch Macs. Our width is fixed (panelWidth in NotchPanelView).
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit b51fd5f (issue #56) — 2026-04-11
+#### Criteria
+- [ ] `Settings.swift` adds `islandWidthScale` key (default 1.0, range 0.5–1.5)
+- [ ] `NotchPanelView.panelWidth` reads `islandWidthScale` from settings
+- [ ] Settings → Appearance/Display page has a width scale slider (50% – 150%)
+- [ ] Setting persisted via UserDefaults and applied at runtime without restart
+- [ ] `swift build && swift test` passes
+
+### T-022: cmux surface-level precise terminal jump
+> PR #50 merged upstream as d599150 (2026-04-11). Adds precise cmux/tmux window-level focus when jumping to terminal. Was "watch, not merged yet" per April 11 scout.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland PR #50 → commit d599150 — 2026-04-11
+#### Criteria
+- [ ] `TerminalActivator.swift` detects cmux multiplexer (similar to existing tmux path)
+- [ ] Resolves cmux session + window from hook metadata (CMUX env vars or similar)
+- [ ] AppleScript / shell command focuses the correct cmux window (not just app-level)
+- [ ] Falls back to CWD/app activation if cmux window can't be identified
+- [ ] `swift build && swift test` passes
+
+### T-023: Migrate hook config from ~/.claude/hooks/ to ~/.codeisland/
+> Upstream b51fd5f migrated hook installation target from ~/.claude/hooks/ to ~/.codeisland/ with auto-cleanup of old paths. Our ConfigInstaller.swift still writes to ~/.claude/hooks/.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit b51fd5f (issue #32) — 2026-04-11
+#### Criteria
+- [ ] `ConfigInstaller.swift` writes bridge + hook script to `~/.codeisland/` instead of `~/.claude/hooks/`
+- [ ] Auto-cleanup removes old `~/.claude/hooks/codeisland-*` files on first launch after migration
+- [ ] `hookCommand` in Claude Code hooks config updated to use new path
+- [ ] Bridge binary path updated in hook script template
+- [ ] No regressions for fresh installs (directory created if missing)
+- [ ] `swift build && swift test` passes
+
+### T-018: Implement multi-question AskUserQuestion wizard UI
+> PR #59 + #60 merged upstream (abfc3b7, 2026-04-11). Wizard-style one-at-a-time questions with Back nav, MultiSelect, and drainQuestions on disconnect.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland PR #59/#60 → commit abfc3b7 — 2026-04-11
+#### Criteria
+- [ ] `AskUserQuestionState` (or equivalent) accumulates multiple `AskUserQuestion` events into a queue in the reducer (`SessionSnapshot.swift`)
+- [ ] `AppState.answerQuestionMulti` sends answers with positional matching; `drainQuestions` sends deny on disconnect
+- [ ] `QuestionBarView` renders one question at a time with Back navigation
+- [ ] MultiSelect checkbox support and "Other" free-text input handled
+- [ ] Explicit confirm/send step before writing response back to socket
+- [ ] Answer key dedup (header-based, collision-safe) prevents duplicate submissions
+- [ ] Skip: remote SSH monitoring bundled in abfc3b7 — cherry-pick question flow only
+- [ ] Unit tests cover multi-question, dedup, skip, disconnect (ref: upstream `AppStateQuestionFlowTests.swift`)
 - [ ] `swift build && swift test` passes
 
 ### T-019: Fix permission requests auto-rejected when multiple arrive in quick succession
