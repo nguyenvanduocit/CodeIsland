@@ -1,9 +1,32 @@
 # Kanban Board
-<!-- Updated: 2026-04-12 -->
+<!-- Updated: 2026-04-13 -->
 
 ## Backlog
 
 ## Todo
+
+### T-024: Fix settings window close causes panel flicker (NSApp.hide nil)
+> SettingsWindowController.swift:55 calls NSApp.hide(nil) in the close handler, hiding the entire app instead of just reverting the activation policy — causes the notch panel to briefly flicker off/on.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland PR #70 (open, Apr 12 2026)
+#### Criteria
+- [ ] Remove `NSApp.hide(nil)` from `SettingsWindowController.swift` close observer
+- [ ] Defer `NSApp.setActivationPolicy(.accessory)` via `DispatchQueue.main.async`
+- [ ] Extract `clearCloseObserver()` helper to avoid duplicate observer registration on repeated open/close
+- [ ] `swift build` passes; verify no panel flicker when closing settings
+
+### T-025: Defer completion card auto-collapse when mouse is inside panel
+> When the 5-second auto-collapse timer fires while the cursor is already hovering over the panel, the completion card dismisses instantly — jarring UX. Should wait until mouse leaves.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #69 (open, Apr 12 2026)
+#### Criteria
+- [ ] Add `deferCollapseOnMouseLeave: Bool` flag to `CompletionQueueService`
+- [ ] In `showNextOrCollapse()`: if mouse is inside panel (`completionHasBeenEntered == true`), set flag and return early instead of collapsing
+- [ ] In `NotchPanelView` hover handler: on mouse-leave when `deferCollapseOnMouseLeave` is set, trigger collapse and clear flag
+- [ ] Reset `deferCollapseOnMouseLeave` in `cancel()` / `doShowCompletion()`
+- [ ] `swift build && swift test` passes
 
 ### T-020: Terminal activation improvements — Warp/Alacritty/Hyper/tmux/IDE
 > Upstream b51fd5f added window-level matching for Warp, Alacritty, Hyper; IDE shortest-title heuristic; terminal-not-running launch fallback; tmux-detached handling. Our TerminalActivator.swift supports Ghostty only.

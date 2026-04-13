@@ -151,6 +151,20 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - PR #67 (Turkish translation) — skip (we don't ship L10n)
 - vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
 
+**Scouted (April 13 2026) — v1.0.19 activity:**
+- v1.0.19 released 2026-04-12
+- `2fd1330`: CLI config dedup via `defaultEvents(for:)` — not applicable (our ConfigInstaller only has Claude Code, no duplication)
+- `8f25152`: Hermes event payload parsing fix — skip (Hermes is a non-Claude CLI)
+- `6c8c352`: include antigravity and hermes in hook install list — skip (non-Claude CLIs)
+- PR #64 MERGED: third-party CLI extensibility (Trae/StepFun/CodyBuddyCN) — skip (non-Claude CLIs)
+- PR #67 MERGED: Turkish translation — skip (we don't ship L10n)
+- PR #66 MERGED: release resource bundle fix — skip (CI/release infra)
+- **PR #70** (open, Apr 12): fix settings close flicker — `NSApp.hide(nil)` in close handler hides entire app → panel flickers. We have this bug at `SettingsWindowController.swift:55` → **T-024**
+- **PR #69** (open, Apr 12): defer completion card auto-collapse when mouse inside panel — timer fires while hovering causes jarring immediate dismiss. We have this issue in `CompletionQueueService.showNextOrCollapse()` → **T-025**
+- PR #72 (open, Apr 12): Japanese/Korean L10n — skip (we don't ship L10n)
+- Issue #75: agent thinking >1min → idle state — already covered by T-012 (stuck session auto-reset)
+- vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
