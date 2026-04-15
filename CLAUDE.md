@@ -165,6 +165,21 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #75: agent thinking >1min → idle state — already covered by T-012 (stuck session auto-reset)
 - vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
 
+**Scouted (April 15 2026) — post-v1.0.19 activity:**
+- PR #70 MERGED (Apr 13): settings close flicker fix — now merged upstream; T-024 ready to implement
+- PR #69 MERGED (Apr 13): defer completion card collapse on hover — now merged upstream; T-025 ready to implement
+- **PR #80 MERGED (Apr 13)**: configurable notch height modes (align to notch/menubar/custom slider) — fixes 1px panel misalignment on MacBook Air 15" and similar → **T-026**
+- **PR #86** (open, Apr 14): opt-in auto-collapse panel after successful session jump; failure → shake + error sound → **T-027** (watch for merge)
+- PR #87 (open, Apr 14): OpenCode permission/question approval race fix — skip (OpenCode-specific)
+- PR #90 (open, Apr 14): Kimi Code CLI support — skip (non-Claude CLI)
+- PR #82 (open, Apr 13): CodeBuddy remote hook — skip (non-Claude CLI)
+- PR #72 (open draft): Japanese/Korean L10n — skip (we don't ship L10n)
+- **PR #76** (open, Apr 13): message input bar + TerminalWriter — direct prompt sending from notch panel, system tag parsing, ApprovalBar attachment input; large unreviewed PR, watch for upstream decision → **T-028** (watch, do not implement until merged)
+- **Issue #84** (open, Apr 13): Ghostty click triggers quick terminal instead of focusing correct tab — user-reported bug, no upstream fix yet → **T-029**
+- Issue #88 (open, Apr 14): request to auto-hide question/approval panel — addressed by T-027 if implemented
+- Issue #91 (open, Apr 14): iPhone sync feature request — out of scope
+- vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

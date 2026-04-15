@@ -1,9 +1,61 @@
 # Kanban Board
-<!-- Updated: 2026-04-13 -->
+<!-- Updated: 2026-04-15 -->
 
 ## Backlog
 
 ## Todo
+
+### T-026: Configurable notch height modes to fix panel misalignment
+> Some Macs (e.g. MacBook Air 15") have a 1px gap between the panel and the physical notch. Add three height modes: align to notch (default), align to menubar, or custom slider.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #80 (MERGED Apr 13, 2026)
+#### Criteria
+- [ ] `Settings.swift` adds `notchHeightMode` key with enum: `notch` / `menubar` / `custom`; `notchHeightOffset` key (Int, default 0) for custom mode
+- [ ] `PanelWindowController.swift` height calculation reads the mode; `menubar` uses `NSStatusBar.system.thickness`; `custom` applies user offset
+- [ ] Settings → Appearance page has a segmented picker for mode + a slider (visible only when `custom` selected)
+- [ ] Changing the setting instantly rebuilds the panel (no restart required)
+- [ ] `swift build && swift test` passes
+
+### T-027: Auto-collapse panel after successful session jump (opt-in)
+> When clicking a session card, optionally collapse the panel if the terminal switch succeeded. On failure, show shake + error sound.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #86 (open, Apr 14, 2026) — **watch for merge before implementing**
+#### Criteria
+- [ ] `Settings.swift` adds `autoCollapseAfterSessionJump` Bool key (default `false`)
+- [ ] `TerminalActivator` returns a success/failure result from `activate()` (or a completion closure)
+- [ ] On successful jump when setting is on: collapse panel (hide `sessionList` / `completionCard` surface)
+- [ ] On failed jump: play error sound + trigger shake animation on the session card
+- [ ] Remote sessions excluded from auto-collapse
+- [ ] Settings → Behavior page has a toggle with preview animation
+- [ ] `swift build && swift test` passes
+
+### T-028: Message input bar — send prompts from notch panel (watch)
+> Large upstream PR adds MessageInputBar + TerminalWriter so users can send prompts to Claude Code without switching to the terminal.
+- **priority**: low
+- **effort**: L
+- **source**: wxtsky/CodeIsland PR #76 (open, Apr 13, 2026) — **do not implement until merged upstream and reviewed**
+#### Criteria
+- [ ] Wait for wxtsky/CodeIsland PR #76 to be merged and reviewed by upstream maintainer
+- [ ] Evaluate `TerminalWriter` module compatibility with our `TerminalActivator` pattern
+- [ ] If merged: port `MessageInputBar` component (requires `TerminalWriter` for keystroke injection)
+- [ ] If merged: port ApprovalBar persistent input field (attach context to approve/deny actions)
+- [ ] System tag stripping (`<task-notification>`, `<system-reminder>`) may be cherry-picked independently
+- [ ] `swift build && swift test` passes
+
+### T-029: Fix Ghostty: clicking session triggers quick terminal instead of focusing tab
+> When a Claude Code session is running in Ghostty, clicking the session card in the panel triggers Ghostty's quick-terminal (Quake dropdown) instead of focusing the correct window/tab.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #84 (open, Apr 13, 2026) — no upstream fix yet; we should investigate independently
+#### Criteria
+- [ ] Reproduce: run Claude Code in Ghostty (with quick terminal configured), click session card — Ghostty quick terminal slides down instead of focusing session
+- [ ] Investigate `TerminalActivator.swift` Ghostty activation path — identify why generic `activate()` triggers quick terminal
+- [ ] Fix: target specific Ghostty window by ID or title rather than app-level activation
+- [ ] Cross-check with T-013 (Ghostty+tmux tab focus) — re-use any window-targeting logic already added there
+- [ ] Verify: clicking session in Ghostty focuses the correct window; quick terminal is not triggered
+- [ ] `swift build && swift test` passes
 
 ### T-024: Fix settings window close causes panel flicker (NSApp.hide nil)
 > SettingsWindowController.swift:55 calls NSApp.hide(nil) in the close handler, hiding the entire app instead of just reverting the activation policy — causes the notch panel to briefly flicker off/on.
