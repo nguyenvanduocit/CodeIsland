@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-15 -->
+<!-- Updated: 2026-04-16 -->
 
 ## Backlog
 
@@ -21,7 +21,7 @@
 > When clicking a session card, optionally collapse the panel if the terminal switch succeeded. On failure, show shake + error sound.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland PR #86 (open, Apr 14, 2026) — **watch for merge before implementing**
+- **source**: wxtsky/CodeIsland PR #86 MERGED (Apr 15, 2026), commit `1f9618b`
 #### Criteria
 - [ ] `Settings.swift` adds `autoCollapseAfterSessionJump` Bool key (default `false`)
 - [ ] `TerminalActivator` returns a success/failure result from `activate()` (or a completion closure)
@@ -29,6 +29,29 @@
 - [ ] On failed jump: play error sound + trigger shake animation on the session card
 - [ ] Remote sessions excluded from auto-collapse
 - [ ] Settings → Behavior page has a toggle with preview animation
+- [ ] `swift build && swift test` passes
+
+### T-030: Bump stuck-session idle threshold from 60s to 300s for long-thinking agents
+> Unmonitored sessions with no active tool are auto-reset to idle after 60s — too aggressive for agents doing extended reasoning without tool calls.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `48520de` (v1.0.20, Apr 13, 2026) — fixes issue #75
+#### Criteria
+- [ ] In `AppState.swift` stuck-detection loop, change `threshold = session.currentTool != nil ? 180 : 60` → `threshold = session.currentTool != nil ? 180 : 300`
+- [ ] `swift build && swift test` passes
+
+### T-031: Watch: dismiss flow for permission prompts (PR #93)
+> Open upstream PR adds a third action to the permission card: Dismiss — closes the UI without responding to Claude Code, deferring the decision. Dismissed sessions are skipped in the queue and re-surface when a new permission arrives.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #93 (open, Apr 15, 2026) — **do not implement until merged**
+#### Criteria
+- [ ] Wait for wxtsky/CodeIsland PR #93 to merge
+- [ ] Port dismiss action to `ApprovalBarView` — third button alongside Allow/Deny
+- [ ] `AppState` tracks dismissed sessions; `RequestQueueService` skips dismissed sessions when selecting next request to show
+- [ ] Dismissed session re-enters queue when a new permission event arrives for that session
+- [ ] Multi-session: dismissing advances to next pending session
+- [ ] Unit tests cover dismiss-skip, re-display, and multi-session scenarios
 - [ ] `swift build && swift test` passes
 
 ### T-028: Message input bar — send prompts from notch panel (watch)
@@ -47,13 +70,10 @@
 ### T-029: Fix Ghostty: clicking session triggers quick terminal instead of focusing tab
 > When a Claude Code session is running in Ghostty, clicking the session card in the panel triggers Ghostty's quick-terminal (Quake dropdown) instead of focusing the correct window/tab.
 - **priority**: high
-- **effort**: S
-- **source**: wxtsky/CodeIsland issue #84 (open, Apr 13, 2026) — no upstream fix yet; we should investigate independently
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #84; upstream fix in commit `48520de` (v1.0.20, Apr 13, 2026)
 #### Criteria
-- [ ] Reproduce: run Claude Code in Ghostty (with quick terminal configured), click session card — Ghostty quick terminal slides down instead of focusing session
-- [ ] Investigate `TerminalActivator.swift` Ghostty activation path — identify why generic `activate()` triggers quick terminal
-- [ ] Fix: target specific Ghostty window by ID or title rather than app-level activation
-- [ ] Cross-check with T-013 (Ghostty+tmux tab focus) — re-use any window-targeting logic already added there
+- [ ] Remove `app.activate()` at `TerminalActivator.swift:98` inside `activateGhostty()` — calling it before the AppleScript is what triggers Ghostty Quick Terminal; the AppleScript's `focus t; activate` handles activation correctly after focusing the right window
 - [ ] Verify: clicking session in Ghostty focuses the correct window; quick terminal is not triggered
 - [ ] `swift build && swift test` passes
 

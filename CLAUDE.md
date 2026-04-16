@@ -179,6 +179,23 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #88 (open, Apr 14): request to auto-hide question/approval panel — addressed by T-027 if implemented
 - Issue #91 (open, Apr 14): iPhone sync feature request — out of scope
 - vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
+- ⚠️ **Missed in this scout**: v1.0.20 (Apr 13) content — `48520de` Ghostty activation fix + idle timeout fix; `356f9b6` haptic feedback. Caught in April 16 scout below.
+
+**Scouted (April 16 2026) — v1.0.20 + post-v1.0.20 activity:**
+- v1.0.20 released 2026-04-13 (missed in Apr 15 scout)
+- `48520de`: fix Ghostty quick terminal — removes premature `app.activate()` in `activateGhostty()` before AppleScript runs; upstream fix for T-029 is a single line deletion in `TerminalActivator.swift:98` → **T-029 has upstream fix, implement now**
+- `48520de`: fix idle fallback timeout 60s → 300s — unmonitored sessions with no active tool were auto-reset to idle after 60s, too short for long-thinking agents; fix is one line in `AppState.swift:189` → **T-030**
+- `356f9b6`: haptic feedback on hover — nice-to-have, low priority; skip for now
+- **PR #86 MERGED** (Apr 15, commit `1f9618b`): auto-collapse after session jump — was watching; now merged → **T-027 promote to implement**
+- PR #87 MERGED (Apr 15): OpenCode approval fix — skip (OpenCode-specific)
+- PR #90 MERGED (Apr 15): Kimi Code CLI support — skip (non-Claude CLI)
+- PR #82 MERGED (Apr 15): CodeBuddy remote hook — skip (non-Claude CLI)
+- **PR #93** (open, Apr 15): dismiss flow for permission prompts — adds "Dismiss" button to skip without Allow/Deny; watch for merge → **T-031** (watch)
+- PR #76 (open, Apr 13): message input bar + TerminalWriter — still open, still watching (T-028)
+- PR #72 (open draft): Japanese/Korean L10n — skip
+- PR #98 (open, Apr 15): TraeCli hooks support — skip (non-Claude CLI)
+- Issue #92 (open, Apr 15): high power consumption report — no technical details, no upstream fix yet; monitor
+- vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
 
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
