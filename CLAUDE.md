@@ -197,6 +197,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #92 (open, Apr 15): high power consumption report — no technical details, no upstream fix yet; monitor
 - vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
 
+**Scouted (April 17 2026) — v1.0.21 activity:**
+- v1.0.21 released 2026-04-16
+- **PR #93 MERGED** (Apr 16, commit `fb64020`): dismiss flow for permission prompts — was watching; now merged → **T-031 promote to implement** (`AppState.swift` +37, `NotchPanelView.swift` +4; adds Dismiss button that abandons the request without sending Allow/Deny, skips dismissed sessions in queue)
+- **`cf9fb81`** (Apr 16): fix fenced code block rendering — `AttributedString(markdown:inlineOnlyPreservingWhitespace)` treats ``` as inline delimiters, merging language tag into first code line and collapsing all newlines; fix splits on fence markers and renders code bodies as literal `AttributedString`. We have the same bug in `ChatMessageTextFormatter.swift`. → **T-032**
+- **`136737a`** (Apr 16): reduce screen-poll interval 1s → 5s — `CGWindowListCopyWindowInfo` every second was measurably showing in Energy Impact; notifications already cover common-path display switches, poller is fallback for drag-across-displays only. We have same 1s cadence at `PanelWindowController.swift:426`. XS fix. → **T-033**
+- `8481f43` / `68dd40b` / `aaf0edc`: SSH auto-reconnect and per-host SSH_AUTH_SOCK — skip (SSH remote monitoring, not applicable)
+- `ebe72c9`: infer source from process ancestry when hook lacks --source — skip (OpenCode/omo-plugin specific)
+- `7c90f7c` / `bd74ca5`: sign/notarize build script + version bump — skip (CI/release only)
+- PR #76 (open, Apr 16): message input bar + TerminalWriter updated — still open, still watching (T-028)
+- Issue #84 (open, Ghostty click can't jump): T-029 has upstream fix (`48520de`), no change to watch status
+- Issue #92 (high power): now resolved upstream by `136737a` (T-033)
+- vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

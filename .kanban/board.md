@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-16 -->
+<!-- Updated: 2026-04-17 -->
 
 ## Backlog
 
@@ -40,18 +40,40 @@
 - [ ] In `AppState.swift` stuck-detection loop, change `threshold = session.currentTool != nil ? 180 : 60` → `threshold = session.currentTool != nil ? 180 : 300`
 - [ ] `swift build && swift test` passes
 
-### T-031: Watch: dismiss flow for permission prompts (PR #93)
-> Open upstream PR adds a third action to the permission card: Dismiss — closes the UI without responding to Claude Code, deferring the decision. Dismissed sessions are skipped in the queue and re-surface when a new permission arrives.
+### T-031: Add dismiss action for permission requests
+> Add a third "Dismiss" button to the approval bar that abandons the request without sending Allow/Deny to Claude Code. Dismissed sessions are skipped in the queue and re-surface on a new permission event.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland PR #93 (open, Apr 15, 2026) — **do not implement until merged**
+- **source**: wxtsky/CodeIsland PR #93 MERGED (Apr 16, 2026), commit `fb64020`
 #### Criteria
-- [ ] Wait for wxtsky/CodeIsland PR #93 to merge
 - [ ] Port dismiss action to `ApprovalBarView` — third button alongside Allow/Deny
-- [ ] `AppState` tracks dismissed sessions; `RequestQueueService` skips dismissed sessions when selecting next request to show
+- [ ] `AppState` / `RequestQueueService` tracks dismissed sessions and skips them when selecting next queued request
 - [ ] Dismissed session re-enters queue when a new permission event arrives for that session
 - [ ] Multi-session: dismissing advances to next pending session
-- [ ] Unit tests cover dismiss-skip, re-display, and multi-session scenarios
+- [ ] Unit tests cover dismiss-skip, re-display, and multi-session scenarios (ref: upstream `AppStatePermissionFlowTests.swift`)
+- [ ] `swift build && swift test` passes
+
+### T-033: Reduce screen-poll interval 1s → 5s to cut Energy Impact
+> `CGWindowListCopyWindowInfo` runs every 1 second as a fallback poller; measurably shows in Energy Impact. Notifications already cover common-path display switches — 5s is sufficient for the drag-across-displays edge case.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `136737a` (v1.0.21, Apr 16, 2026) — fixes issue #92
+#### Criteria
+- [ ] Change `Task.sleep(for: .seconds(1))` → `.seconds(5)` at `PanelWindowController.swift:426` in `configureAutoScreenPolling()`
+- [ ] `swift build && swift test` passes
+
+### T-032: Fix fenced code block rendering in chat view
+> `AttributedString(markdown:inlineOnlyPreservingWhitespace)` misparses fenced code blocks — the language identifier merges into the first line and all newlines inside the fence collapse. Split on fence markers and render code bodies as literal `AttributedString`.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `cf9fb81` (v1.0.21, Apr 16, 2026) — fixes issue #101
+#### Criteria
+- [ ] `ChatMessageTextFormatter.inlineMarkdown(_:)` detects ` ``` ` fence markers and splits the input into fenced/non-fenced segments
+- [ ] Non-fenced segments rendered via existing `AttributedString(markdown:)` path
+- [ ] Fenced segments rendered as literal `AttributedString` (no markdown parsing) preserving all newlines and raw content
+- [ ] Language identifier stripped from code body before rendering
+- [ ] Segments concatenated in order and cached in `markdownCache` as before
+- [ ] Tests added for: code block with language tag, code block without tag, multiple code blocks, code block with markdown-like content inside
 - [ ] `swift build && swift test` passes
 
 ### T-028: Message input bar — send prompts from notch panel (watch)
