@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-17 -->
+<!-- Updated: 2026-04-18 -->
 
 ## Backlog
 
@@ -76,17 +76,26 @@
 - [ ] Tests added for: code block with language tag, code block without tag, multiple code blocks, code block with markdown-like content inside
 - [ ] `swift build && swift test` passes
 
-### T-028: Message input bar — send prompts from notch panel (watch)
-> Large upstream PR adds MessageInputBar + TerminalWriter so users can send prompts to Claude Code without switching to the terminal.
-- **priority**: low
-- **effort**: L
-- **source**: wxtsky/CodeIsland PR #76 (open, Apr 13, 2026) — **do not implement until merged upstream and reviewed**
+### T-034: Fix ConfigInstaller destructive reformat of ~/.claude/settings.json
+> ConfigInstaller.swift uses JSONSerialization with .sortedKeys, which reorders all keys, escapes forward slashes, and strips trailing newlines on every install/repair cycle. Noisy for users who version-control their Claude settings.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #106 (open, Apr 17, 2026) — confirmed same bug at ConfigInstaller.swift:344,367
 #### Criteria
-- [ ] Wait for wxtsky/CodeIsland PR #76 to be merged and reviewed by upstream maintainer
-- [ ] Evaluate `TerminalWriter` module compatibility with our `TerminalActivator` pattern
-- [ ] If merged: port `MessageInputBar` component (requires `TerminalWriter` for keystroke injection)
-- [ ] If merged: port ApprovalBar persistent input field (attach context to approve/deny actions)
-- [ ] System tag stripping (`<task-notification>`, `<system-reminder>`) may be cherry-picked independently
+- [ ] Drop `.sortedKeys` from `JSONSerialization.data` options at both `installClaudeHooks` (line 344) and `uninstallHooks` (line 367)
+- [ ] Append `\n` to written data so trailing newline is preserved
+- [ ] Verify `swift build && swift test` passes
+- [ ] Manual check: install hooks on a real `~/.claude/settings.json` with custom formatting and confirm key order is preserved
+
+### T-035: Investigate agent disappearing from island bar when switching macOS Spaces
+> Upstream issue #104: session's agent indicator disappears when returning to the desktop where the terminal lives. Window has canJoinAllSpaces — likely a content/visibility logic bug.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #104 (open, Apr 17, 2026) — no upstream fix yet
+#### Criteria
+- [ ] Reproduce locally: start session on Desktop 1, switch to Desktop 2 and confirm agent shown, return to Desktop 1 and check if agent is still shown
+- [ ] If reproduced: identify which path causes it (TerminalVisibilityDetector, activeSpaceDidChange handler, or SwiftUI observation race at PanelWindowController.swift:239)
+- [ ] Fix the identified cause
 - [ ] `swift build && swift test` passes
 
 ### T-029: Fix Ghostty: clicking session triggers quick terminal instead of focusing tab
@@ -332,6 +341,12 @@
 - [x] `swift build && swift test` passes on all changes
 
 ## Done
+
+### T-028: Message input bar — watch abandoned
+> Upstream PR #76 (MessageInputBar + TerminalWriter) was closed by contributor on Apr 17, 2026 after maintainer flagged unresolved IME issues, hardcoded delays, and clipboard pollution. Not merged; not worth porting.
+- **priority**: low
+- **effort**: L
+- **completed**: 2026-04-18 (upstream abandoned)
 
 ### [T-006: Typed HookEvent thay rawJSON](tasks/T-006-typed-hook-events.md)
 > EventMetadata struct + typed fields thay rawJSON: [String: Any]. All consumers updated.

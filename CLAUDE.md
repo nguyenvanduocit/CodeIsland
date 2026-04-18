@@ -210,6 +210,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #92 (high power): now resolved upstream by `136737a` (T-033)
 - vibeislandapp/vibe-island: no code changes since 2026-04-03 (only docs/setup)
 
+**Scouted (April 18 2026) — post-v1.0.21 activity:**
+- No new commits, releases, or PRs since v1.0.21 (last commit `7c90f7c`, zero open PRs)
+- **PR #76 CLOSED/ABANDONED** (Apr 17): message input bar + TerminalWriter — maintainer closed after IME incompatibility, hardcoded delays, clipboard pollution, and AppleScript race conditions remained unresolved after multiple review rounds; T-028 retired
+- **Issue #106** (open, Apr 17): `installClaudeHooks()` destructively reformats `~/.claude/settings.json` — confirmed same bug in our `ConfigInstaller.swift:344,367` (`.sortedKeys` reorders keys, `\/` slash escaping, strips trailing newline) → **T-034**
+- **Issue #104** (open, Apr 17): agent indicator disappears from island bar when returning to the Space where the terminal runs — our panel has `.canJoinAllSpaces` so window is fine; bug likely in content/visibility logic → **T-035** (investigate)
+- Issue #105: opencode.json installer destructive reformat — skip (OpenCode-specific)
+- Issue #103: Qwen Code support issues — skip (non-Claude CLI)
+- Issue #102: Default role setting support — skip (feature request for other CLIs)
+- Issue #100: permission modal flickering (black buttons / transparent areas) — no upstream fix; appears rendering-specific to their UI; skip unless reproduced locally
+- vibeislandapp/vibe-island: only Discord webhook setup, README splits, and repo-rename link fixes since Apr 3 — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
