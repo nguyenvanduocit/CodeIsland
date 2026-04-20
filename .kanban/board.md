@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-18 -->
+<!-- Updated: 2026-04-20 -->
 
 ## Backlog
 
@@ -323,6 +323,31 @@
 - [ ] Approval/question/completion states NOT suppressed
 - [ ] Toggle in BehaviorPage with preview animation
 - [ ] Unit tests added; `swift build && swift test` passes
+
+### T-036: Click-to-jump on permission approval card (watch: upstream PR #108)
+> Extend ApprovalBar with click-to-jump navigation — clicking the card focuses the terminal for that session, mirroring session card behaviour. Includes shake + error sound on failure.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #108 (OPEN Apr 19, 2026) — watch for merge
+#### Criteria
+- [ ] `ApprovalBar` accepts `session`, `sessionId`, `appState` params
+- [ ] `handleCardClick()` reuses terminal activation logic from session card click handler
+- [ ] On failed jump: error sound + shake animation
+- [ ] `JumpAnimationHelper` (or equivalent) extracts shared shake animation utilities to avoid duplication between `SessionListView` and `ApprovalBarView`
+- [ ] Coordinate with T-027 (auto-collapse after jump) and T-031 (dismiss button) — all modify `ApprovalBar`
+- [ ] **Do not implement until PR #108 merges upstream** (avoid tracking a moving target)
+- [ ] `swift build && swift test` passes
+
+### T-037: Fix stale PermissionDenied hook surviving Claude Code downgrade
+> ConfigInstaller.swift version-gates PermissionDenied to Claude Code ≥ 2.1.89, but verifyAndRepair() short-circuits without cleaning stale versioned hooks. A user who installed with ≥ 2.1.89 then downgraded retains a PermissionDenied entry that Claude Code < 2.1.89 rejects at startup.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #107 (open, Apr 19, 2026) — same bug confirmed in our ConfigInstaller.swift:316–323
+#### Criteria
+- [ ] Add `hasStaleVersionedHooks` check alongside `hasStaleAsyncKey` in the early-return guard at `installClaudeHooks` (~line 323)
+- [ ] `hasStaleVersionedHooks` returns `true` when any event in `cli.versionedEvents` is present in `hooks` but absent from `compatibleEvents(for: cli)`
+- [ ] Extending the guard forces a full strip-and-reinstall, correctly removing `PermissionDenied` for downgraded users
+- [ ] `swift build && swift test` passes
 
 ## Doing
 

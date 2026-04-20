@@ -221,6 +221,11 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #100: permission modal flickering (black buttons / transparent areas) — no upstream fix; appears rendering-specific to their UI; skip unless reproduced locally
 - vibeislandapp/vibe-island: only Discord webhook setup, README splits, and repo-rename link fixes since Apr 3 — nothing actionable
 
+**Scouted (April 20 2026) — post-v1.0.21 activity:**
+- **PR #108** (open, Apr 19): click-to-jump on permission approval card — extends `ApprovalBar` with `handleCardClick()` + `JumpAnimationHelper`; shake+error-sound on failure; we lack this on `ApprovalBarView.swift`; watch for merge → **T-036**
+- **Issue #107** (open, Apr 19): Claude Code v2.0.73 rejects `PermissionDenied` hook as invalid — we have version gating (`"PermissionDenied": "2.1.89"`) but gap: `verifyAndRepair()` short-circuits if all compatible events present, leaving stale `PermissionDenied` from a prior install (when user had ≥ 2.1.89) even after Claude Code downgrade → **T-037** (fix staleness check)
+- vibeislandapp/vibe-island: no code changes since 2026-04-03 — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
