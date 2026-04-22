@@ -226,6 +226,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - **Issue #107** (open, Apr 19): Claude Code v2.0.73 rejects `PermissionDenied` hook as invalid — we have version gating (`"PermissionDenied": "2.1.89"`) but gap: `verifyAndRepair()` short-circuits if all compatible events present, leaving stale `PermissionDenied` from a prior install (when user had ≥ 2.1.89) even after Claude Code downgrade → **T-037** (fix staleness check)
 - vibeislandapp/vibe-island: no code changes since 2026-04-03 — nothing actionable
 
+**Scouted (April 22 2026) — post-v1.0.21 activity:**
+- **PR #113** (open, Apr 20): Security: remove SSH remote feature and auto-update checker — upstream removes `UpdateChecker.swift` as part of a hardening pass ("zero network calls"). Our concern: `UpdateChecker.swift:8` hardcodes `wxtsky/CodeIsland` (wrong repo), and `AppDelegate.swift:88` calls it silently on every launch — making outbound HTTP to a third-party repo without user knowledge → **T-038** (fix or remove)
+- PR #108 (click-to-jump on approval card): still open, still watching — T-036 unchanged
+- PR #111 (open, Apr 20): pi-mono support — skip (non-Claude CLI)
+- Issue #116 (open, Apr 21): macOS terminal jump fails to activate window — user report of shake-but-no-focus on macOS 14/M3; covered by T-020 (terminal activation overhaul) and T-029 (Ghostty fix); no new code to cherry-pick
+- Issue #118 (open, Apr 21): ACP protocol support request — skip (unrelated protocol)
+- Issue #117 (open, Apr 21): Hermes integration — skip (non-Claude CLI)
+- Issue #115, #114, #112, #109 (open, Apr 20-21): hook forwarding, Codex icon, smart suppression, iOS — skip (non-Claude or out of scope)
+- vibeislandapp/vibe-island: no new commits since Apr 3 — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

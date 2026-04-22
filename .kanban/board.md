@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-20 -->
+<!-- Updated: 2026-04-22 -->
 
 ## Backlog
 
@@ -347,6 +347,17 @@
 - [ ] Add `hasStaleVersionedHooks` check alongside `hasStaleAsyncKey` in the early-return guard at `installClaudeHooks` (~line 323)
 - [ ] `hasStaleVersionedHooks` returns `true` when any event in `cli.versionedEvents` is present in `hooks` but absent from `compatibleEvents(for: cli)`
 - [ ] Extending the guard forces a full strip-and-reinstall, correctly removing `PermissionDenied` for downgraded users
+- [ ] `swift build && swift test` passes
+
+### T-038: Fix UpdateChecker.swift wrong upstream repo reference (or remove)
+> UpdateChecker.swift hardcodes `wxtsky/CodeIsland` as the releases repo, making a silent outbound call to GitHub API on every app launch. Upstream PR #113 removes the checker entirely as a security hardening measure.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland PR #113 (OPEN Apr 20, 2026) — bug confirmed in our `UpdateChecker.swift:8` + `AppDelegate.swift:88`
+#### Criteria
+- [ ] Decide: remove checker entirely (follow upstream PR #113 security rationale — zero outbound calls) OR fix repo to `nguyenvanduocit/CodeIsland` if we publish releases on our fork
+- [ ] If removing: delete `Sources/CodeIsland/UpdateChecker.swift`; remove `UpdateChecker.shared.checkForUpdates(silent: true)` from `AppDelegate.swift:88`; remove any Settings UI that exposes a manual "Check for Updates" action
+- [ ] If keeping: change `private let repo = "wxtsky/CodeIsland"` → `"nguyenvanduocit/CodeIsland"` at `UpdateChecker.swift:8`
 - [ ] `swift build && swift test` passes
 
 ## Doing
