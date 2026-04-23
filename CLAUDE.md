@@ -236,6 +236,14 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #115, #114, #112, #109 (open, Apr 20-21): hook forwarding, Codex icon, smart suppression, iOS — skip (non-Claude or out of scope)
 - vibeislandapp/vibe-island: no new commits since Apr 3 — nothing actionable
 
+**Scouted (April 23 2026) — post-v1.0.21 activity:**
+- No new commits or releases since v1.0.21 (Apr 16)
+- PR #120 (open, Apr 22): third-party CLI extensibility + Hermes/Gemini bridge hardening — skip (non-Claude CLIs)
+- Issue #116 (closed Apr 22): macOS Terminal.app click-to-jump fix — previously noted as "no new code to cherry-pick" but closure comment references commit `5624480` with a principled rewrite of Terminal.app tab activation: priority-based matching (tty exact → auto tab name → fallback) instead of broken `custom title`-only approach. Commit not yet on main as of Apr 23 → **T-039** (watch for landing)
+- Issue #119 (closed Apr 22): opencode.json config reformat — OpenCode-specific, skip
+- Issue #115 (open, Apr 22): custom hook forwarding feature request — out of scope
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) — docs/SEO badges only, nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

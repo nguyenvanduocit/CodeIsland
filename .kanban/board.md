@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-22 -->
+<!-- Updated: 2026-04-23 -->
 
 ## Backlog
 
@@ -358,6 +358,18 @@
 - [ ] Decide: remove checker entirely (follow upstream PR #113 security rationale — zero outbound calls) OR fix repo to `nguyenvanduocit/CodeIsland` if we publish releases on our fork
 - [ ] If removing: delete `Sources/CodeIsland/UpdateChecker.swift`; remove `UpdateChecker.shared.checkForUpdates(silent: true)` from `AppDelegate.swift:88`; remove any Settings UI that exposes a manual "Check for Updates" action
 - [ ] If keeping: change `private let repo = "wxtsky/CodeIsland"` → `"nguyenvanduocit/CodeIsland"` at `UpdateChecker.swift:8`
+- [ ] `swift build && swift test` passes
+
+### T-039: Fix Terminal.app tab activation — priority-based matching (tty → auto-title → fallback)
+> Clicking a session card does nothing for users on macOS built-in Terminal.app because TerminalActivator has no tab-level matching for it — non-Ghostty terminals fall through to app.activate() only. Upstream rewrote this as priority-based AppleScript (tty → auto tab name → fallback), fixing the "shake but nothing happens" bug.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #116 (closed Apr 22, 2026); fix commit `5624480` referenced in closure — **not yet on main, watch for landing**
+#### Criteria
+- [ ] Wait for upstream commit `5624480` to land on `wxtsky/CodeIsland` main before cherry-picking
+- [ ] `activateTerminalApp()` added to `TerminalActivator.swift` for `com.apple.Terminal` bundle ID
+- [ ] AppleScript tries in order: tty exact match → auto tab name (contains cwd folder name) → fallback to `app.activate()`
+- [ ] `deminiaturize` called before `activate` so minimized Terminal windows re-open
 - [ ] `swift build && swift test` passes
 
 ## Doing
