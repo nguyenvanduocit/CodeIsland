@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-23 -->
+<!-- Updated: 2026-04-24 -->
 
 ## Backlog
 
@@ -79,23 +79,24 @@
 ### T-034: Fix ConfigInstaller destructive reformat of ~/.claude/settings.json
 > ConfigInstaller.swift uses JSONSerialization with .sortedKeys, which reorders all keys, escapes forward slashes, and strips trailing newlines on every install/repair cycle. Noisy for users who version-control their Claude settings.
 - **priority**: high
-- **effort**: XS
-- **source**: wxtsky/CodeIsland issue #106 (open, Apr 17, 2026) — confirmed same bug at ConfigInstaller.swift:344,367
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #106, commit `adf41b6` (v1.0.22, Apr 23, 2026) — upstream fix available
 #### Criteria
-- [ ] Drop `.sortedKeys` from `JSONSerialization.data` options at both `installClaudeHooks` (line 344) and `uninstallHooks` (line 367)
-- [ ] Append `\n` to written data so trailing newline is preserved
-- [ ] Verify `swift build && swift test` passes
-- [ ] Manual check: install hooks on a real `~/.claude/settings.json` with custom formatting and confirm key order is preserved
+- [ ] Port `JSONMinimalEditor.swift` from upstream `adf41b6` — minimal-diff editor that splices key/value changes without rewriting the whole file
+- [ ] Update `ConfigInstaller.swift` to use `JSONMinimalEditor` instead of `JSONSerialization.data(..., [.prettyPrinted, .sortedKeys])`
+- [ ] Port `JSONMinimalEditorTests.swift` (14 tests covering comment preservation, idempotency, malformed input)
+- [ ] Manual check: install hooks on a real `~/.claude/settings.json` with comments and custom key order; confirm no reformat
+- [ ] `swift build && swift test` passes
 
-### T-035: Investigate agent disappearing from island bar when switching macOS Spaces
-> Upstream issue #104: session's agent indicator disappears when returning to the desktop where the terminal lives. Window has canJoinAllSpaces — likely a content/visibility logic bug.
+### T-035: Fix agent disappearing from island bar when switching macOS Spaces
+> Upstream issue #104: session's agent indicator disappears when returning to the desktop where the terminal lives. Root cause: stale fullscreen-space latch in PanelWindowController keeps panel hidden for up to 1.5s after a Space switch.
 - **priority**: medium
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #104 (open, Apr 17, 2026) — no upstream fix yet
+- **source**: wxtsky/CodeIsland issue #104, commit `0850f35` (v1.0.22, Apr 23, 2026) — upstream fix available
 #### Criteria
-- [ ] Reproduce locally: start session on Desktop 1, switch to Desktop 2 and confirm agent shown, return to Desktop 1 and check if agent is still shown
-- [ ] If reproduced: identify which path causes it (TerminalVisibilityDetector, activeSpaceDidChange handler, or SwiftUI observation race at PanelWindowController.swift:239)
-- [ ] Fix the identified cause
+- [ ] In `PanelWindowController.swift` Space-switch handler, clear the fullscreen-space latch immediately when entering a non-fullscreen Space (don't wait for next poll interval)
+- [ ] Port the 8-line fix from `0850f35` in `PanelWindowController.swift`
+- [ ] Reproduce locally before and after: switch from fullscreen Space to regular Desktop and back
 - [ ] `swift build && swift test` passes
 
 ### T-029: Fix Ghostty: clicking session triggers quick terminal instead of focusing tab
@@ -199,15 +200,15 @@
 - [ ] `swift build && swift test` passes
 
 ### T-019: Fix permission requests auto-rejected when multiple arrive in quick succession
-> When several PermissionRequest events arrive before the user can click, earlier ones are silently dropped/rejected.
+> When several PermissionRequest events arrive before the user can click, earlier ones are silently dropped/rejected. Upstream fix: tool_use_id deduplication cache (see T-040 for the port task).
 - **priority**: high
 - **effort**: S
-- **source**: wxtsky/CodeIsland issue #57 (open, no upstream fix yet) — 2026-04-10
+- **source**: wxtsky/CodeIsland issue #57, commit `0a6ab92` (v1.0.22, Apr 23, 2026) — upstream fix available via tool_use_id cache (T-040)
 #### Criteria
-- [ ] Reproduce locally: trigger 3+ tool permission requests in rapid succession
-- [ ] `HookServer` / `RequestQueueService` queues pending requests rather than replacing
-- [ ] `ApprovalBarView` shows a counter badge when multiple requests are queued (e.g. "1 of 3")
-- [ ] Responding to one request advances to the next rather than dismissing all
+- [ ] Implement T-040 first (tool_use_id cache) — it directly solves the deduplication problem
+- [ ] Verify that burst `PermissionRequest` events with same `tool_use_id` are deduplicated (in-place replace + stale waiter denied)
+- [ ] `ApprovalBarView` shows a counter badge when multiple distinct requests are queued (e.g. "1 of 3")
+- [ ] Responding to one request advances to the next; orphaned requests drained on `PostToolUse`
 - [ ] Auto-approve rules still apply per-tool before showing UI
 - [ ] `swift build && swift test` passes
 
@@ -324,52 +325,100 @@
 - [ ] Toggle in BehaviorPage with preview animation
 - [ ] Unit tests added; `swift build && swift test` passes
 
-### T-036: Click-to-jump on permission approval card (watch: upstream PR #108)
+### T-036: Click-to-jump on permission approval card
 > Extend ApprovalBar with click-to-jump navigation — clicking the card focuses the terminal for that session, mirroring session card behaviour. Includes shake + error sound on failure.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland PR #108 (OPEN Apr 19, 2026) — watch for merge
+- **source**: wxtsky/CodeIsland PR #108 MERGED, commit `4aac30f` (v1.0.22, Apr 23, 2026)
 #### Criteria
-- [ ] `ApprovalBar` accepts `session`, `sessionId`, `appState` params
-- [ ] `handleCardClick()` reuses terminal activation logic from session card click handler
-- [ ] On failed jump: error sound + shake animation
-- [ ] `JumpAnimationHelper` (or equivalent) extracts shared shake animation utilities to avoid duplication between `SessionListView` and `ApprovalBarView`
-- [ ] Coordinate with T-027 (auto-collapse after jump) and T-031 (dismiss button) — all modify `ApprovalBar`
-- [ ] **Do not implement until PR #108 merges upstream** (avoid tracking a moving target)
+- [ ] `ApprovalBar` supports click-to-jump via `handleCardClick()` reusing terminal activation logic
+- [ ] On failed jump (session gone or remote): error sound + shake animation
+- [ ] Extract `JumpAnimationHelper` namespace to share shake sequence `[8, -8, 6, -6, 3, -3, 0]` between `ApprovalBarView` and `SessionListView` (removes duplication)
+- [ ] Auto-collapse after successful jump respects T-027 setting (3 retries: 120ms / 320ms / 640ms)
+- [ ] Coordinate with T-031 (dismiss button) — both modify `ApprovalBar`
 - [ ] `swift build && swift test` passes
 
 ### T-037: Fix stale PermissionDenied hook surviving Claude Code downgrade
 > ConfigInstaller.swift version-gates PermissionDenied to Claude Code ≥ 2.1.89, but verifyAndRepair() short-circuits without cleaning stale versioned hooks. A user who installed with ≥ 2.1.89 then downgraded retains a PermissionDenied entry that Claude Code < 2.1.89 rejects at startup.
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #107 (open, Apr 19, 2026) — same bug confirmed in our ConfigInstaller.swift:316–323
+- **source**: wxtsky/CodeIsland issue #107, commit `adf41b6` (v1.0.22, Apr 23, 2026) — upstream fix removes invalid PermissionDenied entry from Claude Code hook list
 #### Criteria
-- [ ] Add `hasStaleVersionedHooks` check alongside `hasStaleAsyncKey` in the early-return guard at `installClaudeHooks` (~line 323)
-- [ ] `hasStaleVersionedHooks` returns `true` when any event in `cli.versionedEvents` is present in `hooks` but absent from `compatibleEvents(for: cli)`
-- [ ] Extending the guard forces a full strip-and-reinstall, correctly removing `PermissionDenied` for downgraded users
+- [ ] Port the `PermissionDenied` removal from `adf41b6` — remove invalid entry from Claude Code's registered hook event list in `ConfigInstaller.swift`
+- [ ] Add `hasStaleVersionedHooks` check in the early-return guard so full strip-and-reinstall fires when stale versioned hooks are detected
 - [ ] `swift build && swift test` passes
+- [ ] Note: this is bundled in the same commit as T-034 (JSONMinimalEditor) — implement together
 
 ### T-038: Fix UpdateChecker.swift wrong upstream repo reference (or remove)
-> UpdateChecker.swift hardcodes `wxtsky/CodeIsland` as the releases repo, making a silent outbound call to GitHub API on every app launch. Upstream PR #113 removes the checker entirely as a security hardening measure.
+> UpdateChecker.swift hardcodes `wxtsky/CodeIsland` as the releases repo, making a silent outbound call to GitHub API on every app launch. Upstream PR #113 (remove checker) was abandoned; upstream instead added Sparkle (external dep) which we can't use (zero external deps policy).
 - **priority**: medium
 - **effort**: XS
-- **source**: wxtsky/CodeIsland PR #113 (OPEN Apr 20, 2026) — bug confirmed in our `UpdateChecker.swift:8` + `AppDelegate.swift:88`
+- **source**: wxtsky/CodeIsland PR #113 CLOSED/ABANDONED (Apr 23, 2026); upstream went with Sparkle (`27ac918`) instead — bug still confirmed in our `UpdateChecker.swift:8` + `AppDelegate.swift:88`
 #### Criteria
-- [ ] Decide: remove checker entirely (follow upstream PR #113 security rationale — zero outbound calls) OR fix repo to `nguyenvanduocit/CodeIsland` if we publish releases on our fork
-- [ ] If removing: delete `Sources/CodeIsland/UpdateChecker.swift`; remove `UpdateChecker.shared.checkForUpdates(silent: true)` from `AppDelegate.swift:88`; remove any Settings UI that exposes a manual "Check for Updates" action
+- [ ] Decide: remove checker entirely (zero outbound calls, aligns with our zero-deps policy) OR fix repo URL to `nguyenvanduocit/CodeIsland` if we publish releases on our fork
+- [ ] If removing: delete `Sources/CodeIsland/UpdateChecker.swift`; remove `UpdateChecker.shared.checkForUpdates(silent: true)` from `AppDelegate.swift:88`; remove any Settings UI that exposes manual "Check for Updates"
 - [ ] If keeping: change `private let repo = "wxtsky/CodeIsland"` → `"nguyenvanduocit/CodeIsland"` at `UpdateChecker.swift:8`
+- [ ] Do NOT add Sparkle — it is an external dependency violating our zero-deps constraint
 - [ ] `swift build && swift test` passes
 
 ### T-039: Fix Terminal.app tab activation — priority-based matching (tty → auto-title → fallback)
-> Clicking a session card does nothing for users on macOS built-in Terminal.app because TerminalActivator has no tab-level matching for it — non-Ghostty terminals fall through to app.activate() only. Upstream rewrote this as priority-based AppleScript (tty → auto tab name → fallback), fixing the "shake but nothing happens" bug.
+> Clicking a session card does nothing for users on macOS built-in Terminal.app because TerminalActivator has no tab-level matching for it — non-Ghostty terminals fall through to app.activate() only. Upstream rewrote this as priority-based AppleScript (tty → auto tab name → custom title → deminiaturize), fixing the "shake but nothing happens" bug.
 - **priority**: high
-- **effort**: XS
-- **source**: wxtsky/CodeIsland issue #116 (closed Apr 22, 2026); fix commit `5624480` referenced in closure — **not yet on main, watch for landing**
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #116, commit `0850f35` (v1.0.22, Apr 23, 2026) — upstream fix available (supersedes `5624480`)
 #### Criteria
-- [ ] Wait for upstream commit `5624480` to land on `wxtsky/CodeIsland` main before cherry-picking
-- [ ] `activateTerminalApp()` added to `TerminalActivator.swift` for `com.apple.Terminal` bundle ID
-- [ ] AppleScript tries in order: tty exact match → auto tab name (contains cwd folder name) → fallback to `app.activate()`
-- [ ] `deminiaturize` called before `activate` so minimized Terminal windows re-open
+- [ ] Port `TerminalActivator.swift` changes from `0850f35` (+74, -32 lines): add `activateTerminalApp()` for `com.apple.Terminal` bundle ID
+- [ ] Cascading AppleScript strategy: tty exact match → auto tab name (cwd + command) → custom title → deminiaturize first minimized window
+- [ ] Explicitly activate + unhide Terminal.app in Swift before AppleScript runs so hidden windows come to front
+- [ ] Coordinate with T-020 (broader terminal activation overhaul) — both touch `TerminalActivator.swift`; port T-039 first as it is narrower
+- [ ] `swift build && swift test` passes
+
+### T-040: Port tool_use_id deduplication cache to fix burst PermissionRequest rejection
+> Upstream `0a6ab92` introduces a `PreToolUseRecord` cache keyed on `tool_use_id`. Duplicate PermissionRequest events (same tool_use_id) are deduplicated in-place; stale waiters are denied; orphaned requests drained on PostToolUse. This is the upstream fix for T-019.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland commit `0a6ab92` (v1.0.22, Apr 23, 2026) — cherry-pick `AppState+ToolUseCache.swift` only
+#### Criteria
+- [ ] Port `AppState+ToolUseCache.swift` (+112 lines) — `PreToolUseRecord` struct with TTL (15 min), insert on `PreToolUse` events, lookup on `PermissionRequest`
+- [ ] On duplicate `PermissionRequest` (same `tool_use_id`): replace queued entry in-place, deny stale waiter
+- [ ] On `PostToolUse` / failure: purge completed records + drain orphaned permission requests
+- [ ] Backfill missing `PermissionRequest` metadata from cached `PreToolUse` record
+- [ ] Skip: `AppState+TranscriptTailer.swift` (separate concern) and `AppState+CodexAppServer.swift` (Codex-specific)
+- [ ] Verify `tool_use_id` field is present in our typed `HookEvent` / `EventMetadata`
+- [ ] `swift build && swift test` passes
+
+### T-041: Default mascot setting + fix IDE smart-suppress
+> Users can choose which mascot sprite displays when no sessions are active. IDE smart-suppress is also fixed: panel now correctly suppresses when IDE app is frontmost (was broken — always returned false).
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `657a4db` (v1.0.22, Apr 23, 2026)
+#### Criteria
+- [ ] `Settings.swift` adds `defaultSource` key (default `"claude"`)
+- [ ] `NotchPanelView.displaySource` checks `SettingsManager.defaultSource` when `totalSessionCount == 0`
+- [ ] Settings → Mascots page has a `Picker` for idle mascot selection
+- [ ] `TerminalVisibilityDetector.swift`: flip IDE terminal detection to return `true` (suppress) when IDE is frontmost; use app-frontmost signal instead of assuming terminals are always hidden
+- [ ] `swift build && swift test` passes
+
+### T-042: Configurable auto-approve tools in settings (watch: upstream PR #126)
+> HookServer.swift currently hardcodes the auto-approve tool list. PR #126 makes it configurable per-tool in Settings → Behavior, with defaults matching existing behaviour.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #126 (OPEN Apr 23, 2026) — watch for merge
+#### Criteria
+- [ ] **Do not implement until PR #126 merges upstream**
+- [ ] `Settings.swift` adds `autoApproveTools` Set<String> key with current 10-tool default
+- [ ] `HookServer.swift` reads from `SettingsManager` instead of hardcoded set
+- [ ] Settings → Behavior page adds per-tool toggles
+- [ ] Skip L10n additions (we don't ship L10n)
+- [ ] `swift build && swift test` passes
+
+### T-043: Fix approval card rendering on macOS 26
+> Upstream `05d174c` fixes transparency/rendering issues on macOS 26 (not yet released). Low priority — track for when macOS 26 ships.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `05d174c` (v1.0.22, Apr 23, 2026)
+#### Criteria
+- [ ] Port rendering fix for approval card from `05d174c` when macOS 26 is available for testing
 - [ ] `swift build && swift test` passes
 
 ## Doing

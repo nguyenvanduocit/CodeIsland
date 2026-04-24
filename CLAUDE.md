@@ -244,6 +244,25 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #115 (open, Apr 22): custom hook forwarding feature request — out of scope
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) — docs/SEO badges only, nothing actionable
 
+**Scouted (April 24 2026) — v1.0.22 activity:**
+- v1.0.22 released 2026-04-23
+- `adf41b6`: "fix: preserve user formatting when installing hooks (#105 #106 #119 #107 #103)" — new `JSONMinimalEditor.swift` splices targeted key/value changes without rewriting the file; fixes T-034 (destructive reformat) **and** T-037 (removes invalid `PermissionDenied` entry from Claude Code hook list); comes with 14 tests → **T-034 + T-037: upstream fix available, promote to implement**
+- `0850f35`: "fix: Terminal.app minimized jump + multi-desktop panel visibility (#116 #104)" — `TerminalActivator.swift` gets cascading AppleScript fallback (tty exact → auto tab name → custom title → deminiaturize); supersedes `5624480` that T-039 was watching; `PanelWindowController.swift` clears stale fullscreen-space latch immediately → **T-039 + T-035: upstream fix available, promote to implement**
+- `4aac30f`: "feat(panel): add click-to-jump on permission approval card (#108)" — PR #108 merged; `ApprovalBar` now navigates to terminal on click; `JumpAnimationHelper` centralises shake animation; auto-collapse aware → **T-036: now merged, remove "watch" gate and implement**
+- `0a6ab92`: "feat: session monitoring overhaul — tool_use_id cache, JSONL tailing, Codex app-server" — new `AppState+ToolUseCache.swift` caches `PreToolUse` records by `tool_use_id`; deduplicates burst `PermissionRequest` events (in-place replace + deny stale waiter); fixes T-019 exactly; JSONL tailing is new feature; Codex app-server skip → **T-019 upstream fix: cherry-pick `AppState+ToolUseCache.swift` only (skip Codex parts)** → **T-040** (new)
+- `657a4db`: "feat: default mascot setting + smart-suppress in IDE terminals (#102 #112)" — Settings picker lets user choose which mascot shows when idle; `TerminalVisibilityDetector.swift` now suppresses panel when IDE is frontmost (was broken) → **T-041** (new, medium priority)
+- `27ac918`: Sparkle-based auto-update with ed25519 sig verification — adds Sparkle as external dependency (violates our zero-deps policy); skip Sparkle; T-038 still stands but note that upstream chose Sparkle over deleting the checker
+- **PR #113 CLOSED/ABANDONED** (Apr 23): "Security: remove SSH remote feature and auto-update checker" — closed without merging; upstream went with Sparkle instead; T-038 must be resolved independently (fix repo URL or remove checker)
+- `73c059b`: silence compiler warnings (Sendable + let + nil coalescing) — minor quality chore; skip unless we have the same warnings
+- `aa84056`: performance benchmark tests for hot-path helpers — internal test improvement; skip
+- `cfaa6c6` / `ed2dce4` / `6adb107` / `5ba0a5e`: third-party CLI extensibility, pi-mono, Codex bundle ID, Copilot field seeding — skip (non-Claude CLIs)
+- `05d174c`: "fix: approval card rendering on macOS 26 (#100)" — fixes transparency rendering on macOS 26 (not yet released; future-proof) → **T-043** (low priority, watch)
+- **PR #126** (open, Apr 23): "feat: make auto-approve tools configurable in settings" — `HookServer.swift` reads `autoApproveTools` from `SettingsManager` instead of hardcoded set; Settings Behavior page gets per-tool toggles → **T-042** (watch for merge)
+- Issue #124 (open, Apr 23): macOS terminal click-to-jump still failing — covered by T-039 fix in `0850f35`
+- Issue #125 (open, Apr 23): claude-mem plugin hook triggering issues — plugin-specific, skip
+- Issue #127 (open, Apr 23): Kiro support request — non-Claude CLI, skip
+- vibeislandapp/vibe-island: no new commits since Apr 22 (docs only) — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
