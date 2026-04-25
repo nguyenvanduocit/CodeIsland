@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-24 -->
+<!-- Updated: 2026-04-25 -->
 
 ## Backlog
 
@@ -410,6 +410,21 @@
 - [ ] `HookServer.swift` reads from `SettingsManager` instead of hardcoded set
 - [ ] Settings → Behavior page adds per-tool toggles
 - [ ] Skip L10n additions (we don't ship L10n)
+- [ ] `swift build && swift test` passes
+
+### T-044: Warp pane-precision jumping via SQLite
+> Clicking a session card should land Warp users in the exact pane matching their session's cwd. Currently all non-Ghostty terminals fall through to no-op activation.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland commit `65da9fb` (v1.0.22, Apr 23, 2026) — missed from April 24 scout
+#### Criteria
+- [ ] Port `Sources/CodeIslandCore/WarpPaneResolver.swift` from `65da9fb` (219 lines) — `WarpPaneMatch` struct + `WarpPaneResolver` read-only SQLite reader with firmlink normalisation (`/tmp↔/private/tmp`, `/var↔/private/var`, `/etc↔/private/etc`)
+- [ ] `TerminalActivator.swift`: add Warp bundle-name check → `activateWarp(cwd:)` (+71 lines); `sendWarpGoToTab(position:)` synthesises `Cmd+<n>` via CoreGraphics for tabs 1–9
+- [ ] Fallback to plain app activation when SQLite file absent, query returns no match, or Accessibility permission denied
+- [ ] Port `Tests/CodeIslandCoreTests/WarpPaneResolverTests.swift` from upstream
+- [ ] Uses `import SQLite3` (macOS SDK system library — no external dependencies added)
+- [ ] Coordinate with T-039 (Terminal.app fix also modifies `TerminalActivator.swift`) — port T-039 first
+- [ ] Note: supersedes T-020's partial Warp window-level approach; no need to implement T-020 separately
 - [ ] `swift build && swift test` passes
 
 ### T-043: Fix approval card rendering on macOS 26

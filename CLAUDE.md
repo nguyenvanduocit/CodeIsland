@@ -263,6 +263,13 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #127 (open, Apr 23): Kiro support request — non-Claude CLI, skip
 - vibeislandapp/vibe-island: no new commits since Apr 22 (docs only) — nothing actionable
 
+**Scouted (April 25 2026) — post-v1.0.22 activity:**
+- No new commits or releases since v1.0.22 (Apr 23); latest is still `3d5ea9b`
+- Open PRs: #126 (configurable auto-approve tools, T-042) — still open, still watching; #122 (TraeCli YAML hook fix) — skip
+- Open issues: #128 (Apr 24, Claude Code auto-executes after plan) — Claude Code CLI behaviour, not our app; skip
+- **⚠️ Missed from April 24 scout**: `65da9fb` "feat: Warp SQLite pane-precision jumping" — was in the v1.0.22 batch but absent from previous scout notes. New `WarpPaneResolver.swift` (219 lines) + `TerminalActivator.swift` (+71 lines) adds pane-precision tab-jumping for Warp via read-only SQLite query. Supersedes T-020 (Warp window-level). Uses `import SQLite3` (system lib, zero external deps). → **T-044** (new, high priority)
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
