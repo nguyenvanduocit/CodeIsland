@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-04-25 -->
+<!-- Updated: 2026-04-26 -->
 
 ## Backlog
 
@@ -399,16 +399,15 @@
 - [ ] `TerminalVisibilityDetector.swift`: flip IDE terminal detection to return `true` (suppress) when IDE is frontmost; use app-frontmost signal instead of assuming terminals are always hidden
 - [ ] `swift build && swift test` passes
 
-### T-042: Configurable auto-approve tools in settings (watch: upstream PR #126)
-> HookServer.swift currently hardcodes the auto-approve tool list. PR #126 makes it configurable per-tool in Settings → Behavior, with defaults matching existing behaviour.
+### T-042: Configurable auto-approve tools in settings
+> HookServer.swift currently hardcodes the auto-approve tool list. Make it configurable per-tool in Settings → Behavior, with defaults matching existing behaviour.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland PR #126 (OPEN Apr 23, 2026) — watch for merge
+- **source**: wxtsky/CodeIsland PR #126 MERGED, commit `d3c1e25` (v1.0.23, Apr 25, 2026)
 #### Criteria
-- [ ] **Do not implement until PR #126 merges upstream**
-- [ ] `Settings.swift` adds `autoApproveTools` Set<String> key with current 10-tool default
-- [ ] `HookServer.swift` reads from `SettingsManager` instead of hardcoded set
-- [ ] Settings → Behavior page adds per-tool toggles
+- [ ] `Settings.swift` adds `autoApproveToolsRaw` String key (comma-separated); getter/setter parse/serialise manually — do NOT add `@retroactive Set<String> RawRepresentable` conformance (see `7008e9a`)
+- [ ] `HookServer.swift` reads from `SettingsManager.autoApproveTools` (parsed Set<String>) instead of hardcoded set
+- [ ] Settings → Behavior page adds per-tool toggles; use `autoApproveBinding(for:)` helper pattern from upstream `d3c1e25`
 - [ ] Skip L10n additions (we don't ship L10n)
 - [ ] `swift build && swift test` passes
 
@@ -425,6 +424,43 @@
 - [ ] Uses `import SQLite3` (macOS SDK system library — no external dependencies added)
 - [ ] Coordinate with T-039 (Terminal.app fix also modifies `TerminalActivator.swift`) — port T-039 first
 - [ ] Note: supersedes T-020's partial Warp window-level approach; no need to implement T-020 separately
+- [ ] `swift build && swift test` passes
+
+### T-045: Terminal jump robustness — Ghostty Accessibility fallback + Terminal.app variable shadowing
+> TerminalActivator.swift has three additional robustness fixes beyond T-029/T-020: Ghostty System Events fallback when AppleScript is unreliable; Terminal.app minimised-window recovery on macOS 14; Terminal.app variable shadowing bug where `tty of t is tty` compared tab property to itself, silently jumping to wrong window in multi-session setups.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `ed7cb7e` (v1.0.23, Apr 25, 2026)
+#### Criteria
+- [ ] Port Ghostty System Events fallback block (lines 393–411 upstream): when AppleScript focus is unreliable, force app frontmost via `System Events` Accessibility API + deminiaturise all windows; wrap in error handling for missing Accessibility permission
+- [ ] Port Terminal.app identical fallback for minimised window recovery (lines 615–631 upstream)
+- [ ] Rename local variables `tty` → `targetTty` and `dir` → `targetDir` in Terminal.app AppleScript block; update all three matching strategy references
+- [ ] Apply on top of any T-020 / T-039 changes (all touch `TerminalActivator.swift`)
+- [ ] `swift build && swift test` passes
+
+### T-046: Webhook forwarding for hook events
+> Power users want to route hook events to external services (Slack, CI webhooks, custom logging). Add a fire-and-forget HTTP POST option with configurable URL and event allow-list filter. Failures are silently ignored so webhook issues never disrupt the main event pipeline.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commit `b6a7007` (v1.0.23, Apr 25, 2026)
+#### Criteria
+- [ ] `Settings.swift` adds three keys: `webhookEnabled` (Bool, default false), `webhookURL` (String, default ""), `webhookEventFilter` (String, comma-separated, default "")
+- [ ] `HookServer.swift` adds `forwardEventToWebhook()` — URLSession fire-and-forget POST; JSON envelope with event name, session ID, source, cwd, tool name, timestamp; 5s timeout; runs before route handlers; failures logged but not propagated
+- [ ] Event filter: when non-empty, only forward events whose name appears in the comma-separated list; when empty, forward all
+- [ ] Settings → Behavior page adds Webhook Forwarding section: enable toggle + conditional URL field + event filter field (monospaced font); strip whitespace from URL before use
+- [ ] Skip L10n additions (we don't ship L10n)
+- [ ] `swift build && swift test` passes
+
+### T-047: Configurable cwd-substring blocklist to filter noisy background hooks
+> Background plugins (claude-mem, etc.) fire hook events from their own directories, creating unwanted sessions in the panel. Add a user-configurable comma-separated blocklist of cwd substrings; any hook event whose working directory contains a match is silently dropped before state mutation.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `63e3ac6` (v1.0.23, Apr 25, 2026) — fixes issue #125
+#### Criteria
+- [ ] `Settings.swift` adds `excludedHookCwdSubstrings` key (String, comma-separated, default "")
+- [ ] `HookServer.swift` adds `eventMatchesExcludedCwd()` helper; call in `processRequest()` before any session state mutation; silently drop matching events
+- [ ] Settings → Behavior page adds "Ignore Hooks From Paths" section with a monospaced text field and placeholder examples (e.g. `.claude/plugins/claude-mem`)
+- [ ] Skip L10n additions (we don't ship L10n)
 - [ ] `swift build && swift test` passes
 
 ### T-043: Fix approval card rendering on macOS 26

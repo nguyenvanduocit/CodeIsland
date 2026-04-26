@@ -270,6 +270,24 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - **⚠️ Missed from April 24 scout**: `65da9fb` "feat: Warp SQLite pane-precision jumping" — was in the v1.0.22 batch but absent from previous scout notes. New `WarpPaneResolver.swift` (219 lines) + `TerminalActivator.swift` (+71 lines) adds pane-precision tab-jumping for Warp via read-only SQLite query. Supersedes T-020 (Warp window-level). Uses `import SQLite3` (system lib, zero external deps). → **T-044** (new, high priority)
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
 
+**Scouted (April 26 2026) — v1.0.23 activity:**
+- v1.0.23 released 2026-04-25
+- **PR #126 MERGED** (`d3c1e25`): configurable auto-approve tools in settings — `HookServer.swift` reads from `SettingsManager`; Settings Behavior page adds per-tool toggles → **T-042 promote to implement**. Also note: `7008e9a` (same batch) drops `@retroactive Set<String> RawRepresentable` conformance in favour of manual comma-string serialisation — implement T-042 following this pattern (store as `String`, parse/serialise manually)
+- **`ed7cb7e`**: terminal jump robustness — Ghostty: System Events Accessibility API fallback when AppleScript unreliable; Terminal.app: identical fallback for minimised window recovery on macOS 14; Terminal.app variable shadowing fix (renamed `tty`/`dir` → `targetTty`/`targetDir` so AppleScript comparisons don't compare a variable to itself). Additive on top of T-020 (`b51fd5f`) and T-029 (`48520de`). → **T-045** (new, S effort)
+- **`b6a7007`**: webhook forwarding for hook events — fire-and-forget HTTP POST to user-configured URL; configurable event allow-list filter; 5s timeout; HookServer + Settings + SettingsView changes only → **T-046** (new, M effort)
+- **`63e3ac6`**: configurable cwd-substring blocklist for hook events — users can enter comma-separated path substrings; matching events silently dropped before state mutation; prevents background plugins (claude-mem, etc.) creating noise sessions → **T-047** (new, S effort)
+- `9098aeb`: don't force remote sessions to idle on local timeout — skip (SSH remote sessions, not applicable)
+- `9c1920e` / PR #131: ESP32 BLE companion device — skip (hardware)
+- `8863a46`: Kiro CLI support — skip (non-Claude CLI)
+- `1f7b419` / `5742e32`: TraeCli fixes — skip
+- `9346ff3`: Codex $CODEX_HOME config — skip
+- `746afa4`: WorkBuddy support — skip (non-Claude CLI)
+- `79787e9`: refactor share TerminalActivator source→bundle-id map — introduces ESP32FocusCoordinator dependency; skip
+- `97842e6`: test coverage for cwd filter + Kiro — internal, skip
+- `9ef73c1`: trim whitespace around webhook URL — minor, bundled with T-046
+- No new open PRs or issues relevant to us (only Kiro #127, opencode.jsonc #132, and non-Claude CLIs)
+- vibeislandapp/vibe-island: still no new code since Apr 3 (docs/SEO only) — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
