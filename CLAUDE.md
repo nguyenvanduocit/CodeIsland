@@ -288,6 +288,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - No new open PRs or issues relevant to us (only Kiro #127, opencode.jsonc #132, and non-Claude CLIs)
 - vibeislandapp/vibe-island: still no new code since Apr 3 (docs/SEO only) — nothing actionable
 
+**Scouted (April 27 2026) — post-v1.0.23 activity:**
+- No new commits or releases since v1.0.23 (Apr 25); latest commit is `d887012` (appcast.xml chore)
+- **PR #133** (open, Apr 26): "fix: prevent Sparkle crash in DEBUG mode when running without bundle ID" — adds `#if DEBUG` guard around Sparkle init in `UpdateChecker.swift`; not applicable (we don't use Sparkle; T-038 tracks our independent UpdateChecker fix)
+- **PR #135** (open, Apr 26): "Chore: Polish Turkish translation" — skip (no L10n)
+- **PR #136** (closed, Apr 26): opened on wrong repo in error — skip
+- **Issue #134** (open, Apr 26): cursor-agent and qodercli support request — skip (non-Claude CLIs)
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via this kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
