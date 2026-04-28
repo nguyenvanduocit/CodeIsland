@@ -1,9 +1,31 @@
 # Kanban Board
-<!-- Updated: 2026-04-26 -->
+<!-- Updated: 2026-04-28 -->
 
 ## Backlog
 
+### T-049: Investigate subagent session visual indicator
+> Top-level sessions spawned by Claude Code's Task tool are visually indistinguishable from main-agent sessions. We already show active subagents within a session card; the gap is labelling the session itself as a subagent when it was Task-spawned. Needs investigation: does the hook payload include an "is_subagent" or "parent_session_id" field?
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #141 (open, Apr 27, 2026) — no upstream fix yet
+#### Criteria
+- [ ] Investigate: confirm whether Claude Code hook events for a Task-spawned subagent process include any `is_subagent` / `parent_session_id` / `agent_type` flag in `EventMetadata` or top-level JSON
+- [ ] If field available: store it in `SessionSnapshot` (e.g. `isSubagentSession: Bool`) and surface a small badge or dimmed styling in `SessionListView`
+- [ ] If field not available: document the gap and watch for upstream Claude Code changes that expose it
+- [ ] `swift build && swift test` passes
+
 ## Todo
+
+### T-048: Fix main-thread block in detectClaudeVersion() — app freezes on activation
+> `ConfigInstaller.detectClaudeVersion()` calls `proc.waitUntilExit()` synchronously. It is invoked from `checkAndRepairHooks()` on `@MainActor AppDelegate`, which runs on every app-activation event (user switching back to the app) and every 300 s via background timer. Slow Claude CLI startup or permission dialogs will freeze the entire app UI.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #139 (open, Apr 27, 2026) — confirmed in our codebase; no upstream fix merged yet
+#### Criteria
+- [ ] In `AppDelegate.checkAndRepairHooks()`: wrap `ConfigInstaller.verifyAndRepair()` call in `Task.detached(priority: .utility) { ... }` so the synchronous subprocess no longer blocks the main actor
+- [ ] Add a 5-second timeout to `detectClaudeVersion()` (`proc.waitUntilExit()` → timer-based cancel + `waitUntilExit()` on background thread, or use `AsyncProcess` pattern)
+- [ ] `app.activate` notification observer callback in `AppDelegate` already runs on `.main` queue — keep only UI-update code there; move `checkAndRepairHooks()` off main
+- [ ] `swift build && swift test` passes
 
 ### T-026: Configurable notch height modes to fix panel misalignment
 > Some Macs (e.g. MacBook Air 15") have a 1px gap between the panel and the physical notch. Add three height modes: align to notch (default), align to menubar, or custom slider.

@@ -297,6 +297,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via this kanban board only
 
+**Scouted (April 28 2026) — post-v1.0.23 activity:**
+- No new commits or releases since v1.0.23 (Apr 25); latest upstream commit remains `d887012` (appcast.xml chore)
+- **Issue #139** (open, Apr 27): app hangs silently on launch — main thread blocked by `detectClaudeVersion()` calling `proc.waitUntilExit()` on `@MainActor AppDelegate`; confirmed same bug in our `ConfigInstaller.swift:263` + `AppDelegate.checkAndRepairHooks()` triggered on every app-activation event → **T-048** (new, high priority, XS)
+- **Issue #141** (open, Apr 27): feature request for visual indicator to distinguish subagent sessions — we already show active subagents within session cards; gap is top-level sessions spawned by Task tool looking identical to main-agent sessions → **T-049** (new, low priority, backlog)
+- **Issue #140** (open, Apr 27): Light/Dark/System theme toggle request — skip (low demand, our pixel aesthetic is intentionally dark-only)
+- **Issue #137** (open, Apr 27): update failure after showing "latest version" — Sparkle-specific; we don't use Sparkle (T-038 tracks our own UpdateChecker)
+- **PR #138** (open, Apr 27): fix Sparkle abort-callback race — Sparkle-specific; skip
+- PR #133/#135: Sparkle DEBUG guard + Turkish L10n polish — unchanged, still skip
+- vibeislandapp/vibe-island: no new commits since Apr 22 — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
