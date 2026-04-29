@@ -307,6 +307,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - PR #133/#135: Sparkle DEBUG guard + Turkish L10n polish — unchanged, still skip
 - vibeislandapp/vibe-island: no new commits since Apr 22 — nothing actionable
 
+**Scouted (April 29 2026) — post-v1.0.23 activity:**
+- No new commits or releases since v1.0.23 (Apr 25); upstream still quiet
+- **PR #144** (open, Apr 28): "feat: improve Buddy watch approval previews and alerts" — extends the ESP32 BLE hardware companion device (wearable desk pet); hardware-specific, not relevant to macOS app — skip
+- **PR #138** (open, Apr 27): Sparkle abort-callback race — Sparkle-specific; still open, still skip (T-038 tracks our own UpdateChecker fix independently)
+- **Issue #143** (open, Apr 28): pi-coding-agent support request — non-Claude CLI, skip
+- **Issue #142** (open, Apr 28): iPhone companion app feature request — out of scope, skip
+- vibeislandapp/vibe-island: no new commits since Apr 22 — nothing actionable
+- **No new actionable items.** All tasks (T-016 through T-049) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
