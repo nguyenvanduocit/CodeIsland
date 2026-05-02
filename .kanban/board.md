@@ -1,18 +1,7 @@
 # Kanban Board
-<!-- Updated: 2026-04-28 -->
+<!-- Updated: 2026-05-02 -->
 
 ## Backlog
-
-### T-049: Investigate subagent session visual indicator
-> Top-level sessions spawned by Claude Code's Task tool are visually indistinguishable from main-agent sessions. We already show active subagents within a session card; the gap is labelling the session itself as a subagent when it was Task-spawned. Needs investigation: does the hook payload include an "is_subagent" or "parent_session_id" field?
-- **priority**: low
-- **effort**: S
-- **source**: wxtsky/CodeIsland issue #141 (open, Apr 27, 2026) — no upstream fix yet
-#### Criteria
-- [ ] Investigate: confirm whether Claude Code hook events for a Task-spawned subagent process include any `is_subagent` / `parent_session_id` / `agent_type` flag in `EventMetadata` or top-level JSON
-- [ ] If field available: store it in `SessionSnapshot` (e.g. `isSubagentSession: Bool`) and surface a small badge or dimmed styling in `SessionListView`
-- [ ] If field not available: document the gap and watch for upstream Claude Code changes that expose it
-- [ ] `swift build && swift test` passes
 
 ## Todo
 
@@ -20,7 +9,7 @@
 > `ConfigInstaller.detectClaudeVersion()` calls `proc.waitUntilExit()` synchronously. It is invoked from `checkAndRepairHooks()` on `@MainActor AppDelegate`, which runs on every app-activation event (user switching back to the app) and every 300 s via background timer. Slow Claude CLI startup or permission dialogs will freeze the entire app UI.
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #139 (open, Apr 27, 2026) — confirmed in our codebase; no upstream fix merged yet
+- **source**: wxtsky/CodeIsland issue #139; upstream fix in v1.0.24 commits `61ab21e`/`7748e48`/`67d8039`/`78000a7`/`fecfed9` (Apr 29, 2026)
 #### Criteria
 - [ ] In `AppDelegate.checkAndRepairHooks()`: wrap `ConfigInstaller.verifyAndRepair()` call in `Task.detached(priority: .utility) { ... }` so the synchronous subprocess no longer blocks the main actor
 - [ ] Add a 5-second timeout to `detectClaudeVersion()` (`proc.waitUntilExit()` → timer-based cancel + `waitUntilExit()` on background thread, or use `AsyncProcess` pattern)
@@ -407,6 +396,7 @@
 - [ ] Backfill missing `PermissionRequest` metadata from cached `PreToolUse` record
 - [ ] Skip: `AppState+TranscriptTailer.swift` (separate concern) and `AppState+CodexAppServer.swift` (Codex-specific)
 - [ ] Verify `tool_use_id` field is present in our typed `HookEvent` / `EventMetadata`
+- [ ] Also port `e18f884` (Apr 30, 2026): replace "blanket drain" with surgical `tool_use_id`-targeted drain in `AppState.swift`; prevents parallel tool completions from falsely denying unrelated pending permissions; port 2 regression tests (`testStopEventDoesNotDenyPendingPermission`, `testParallelPostToolUseDoesNotDenyUnrelatedPendingPermission`)
 - [ ] `swift build && swift test` passes
 
 ### T-041: Default mascot setting + fix IDE smart-suppress
@@ -419,6 +409,7 @@
 - [ ] `NotchPanelView.displaySource` checks `SettingsManager.defaultSource` when `totalSessionCount == 0`
 - [ ] Settings → Mascots page has a `Picker` for idle mascot selection
 - [ ] `TerminalVisibilityDetector.swift`: flip IDE terminal detection to return `true` (suppress) when IDE is frontmost; use app-frontmost signal instead of assuming terminals are always hidden
+- [ ] Port `257778b` bugfix (Apr 30, 2026): change default-mascot trigger from `totalSessionCount == 0` → `summary.status == .idle` so idle-with-sessions also shows the user's preferred mascot (not just the empty state)
 - [ ] `swift build && swift test` passes
 
 ### T-042: Configurable auto-approve tools in settings
@@ -431,6 +422,7 @@
 - [ ] `HookServer.swift` reads from `SettingsManager.autoApproveTools` (parsed Set<String>) instead of hardcoded set
 - [ ] Settings → Behavior page adds per-tool toggles; use `autoApproveBinding(for:)` helper pattern from upstream `d3c1e25`
 - [ ] Skip L10n additions (we don't ship L10n)
+- [ ] Default value for `autoApproveToolsRaw` should be empty string (empty set), not the old hardcoded list — matches upstream `b0a6989` (Apr 29, 2026)
 - [ ] `swift build && swift test` passes
 
 ### T-044: Warp pane-precision jumping via SQLite
@@ -493,6 +485,66 @@
 #### Criteria
 - [ ] Port rendering fix for approval card from `05d174c` when macOS 26 is available for testing
 - [ ] `swift build && swift test` passes
+
+### T-049: Surface subagent count + tooltip on session card
+> Show a "+N Sub" count badge in purple and per-agent tooltips (agent type + current tool) on session cards so multi-subagent sessions are easy to read at a glance.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commits `ee25116` + `2cf2960` (v1.0.24, Apr 29, 2026) — upstream fix available; supersedes earlier "investigate" framing
+#### Criteria
+- [ ] In `NotchPanelView.swift` (or `SessionListView.swift`), add `.help()` tooltip to each `MiniAgentIcon`: text = "{agentType} — {currentTool}" when tool active, or just "{agentType}" when idle
+- [ ] Add a `SessionTag` displaying "+N Sub" in purple to the session header when `subagentCount > 0`
+- [ ] Extract subagent tooltip builder to a dedicated `@ViewBuilder` helper outside the main `body` (avoids recomputing on every `ViewBuilder` pass — perf fix from `2cf2960`)
+- [ ] `swift build && swift test` passes
+
+### T-050: Setting to disable auto-expand panel on agent completion
+> Add a toggle so users who find the panel auto-expanding after every agent task can opt out. Defaults to enabled to preserve current behaviour.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `d71b11e` (v1.0.24, Apr 29, 2026) — upstream fix available
+#### Criteria
+- [ ] `Settings.swift` adds `autoExpandOnCompletion` Bool key (default `true`)
+- [ ] In `CompletionQueueService.enqueueCompletion()` (or wherever panel expansion is triggered), guard on `SettingsManager.autoExpandOnCompletion`; skip expansion when `false`
+- [ ] Settings → Behavior page adds a toggle row for this setting
+- [ ] `swift build && swift test` passes
+
+### T-051: Plugin sub-sessions mode — separate / merge / hide
+> claude-mem and similar plugins running inside a Claude session fire hook events with their own session ID, creating spurious cards. A 3-way setting (Separate/Merge/Hide) lets users decide how these `_via_plugin`-stamped events are handled. "Hide" auto-approves permissions to avoid blocking the main session.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `af7bbb1` (v1.0.24, Apr 29, 2026) — upstream fix available
+#### Criteria
+- [ ] `CodeIslandBridge/main.swift`: stamp `_via_plugin = true` in the forwarded JSON when source was inferred via process ancestry (no explicit `--source` flag)
+- [ ] `HookEvent` / `EventMetadata`: add `isViaPlugin: Bool` parsed field
+- [ ] `Settings.swift` adds `pluginSessionMode` key (String, default `"separate"`; values: `"separate"` / `"merge"` / `"hide"`)
+- [ ] `HookServer.swift`: pre-filter `isViaPlugin` events per mode before reducer — "Merge" rewrites session ID to match parent (look up by source + CLI PID); "Hide" drops event and auto-approves any `PermissionRequest` in it
+- [ ] Settings → Sessions page has a segmented picker for the mode
+- [ ] Skip L10n additions (we don't ship L10n)
+- [ ] `swift build && swift test` passes
+
+### T-052: Hook event ring buffer + diagnostics export
+> Maintain a 100-event in-memory ring buffer of received hook events (timestamp, source, session ID, event name, tool, plugin flag) and export it to `state/hook-events.json` during diagnostics. Makes it possible to triage session-routing bugs without guessing. Also includes a harden pass on `UserPromptSubmit` prompt extraction.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `94f7ca8` + `0972e8b` (v1.0.24, Apr 29, 2026) — upstream fix available
+#### Criteria
+- [ ] Add `DiagnosticHookEvent` struct (timestamp, source, sessionId prefix-12, eventName, toolName, isViaPlugin)
+- [ ] `AppState.swift` adds `recentHookEvents: [DiagnosticHookEvent]` (capped at 100, FIFO); expose `recordHookEvent()` method
+- [ ] `HookServer.swift` calls `recordHookEvent()` after event construction, before routing
+- [ ] `DiagnosticsExporter.swift` (create if absent) writes ring buffer to `state/hook-events.json` with ISO 8601 fractional-second timestamps
+- [ ] Port `UserPromptSubmit` prompt-extraction hardening from `0972e8b`
+- [ ] `swift build && swift test` passes
+
+### T-053: Investigate Claude Code 2.1.121 quick-select incompatibility
+> Issue #150: users on Claude Code 2.1.121 get a "tool selection error" when using the quick-select feature. No upstream fix exists yet. Need to reproduce and determine if the root cause is in our hook handling or in upstream's UI layer.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #150 (open, Apr 30, 2026) — no upstream fix yet
+#### Criteria
+- [ ] Reproduce with Claude Code 2.1.121 and confirm whether the error originates in CodeIsland hook handling or in the Claude CLI itself
+- [ ] If CodeIsland-side: identify which event type / response is malformed and fix
+- [ ] If Claude CLI-side: document findings and watch for upstream fix
+- [ ] `swift build && swift test` passes (if code change needed)
 
 ## Doing
 

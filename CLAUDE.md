@@ -316,6 +316,23 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: no new commits since Apr 22 — nothing actionable
 - **No new actionable items.** All tasks (T-016 through T-049) remain as previously documented.
 
+**Scouted (May 2, 2026) — v1.0.24 + post-v1.0.24 activity:**
+- v1.0.24 released 2026-04-29
+- **BATCH `61ab21e`/`7748e48`/`67d8039`/`78000a7`/`fecfed9`** (Apr 29): main-thread hardening — `ProcessRunner` with timeout for `detectClaudeVersion`; move hook installation + `verifyAndRepair` off main thread; cap `TerminalActivator`/`VisibilityDetector` subprocess waits; dispatch Ghostty activation off main. Upstream fix for T-048 now available → **T-048 promote to implement**
+- **`d71b11e`** (Apr 29): opt-in setting to disable auto-expand panel on agent completion — guard in `enqueueCompletion()`, new `autoExpandOnCompletion` key (default true), toggle in Settings → Behavior → **T-050** (new, XS)
+- **`ee25116` + `2cf2960`** (Apr 29): surface "+N Sub" purple tag + per-agent tooltip on session cards (#141) — `agentType` and `currentTool` already in typed `HookEvent`; `@ViewBuilder` helper extracted for perf → **T-049 promoted from Backlog investigate to Todo implement**
+- **`af7bbb1`** (Apr 29): Settings → Plugin Sub-Sessions: separate/merge/hide (#123) — bridge stamps `_via_plugin` on ancestry-inferred events; "Merge" folds into parent session; "Hide" auto-approves and drops. Directly relevant for claude-mem and similar plugins that fire hooks inside a Claude session → **T-051** (new, S)
+- **`94f7ca8` + `0972e8b`** (Apr 29): hook event ring buffer — last 100 events in-memory, exported to `state/hook-events.json` in diagnostics; hardens `UserPromptSubmit` prompt extraction → **T-052** (new, S)
+- **`e18f884`** (Apr 30): stop blanket-draining pending permissions on activity events (#147) — replaces "drain all" with surgical `tool_use_id`-targeted drain; fixes parallel MCP/plugin race where one completion denied another tool's pending permission; 2 regression tests added → cherry-pick alongside T-040; add to T-040 criteria
+- **`257778b`** (Apr 30): fix: honor user default mascot when no session is actively working (#149) — trigger changed `totalSessionCount == 0` → `summary.status == .idle`; idle-with-sessions now shows default mascot → add to T-041 criteria
+- `7d475b4` (Apr 30): collapse Cursor sub-agent processes onto one card (#148) — Cursor-specific, skip
+- `b0a6989` (Apr 29): empty default `autoApproveTools` — T-042 should ship with empty default, not the old hardcoded list
+- `a5331f3` (Apr 29): distinguish cursor-agent/qodercli source (#134) — Cursor-specific, skip
+- PR #152 (open, May 1): route Codex subagent sessions by mode — Codex-specific, skip
+- **Issue #150** (open, Apr 30): Claude Code 2.1.121 "quick-select" (快速选择) incompatibility — user reports tool selection error on click; no upstream fix yet → **T-053** (new, watch/investigate)
+- Issue #151 (open, Apr 30): Codex native subagents shown as separate sessions — Codex-specific, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
