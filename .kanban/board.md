@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-02 -->
+<!-- Updated: 2026-05-03 -->
 
 ## Backlog
 
@@ -535,16 +535,16 @@
 - [ ] Port `UserPromptSubmit` prompt-extraction hardening from `0972e8b`
 - [ ] `swift build && swift test` passes
 
-### T-053: Investigate Claude Code 2.1.121 quick-select incompatibility
-> Issue #150: users on Claude Code 2.1.121 get a "tool selection error" when using the quick-select feature. No upstream fix exists yet. Need to reproduce and determine if the root cause is in our hook handling or in upstream's UI layer.
-- **priority**: medium
-- **effort**: S
-- **source**: wxtsky/CodeIsland issue #150 (open, Apr 30, 2026) — no upstream fix yet
+### T-053: Fix AskUserQuestion answer broken in Claude Code ≥2.1.121 (missing questions in updatedInput)
+> Newer Claude Code versions require the original `questions` array echoed back inside `updatedInput` when answering AskUserQuestion via PermissionRequest. Our response omits it, causing a "tool selection error" on click. Root cause confirmed CodeIsland-side by upstream PR #153.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #150 + PR #153 (open, May 2, 2026) — root cause identified, fix available
 #### Criteria
-- [ ] Reproduce with Claude Code 2.1.121 and confirm whether the error originates in CodeIsland hook handling or in the Claude CLI itself
-- [ ] If CodeIsland-side: identify which event type / response is malformed and fix
-- [ ] If Claude CLI-side: document findings and watch for upstream fix
-- [ ] `swift build && swift test` passes (if code change needed)
+- [ ] In `RequestQueueService.swift` `answer()`, change the `isFromPermission` branch to build `updatedInput` from `pending.event.toolInput ?? [:]` as base, then stamp `questions` from `pending.event.toolInput?["questions"] as? [[String: Any]]`, `answers: [answerKey: answer]`, and `answer: answer` (backward-compat single-answer field)
+- [ ] Extract a private `askUserQuestionUpdatedInput(event:answers:answer:)` helper (mirrors upstream PR #153 pattern) so any future multi-answer path reuses the same logic
+- [ ] Add test to `AppStateQuestionFlowTests` (or `RequestQueueServiceTests`) asserting that the PermissionRequest response payload contains `questions`, `answers`, and `answer` fields
+- [ ] `swift build && swift test` passes
 
 ## Doing
 
