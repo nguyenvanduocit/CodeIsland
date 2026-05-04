@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-03 -->
+<!-- Updated: 2026-05-04 -->
 
 ## Backlog
 
@@ -539,7 +539,7 @@
 > Newer Claude Code versions require the original `questions` array echoed back inside `updatedInput` when answering AskUserQuestion via PermissionRequest. Our response omits it, causing a "tool selection error" on click. Root cause confirmed CodeIsland-side by upstream PR #153.
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #150 + PR #153 (open, May 2, 2026) — root cause identified, fix available
+- **source**: wxtsky/CodeIsland issue #150 + PR #153 (open, May 2, 2026) — reference implementation available; PR not yet merged but fix is confirmed and safe to port now
 #### Criteria
 - [ ] In `RequestQueueService.swift` `answer()`, change the `isFromPermission` branch to build `updatedInput` from `pending.event.toolInput ?? [:]` as base, then stamp `questions` from `pending.event.toolInput?["questions"] as? [[String: Any]]`, `answers: [answerKey: answer]`, and `answer: answer` (backward-compat single-answer field)
 - [ ] Extract a private `askUserQuestionUpdatedInput(event:answers:answer:)` helper (mirrors upstream PR #153 pattern) so any future multi-answer path reuses the same logic

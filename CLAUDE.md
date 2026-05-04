@@ -333,6 +333,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #151 (open, Apr 30): Codex native subagents shown as separate sessions — Codex-specific, skip
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
 
+**Scouted (May 4, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest commit on main remains `257778b` (Apr 30)
+- **PR #153** (open, May 2): "fix: 修复 AskUserQuestion 在新版 Claude Code 下的点击回答异常" — upstream fix for T-053 now has confirmed implementation: adds `askUserQuestionUpdatedInput()` private helper that builds `updatedInput` from `toolInput` base, preserves `questions` array, adds `answers` dict and backward-compat `answer` field; not yet merged into main → T-053 criteria already captures this accurately, status unchanged (implement now, don't wait for merge)
+- PR #152 (open, May 1): route Codex subagent sessions by mode — Codex-specific, skip (unchanged)
+- Issue #150 (open, Apr 30): Claude Code 2.1.121 incompatibility — PR #153 is the upstream fix; T-053 promoted from watch/investigate to **implement** (confirmed root cause + reference implementation)
+- Issue #151 (open, Apr 30): Codex native subagents — Codex-specific, skip (unchanged)
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via this kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
