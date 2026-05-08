@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-04 -->
+<!-- Updated: 2026-05-08 -->
 
 ## Backlog
 
@@ -100,14 +100,15 @@
 - [ ] `swift build && swift test` passes
 
 ### T-035: Fix agent disappearing from island bar when switching macOS Spaces
-> Upstream issue #104: session's agent indicator disappears when returning to the desktop where the terminal lives. Root cause: stale fullscreen-space latch in PanelWindowController keeps panel hidden for up to 1.5s after a Space switch.
+> Upstream issue #104: session's agent indicator disappears when returning to the desktop where the terminal lives. Root cause: stale fullscreen-space latch in PanelWindowController keeps panel hidden for up to 1.5s after a Space switch. Also: upstream issue #154 (May 4 2026, filed AFTER v1.0.22) reports panel permanently invisible on non-first desktops on Mac mini M4 (no notch) — suggests `0850f35` latch fix alone may be insufficient for non-notch multi-desktop path; upstream has no additional fix yet.
 - **priority**: medium
-- **effort**: XS
-- **source**: wxtsky/CodeIsland issue #104, commit `0850f35` (v1.0.22, Apr 23, 2026) — upstream fix available
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #104 + #154, commit `0850f35` (v1.0.22, Apr 23, 2026) — upstream fix available for latch; non-notch case unresolved upstream
 #### Criteria
 - [ ] In `PanelWindowController.swift` Space-switch handler, clear the fullscreen-space latch immediately when entering a non-fullscreen Space (don't wait for next poll interval)
 - [ ] Port the 8-line fix from `0850f35` in `PanelWindowController.swift`
-- [ ] Reproduce locally before and after: switch from fullscreen Space to regular Desktop and back
+- [ ] After porting, test on a non-notch external display: switch Spaces and verify panel appears on each desktop (not just first)
+- [ ] If panel is permanently invisible on non-first desktop on non-notch display, investigate whether `.collectionBehavior` or screen-detection logic needs adjustment for that path
 - [ ] `swift build && swift test` passes
 
 ### T-029: Fix Ghostty: clicking session triggers quick terminal instead of focusing tab
@@ -536,14 +537,14 @@
 - [ ] `swift build && swift test` passes
 
 ### T-053: Fix AskUserQuestion answer broken in Claude Code ≥2.1.121 (missing questions in updatedInput)
-> Newer Claude Code versions require the original `questions` array echoed back inside `updatedInput` when answering AskUserQuestion via PermissionRequest. Our response omits it, causing a "tool selection error" on click. Root cause confirmed CodeIsland-side by upstream PR #153.
+> Newer Claude Code versions require the original `questions` array echoed back inside `updatedInput` when answering AskUserQuestion via PermissionRequest. Our response omits it, causing a crash: `"undefined is not an object (evaluating 'H.map')"` (confirmed by upstream issue #157, May 7 2026). Root cause: `RequestQueueService.swift:answer()` builds `updatedInput` as `["answers": [answerKey: answer]]` only — drops `questions`.
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #150 + PR #153 (open, May 2, 2026) — reference implementation available; PR not yet merged but fix is confirmed and safe to port now
+- **source**: wxtsky/CodeIsland issue #150 + PR #153 (open May 2) + PR #158 (open May 7, simpler approach) — implement using PR #158 inline pattern (no helper needed; we have one answer path, not three)
 #### Criteria
-- [ ] In `RequestQueueService.swift` `answer()`, change the `isFromPermission` branch to build `updatedInput` from `pending.event.toolInput ?? [:]` as base, then stamp `questions` from `pending.event.toolInput?["questions"] as? [[String: Any]]`, `answers: [answerKey: answer]`, and `answer: answer` (backward-compat single-answer field)
-- [ ] Extract a private `askUserQuestionUpdatedInput(event:answers:answer:)` helper (mirrors upstream PR #153 pattern) so any future multi-answer path reuses the same logic
-- [ ] Add test to `AppStateQuestionFlowTests` (or `RequestQueueServiceTests`) asserting that the PermissionRequest response payload contains `questions`, `answers`, and `answer` fields
+- [ ] In `RequestQueueService.swift` `answer()`, in the `isFromPermission` branch: build `updatedInput` as `var updatedInput: [String: Any] = ["answers": [answerKey: answer], "answer": answer]`; then if `pending.event.toolInput?["questions"]` is non-nil, add it to `updatedInput["questions"]` (mirrors PR #158 inline approach)
+- [ ] Do NOT extract a helper method — we have a single answer path (T-018 multi-question wizard not yet implemented)
+- [ ] Add test asserting the PermissionRequest response payload contains `questions`, `answers`, and `answer` fields when `toolInput` carries a `questions` array
 - [ ] `swift build && swift test` passes
 
 ## Doing

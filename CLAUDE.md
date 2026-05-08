@@ -342,6 +342,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via this kanban board only
 
+**Scouted (May 8, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24; latest commit on main remains `257778b` (Apr 30)
+- **PR #158** (open, May 7): "fix: preserve original questions in AskUserQuestion hook response" — second competing fix for T-053 bug; inline approach (3 targeted patches) vs PR #153's helper-method approach; root cause confirmed by user crash report in **Issue #157** (`"undefined is not an object (evaluating 'H.map')"` — Claude CLI loses `questions` array when `updatedInput` omits it) → T-053 criteria updated to reference PR #158 as simpler implementation path (our codebase has one answer path, not three, so no helper needed)
+- PR #156 (open, May 6): "feat: add Cline support" — non-Claude CLI, skip
+- **Issue #154** (open, May 4): "macmini M4多个桌面，只有在第一个桌面显示灵动岛" — panel permanently invisible on non-first desktops (Mac mini M4, no notch); filed AFTER v1.0.22 that contains `0850f35` T-035 fix; suggests T-035's fullscreen-space latch fix may be insufficient for non-notch multi-desktop case; upstream has no fix yet → T-035 criteria updated to note investigation needed for non-notch display path
+- Issue #157 (open, May 7): AskUserQuestion crash — same root cause as T-053; PR #158 is the upstream fix (as above)
+- Issue #155 (open, May 7): Codex PermissionRequest hook error — Codex-specific, skip
+- Issues #159, #160 (open, May 7): kaku/opencode feature requests — non-Claude CLIs, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
