@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-08 -->
+<!-- Updated: 2026-05-10 -->
 
 ## Backlog
 
@@ -534,6 +534,18 @@
 - [ ] `HookServer.swift` calls `recordHookEvent()` after event construction, before routing
 - [ ] `DiagnosticsExporter.swift` (create if absent) writes ring buffer to `state/hook-events.json` with ISO 8601 fractional-second timestamps
 - [ ] Port `UserPromptSubmit` prompt-extraction hardening from `0972e8b`
+- [ ] `swift build && swift test` passes
+
+### T-054: Fix Ghostty Quick Terminal causing false panel expansion
+> When Claude Code runs inside Ghostty's Quick Terminal (floating overlay / "Quake mode"), `TerminalVisibilityDetector` doesn't suppress the panel because the OS still reports the previous app (e.g. Chrome) as frontmost — Ghostty Quick Terminal is not a standard macOS window and doesn't receive a normal focus event. CodeIsland incorrectly concludes the user is not in a terminal and expands approval/question prompts.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #161 (May 8, 2026) — no upstream fix yet; distinct from T-029 (which fixes clicking a session card triggering the quick terminal)
+#### Criteria
+- [ ] Investigate how to detect the Ghostty Quick Terminal: check `NSRunningApplication` for Ghostty + query if any Ghostty window is currently visible/key via Accessibility API or `CGWindowListCopyWindowInfo` (layer/bounds heuristic for always-on-top overlays)
+- [ ] In `TerminalVisibilityDetector.swift`: if Ghostty is running AND its overlay window is visible (even when not system-frontmost), treat the session as "user is in terminal" and suppress panel expansion
+- [ ] Alternatively, add a Settings toggle "Suppress panel when Ghostty Quick Terminal is open" if programmatic detection proves unreliable
+- [ ] Coordinate with T-041 (IDE smart-suppress also modifies `TerminalVisibilityDetector.swift`)
 - [ ] `swift build && swift test` passes
 
 ### T-053: Fix AskUserQuestion answer broken in Claude Code ≥2.1.121 (missing questions in updatedInput)
