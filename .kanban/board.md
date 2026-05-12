@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-10 -->
+<!-- Updated: 2026-05-12 -->
 
 ## Backlog
 
@@ -548,11 +548,32 @@
 - [ ] Coordinate with T-041 (IDE smart-suppress also modifies `TerminalVisibilityDetector.swift`)
 - [ ] `swift build && swift test` passes
 
+### T-055: Zellij/Kaku/WezTerm multiplexer pane-precise jump support
+> Missed from May 2+8 scouts. Four Apr 30 + May 10 upstream commits add Zellij pane-level jump, Kaku (WezTerm fork) support, WezTerm ttyForPid fallback, tmux cross-session hardening, and persistence of multiplexer pane hints across restarts.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `4066315`, `7b47019`, `06df412` (Apr 30, 2026) + `d17709a` (May 10, 2026)
+#### Criteria
+- [ ] **Bridge** (`CodeIslandBridge/main.swift`): capture `ZELLIJ_PANE_ID`, `ZELLIJ_SESSION_NAME`, `WEZTERM_PANE` from environment and forward in JSON payload
+- [ ] **EventMetadata / HookEvent**: add `zellijPaneId`, `zellijSessionName`, `weztermPaneId` fields parsed at boundary
+- [ ] **SessionSnapshot.swift**: store pane hint fields; `SessionPersistence.PersistedSession` gains `zellijPaneId`, `zellijSessionName`, `weztermPaneId`, `cmuxSurfaceId`, `cmuxWorkspaceId` optionals; restore on reload
+- [ ] **ProcessRunner.swift**: add `ttyForPid(_ pid: Int32) -> String?` using `ps -o tty=` with 5s timeout; strip `/dev/` prefix handling and reject empty / generic `/dev/tty`
+- [ ] **TerminalActivator.swift**:
+  - `activateWeztermFamily(bundleIdentifier:cliName:cliPid:tty:)` — prefers `ttyForPid(cliPid)` → `WEZTERM_PANE` fast-path → env TTY fallback
+  - `activateWezTerm(cliPid:tty:)` and `activateKaku(cliPid:tty:)` delegate to above
+  - `activateZellij(paneId:sessionName:)` — `parseZellijPaneId()` normalises `terminal_N`/numeric, rejects plugin panes; queries `zellij action list-panes --json`; calls `zellij action go-to-tab`
+  - `activateTmux()`: prefix pane selection with `switch-client -t <pane>` for cross-session support
+  - `raiseAppWithoutQuickTerminal()` helper: raise via `NSWorkspace.openApplication` (not `NSRunningApplication.activate()`) to avoid triggering Ghostty quick-terminal as side-effect
+- [ ] **TerminalVisibilityDetector.swift**: `isZellijTabActive()` checks active pane via `ZELLIJ_PANE_ID`; `isWeztermFamilyTabActive()` uses same tty priority (ttyForPid → env)
+- [ ] Port tests: `ZellijPaneIdParseTests.swift`, `MultiplexerEnvCaptureTests.swift`, `SessionPersistenceTests.swift` round-trip for new fields
+- [ ] Apply on top of T-020/T-039/T-044/T-045 (all touch `TerminalActivator.swift`) — port those first; add Zellij/Kaku on top
+- [ ] `swift build && swift test` passes
+
 ### T-053: Fix AskUserQuestion answer broken in Claude Code ≥2.1.121 (missing questions in updatedInput)
 > Newer Claude Code versions require the original `questions` array echoed back inside `updatedInput` when answering AskUserQuestion via PermissionRequest. Our response omits it, causing a crash: `"undefined is not an object (evaluating 'H.map')"` (confirmed by upstream issue #157, May 7 2026). Root cause: `RequestQueueService.swift:answer()` builds `updatedInput` as `["answers": [answerKey: answer]]` only — drops `questions`.
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #150 + PR #153 (open May 2) + PR #158 (open May 7, simpler approach) — implement using PR #158 inline pattern (no helper needed; we have one answer path, not three)
+- **source**: wxtsky/CodeIsland issue #150 + PR #153 (MERGED May 10, `fa170b2`) + PR #158 (open May 7, simpler approach) — implement using PR #158 inline pattern (no helper needed; we have one answer path, not three)
 #### Criteria
 - [ ] In `RequestQueueService.swift` `answer()`, in the `isFromPermission` branch: build `updatedInput` as `var updatedInput: [String: Any] = ["answers": [answerKey: answer], "answer": answer]`; then if `pending.event.toolInput?["questions"]` is non-nil, add it to `updatedInput["questions"]` (mirrors PR #158 inline approach)
 - [ ] Do NOT extract a helper method — we have a single answer path (T-018 multi-question wizard not yet implemented)

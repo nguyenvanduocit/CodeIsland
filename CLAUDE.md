@@ -29,7 +29,7 @@ Three SPM targets with strict dependency direction: Core ← App, Core ← Bridg
 Models and business logic. Zero UI imports. All types are `Sendable` + `Codable`.
 
 | File | Purpose |
-|------|---------|
+|------|----------|
 | `Models.swift` | `AgentStatus`, `HookEvent` (typed — `EventMetadata` + typed fields, no rawJSON), `SubagentState`, `ChatMessage`, `HookResponse`, `QuestionPayload` |
 | `SessionSnapshot.swift` | `SessionSnapshot` (Sendable, Codable), `reduceEvent()` pure reducer, `extractMetadata()`, `SideEffect` enum, `TokenUsage`, `deriveSessionSummary()` |
 | `MascotState.swift` | `MascotTask`, `MascotEmotion`, `MascotState` — sprite animation state model (ported from notchi) |
@@ -351,6 +351,21 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #155 (open, May 7): Codex PermissionRequest hook error — Codex-specific, skip
 - Issues #159, #160 (open, May 7): kaku/opencode feature requests — non-Claude CLIs, skip
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
+
+**Scouted (May 12, 2026) — post-v1.0.24 activity:**
+- No new releases since v1.0.24 (Apr 29); 0 open PRs
+- **`fa170b2`** (May 10): Merge pull request #153 — **T-053 fix confirmed merged**; source in kanban updated from "open" to "merged"
+- **`d17709a`** (May 10): fix: resolve WezTerm-family panes by cli tty — adds `ttyForPid()` in `ProcessRunner.swift` (uses `ps -o tty=` with 5s timeout); `activateWeztermFamily()` now prefers dynamically-resolved TTY over captured env var when env has generic `/dev/tty`; same fallback in `TerminalVisibilityDetector.isWeztermFamilyTabActive()`. Part of T-055 batch (see below).
+- `f5c92a5` (May 10): fix: pass flat hook events and complete IDE responses — `ConfigInstaller.swift` adds `--event` flag to flat hook format (TraeCli only); IDE completion sources (Cursor/Trae/CodeBuddy) now transition to idle. Flat hook format is TraeCli-specific; our bridge is a binary receiving event payload via stdin — not applicable. IDE-source completion is Cursor/Trae only. Skip.
+- Cline support commits `6a28f06`, `50beca9`, `ccb0efd`, `d529682` (May 6–7), merge `ba86fbc` (May 10) — non-Claude CLI, skip
+- Codex fixes `d119766`, `861adcf`, merges `acc0fc5`, `043e85a` (May 9–10) — Codex-specific, skip
+- **⚠️ Missed from May 2+8 scouts — multiplexer terminal support batch (Apr 30):**
+  - `4066315`: feat: support Zellij and Kaku jump-back, harden tmux multiplexer — Zellij: `ZELLIJ_PANE_ID`/`ZELLIJ_SESSION_NAME` env vars → `zellij action go-to-tab`; `parseZellijPaneId()` normalises `terminal_N`/numeric; Kaku (WezTerm fork): detected via bundle ID `fun.tw93.kaku`, shares `activateWeztermFamily()`; tmux: `switch-client -t` prefix for cross-session jumps; WezTerm: `WEZTERM_PANE` env var fast-path `wezterm cli activate-pane`; new `raiseAppWithoutQuickTerminal()` helper avoids Ghostty quick-terminal side-effect on Zellij activate; Bridge `main.swift` captures `ZELLIJ_PANE_ID`, `ZELLIJ_SESSION_NAME`, `WEZTERM_PANE`
+  - `7b47019`: feat: detect Zellij and Kaku active pane in visibility checks — `TerminalVisibilityDetector.isZellijTabActive()` + `isWeztermFamilyTabActive()` updated with same tty priority
+  - `06df412`: fix: persist multiplexer pane hints across app restarts — `SessionPersistence.PersistedSession` gains: `zellijPaneId`, `zellijSessionName`, `weztermPaneId`, `cmuxSurfaceId`, `cmuxWorkspaceId` — restored on session reload for precise post-restart jumps
+  → **T-055** (new — missed two scouts; implement after T-020/T-039/T-045 which all touch `TerminalActivator.swift`)
+- **Issue #169** (open, May 11): "claude code concurrent permission auto-rejection" — Claude Code 2.1.126; burst `PermissionRequest` events trigger "Denied by PermissionRequest hook" even after reinstall; no upstream fix beyond `0a6ab92` (T-040); confirms T-040 is still needed and not yet resolved upstream for all burst patterns
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
