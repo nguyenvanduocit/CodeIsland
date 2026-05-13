@@ -367,6 +367,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - **Issue #169** (open, May 11): "claude code concurrent permission auto-rejection" — Claude Code 2.1.126; burst `PermissionRequest` events trigger "Denied by PermissionRequest hook" even after reinstall; no upstream fix beyond `0a6ab92` (T-040); confirms T-040 is still needed and not yet resolved upstream for all burst patterns
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 
+**Scouted (May 13, 2026) — post-v1.0.24 activity:**
+- No new releases since v1.0.24 (Apr 29); latest release still v1.0.24
+- `7e9697a` (May 10): fix: preserve remote opencode host identity — `RemoteInstaller.swift` + OpenCode remote hook JS/Python; OpenCode remote monitoring, skip
+- `4fd5a64` (May 10): fix: resolve codex hooks and remote approval issues — new `CodexPermissionRules.swift`, `RemoteInstaller.swift` (+145), `codeisland-opencode-remote.js` (+301); Codex and OpenCode remote only; `TerminalVisibilityDetector.swift` (+57) and `PanelWindowController.swift` (-6) changes appear bundled — diff unavailable (rate limit); tentatively skip pending diff verification
+- **PR #171** (open, May 12): "feat: 支持灵动岛宽度设置" — extends island width slider to real notch MacBooks (T-021 currently scope is non-notch only); changes guard from `guard !hasNotch else { return notchW }` to apply `collapsedWidthScale` on real notch too; compact/idle placeholder widths unified to scaled value; unit tests included; watch for merge → **update T-021 criteria when merged**
+- PR #175 (open, May 12): fix: remove legacy codex hooks config — Codex `codex_hooks` migration to `hooks=true`; Codex-specific, skip
+- **Issue #170** (open, May 12): "claude-code CLI plan mode interaction failure" — questions re-appear after answering in plan mode; likely symptom of T-053 (missing `questions` in AskUserQuestion `updatedInput`); upstream fix `fa170b2` (T-053) should resolve; no separate action needed — note in T-053 source
+- **Issue #176** (open, May 12): "dual-screen panel jumps between physical monitors" — panel can't be pinned to preferred screen in two-monitor setup; no upstream fix yet; distinct from T-035 (Space-switching latch) → **T-056** (new)
+- Issue #177 (open, May 13): support jumping to Claude Desktop App — out of scope (we are Claude Code CLI only), skip
+- Issue #172 (open, May 12): adjust non-notch island length — same request as PR #171 / T-021, skip (already tracked)
+- Issue #169 (May 11): already documented in May 12 scout
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-12 -->
+<!-- Updated: 2026-05-13 -->
 
 ## Backlog
 
@@ -158,16 +158,18 @@
 - [ ] tmux detached: skip stale inner TTY, fall back to CWD/app activation
 - [ ] `swift build && swift test` passes
 
-### T-021: Configurable island width for non-notch displays
-> Upstream added a 50%-150% width slider in Settings for users on non-notch Macs. Our width is fixed (panelWidth in NotchPanelView).
+### T-021: Configurable island width (non-notch + real notch)
+> Upstream added a 50%-150% width slider in Settings for users on non-notch Macs. Our width is fixed (panelWidth in NotchPanelView). PR #171 (open May 12, 2026) extends this to real notch MacBooks — implement both together.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland commit b51fd5f (issue #56) — 2026-04-11
+- **source**: wxtsky/CodeIsland commit b51fd5f (issue #56) — 2026-04-11; PR #171 (open, May 12, 2026) extends to real notch
 #### Criteria
 - [ ] `Settings.swift` adds `islandWidthScale` key (default 1.0, range 0.5–1.5)
 - [ ] `NotchPanelView.panelWidth` reads `islandWidthScale` from settings
 - [ ] Settings → Appearance/Display page has a width scale slider (50% – 150%)
 - [ ] Setting persisted via UserDefaults and applied at runtime without restart
+- [ ] Remove `guard !hasNotch else { return notchW }` early-return — apply `collapsedWidthScale` to real notch Macs too (per PR #171 pattern); compact/idle placeholder widths unified to scaled value
+- [ ] Port PR #171 unit tests for width scaling and boundary clamp
 - [ ] `swift build && swift test` passes
 
 ### T-022: cmux surface-level precise terminal jump
@@ -478,6 +480,18 @@
 - [ ] Skip L10n additions (we don't ship L10n)
 - [ ] `swift build && swift test` passes
 
+### T-056: Fix panel jumping between physical monitors in dual-screen setup
+> In a dual-monitor setup the panel jumps between screens unpredictably — users cannot pin it to their preferred display. Distinct from T-035 (macOS Space-switching latch).
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #176 (May 12, 2026) — no upstream fix yet
+#### Criteria
+- [ ] Investigate `ScreenDetector.swift` and `PanelWindowController.swift`: determine what heuristic selects the current screen (active app, cursor, or notch detection) and whether it creates the observed jump in dual-monitor setups
+- [ ] Confirm root cause: if panel follows active app across screens by design, add a "Lock to primary display" setting to let users opt out of screen-following
+- [ ] If unintentional: fix screen-selection logic to be stable across display arrangement changes and app focus switches
+- [ ] Implement after T-033 (reduce screen poll 1s → 5s) to lower jump frequency as a quick partial mitigation
+- [ ] `swift build && swift test` passes
+
 ### T-043: Fix approval card rendering on macOS 26
 > Upstream `05d174c` fixes transparency/rendering issues on macOS 26 (not yet released). Low priority — track for when macOS 26 ships.
 - **priority**: low
@@ -573,7 +587,7 @@
 > Newer Claude Code versions require the original `questions` array echoed back inside `updatedInput` when answering AskUserQuestion via PermissionRequest. Our response omits it, causing a crash: `"undefined is not an object (evaluating 'H.map')"` (confirmed by upstream issue #157, May 7 2026). Root cause: `RequestQueueService.swift:answer()` builds `updatedInput` as `["answers": [answerKey: answer]]` only — drops `questions`.
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #150 + PR #153 (MERGED May 10, `fa170b2`) + PR #158 (open May 7, simpler approach) — implement using PR #158 inline pattern (no helper needed; we have one answer path, not three)
+- **source**: wxtsky/CodeIsland issue #150 + PR #153 (MERGED May 10, `fa170b2`) + PR #158 (open May 7, simpler approach) — implement using PR #158 inline pattern (no helper needed; we have one answer path, not three); also confirms fix for plan-mode re-appearing questions (upstream issue #170, May 12)
 #### Criteria
 - [ ] In `RequestQueueService.swift` `answer()`, in the `isFromPermission` branch: build `updatedInput` as `var updatedInput: [String: Any] = ["answers": [answerKey: answer], "answer": answer]`; then if `pending.event.toolInput?["questions"]` is non-nil, add it to `updatedInput["questions"]` (mirrors PR #158 inline approach)
 - [ ] Do NOT extract a helper method — we have a single answer path (T-018 multi-question wizard not yet implemented)
