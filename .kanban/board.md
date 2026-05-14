@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-13 -->
+<!-- Updated: 2026-05-14 -->
 
 ## Backlog
 
@@ -107,6 +107,7 @@
 #### Criteria
 - [ ] In `PanelWindowController.swift` Space-switch handler, clear the fullscreen-space latch immediately when entering a non-fullscreen Space (don't wait for next poll interval)
 - [ ] Port the 8-line fix from `0850f35` in `PanelWindowController.swift`
+- [ ] Also port the menu bar gap fallback removal from `4fd5a64` (-6 lines): remove `menuBarGap = screen.frame.maxY - screen.visibleFrame.maxY; if menuBarGap < 1 { return true }` — this false-positive shortcut triggers when menu bar is hidden (fullscreen), causing the panel to show on wrong displays
 - [ ] After porting, test on a non-notch external display: switch Spaces and verify panel appears on each desktop (not just first)
 - [ ] If panel is permanently invisible on non-first desktop on non-notch display, investigate whether `.collectionBehavior` or screen-detection logic needs adjustment for that path
 - [ ] `swift build && swift test` passes
@@ -554,11 +555,10 @@
 > When Claude Code runs inside Ghostty's Quick Terminal (floating overlay / "Quake mode"), `TerminalVisibilityDetector` doesn't suppress the panel because the OS still reports the previous app (e.g. Chrome) as frontmost — Ghostty Quick Terminal is not a standard macOS window and doesn't receive a normal focus event. CodeIsland incorrectly concludes the user is not in a terminal and expands approval/question prompts.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland issue #161 (May 8, 2026) — no upstream fix yet; distinct from T-029 (which fixes clicking a session card triggering the quick terminal)
+- **source**: wxtsky/CodeIsland issue #161 (May 8, 2026); upstream fix in commit `4fd5a64` (May 10, 2026) — `isGhosttySessionVisibleInAnyWindow()` added to `TerminalVisibilityDetector.swift`
 #### Criteria
-- [ ] Investigate how to detect the Ghostty Quick Terminal: check `NSRunningApplication` for Ghostty + query if any Ghostty window is currently visible/key via Accessibility API or `CGWindowListCopyWindowInfo` (layer/bounds heuristic for always-on-top overlays)
-- [ ] In `TerminalVisibilityDetector.swift`: if Ghostty is running AND its overlay window is visible (even when not system-frontmost), treat the session as "user is in terminal" and suppress panel expansion
-- [ ] Alternatively, add a Settings toggle "Suppress panel when Ghostty Quick Terminal is open" if programmatic detection proves unreliable
+- [ ] Port `isGhosttySessionVisibleInAnyWindow(_ session:)` from `4fd5a64`: enumerate visible windows via `CGWindowListCopyWindowInfo`; match by Ghostty bundle ID (`com.mitchellh.ghostty`), session CWD (normalise `~` → home dir), and window title; return `true` when any visible Ghostty window matches
+- [ ] In `TerminalVisibilityDetector.swift`: call inside the Ghostty branch of `isTerminalVisible()` — if it returns `true`, suppress panel even when Ghostty is not system-frontmost
 - [ ] Coordinate with T-041 (IDE smart-suppress also modifies `TerminalVisibilityDetector.swift`)
 - [ ] `swift build && swift test` passes
 

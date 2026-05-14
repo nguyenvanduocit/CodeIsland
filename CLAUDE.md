@@ -380,6 +380,14 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Issue #169 (May 11): already documented in May 12 scout
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 
+**Scouted (May 14, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); most recent upstream activity remains May 10 (already documented in May 12/13 scouts)
+- Diff verification of `4fd5a64` (May 10) — previously "tentatively skip pending diff verification": `TerminalVisibilityDetector.swift` (+57) adds `isGhosttySessionVisibleInAnyWindow(_:)` — uses `CGWindowListCopyWindowInfo` to enumerate visible windows; matches by Ghostty bundle ID, session CWD (normalises `~`), and window title; suppresses approval/question UI when Ghostty Quick Terminal is already visible even when not system-frontmost. This is the upstream fix for T-054 → **T-054 promote to implement**
+- Diff verification of `4fd5a64` `PanelWindowController.swift` (-6): removes menu bar gap fallback (`menuBarGap = screen.frame.maxY - screen.visibleFrame.maxY; if menuBarGap < 1 { return true }`); was a false-positive shortcut triggering when menu bar is hidden (fullscreen mode); removed in favour of other visibility mechanisms — may be relevant to T-035; port alongside T-035 `0850f35` changes
+- PR #171 (island width for real notch): still open, T-021 criteria already updated to include it; no change
+- No new PRs or issues affecting us since May 13 scout
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
