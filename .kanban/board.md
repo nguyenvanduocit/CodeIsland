@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-14 -->
+<!-- Updated: 2026-05-16 -->
 
 ## Backlog
 
@@ -386,6 +386,7 @@
 - [ ] Cascading AppleScript strategy: tty exact match → auto tab name (cwd + command) → custom title → deminiaturize first minimized window
 - [ ] Explicitly activate + unhide Terminal.app in Swift before AppleScript runs so hidden windows come to front
 - [ ] Coordinate with T-020 (broader terminal activation overhaul) — both touch `TerminalActivator.swift`; port T-039 first as it is narrower
+- [ ] Verify with multiple Terminal.app windows open simultaneously: clicking a session card focuses the correct window, not an arbitrary one (regression scenario from upstream issue #179, May 15 2026)
 - [ ] `swift build && swift test` passes
 
 ### T-040: Port tool_use_id deduplication cache to fix burst PermissionRequest rejection

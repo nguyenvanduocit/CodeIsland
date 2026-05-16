@@ -388,6 +388,13 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - No new PRs or issues affecting us since May 13 scout
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 
+**Scouted (May 16, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit remains May 10 (same as May 14 scout)
+- **Issue #179** (open, May 15): "multiple terminal windows — clicking island card can't jump to the correct terminal after switching" — user reports that when multiple terminal windows are open and they switch to another window, clicking a prior session's island card fails to focus the right one; no upstream fix yet; this scenario is addressed by the cascading tty-match strategy in T-039 and window-level matching in T-020; T-039 criteria updated to add explicit multi-window test → **no new task needed, T-039 covers it**
+- PR #171 (island width for real notch): still open, T-021 unchanged
+- PR #175 (remove legacy Codex hooks config): Codex-specific, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
