@@ -395,6 +395,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - PR #175 (remove legacy Codex hooks config): Codex-specific, skip
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 
+**Scouted (May 17, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit still `d17709a` / `fa170b2` batch (May 10) — upstream quiet for 7 days
+- PR #171 (island width for real notch): still open, still watching — T-021 unchanged
+- PR #174 (CLOSED, May 12): "fix: clean hooks config and adhoc signing" — closed without merging (force-pushed, branch deleted); CI/release only, skip
+- PR #175 (remove legacy Codex hooks config): Codex-specific, skip (unchanged)
+- **`2c98861`** (May 2): "fix: preserve AskUserQuestion payload in PermissionRequest" — missed in May 4+8 scouts due to commit date ambiguity; adds `askUserQuestionUpdatedInput()` helper that was later merged as PR #153 (`fa170b2`, May 10); fully captured under T-053; no new task
+- Issues #177 (Claude Desktop App support), #178 (ESP32 hardware) — skip (out of scope)
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- **No new actionable items.** All open tasks documented in prior scouts remain as-is (T-016 through T-056). Note: GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
