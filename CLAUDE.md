@@ -405,6 +405,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **No new actionable items.** All open tasks documented in prior scouts remain as-is (T-016 through T-056). Note: GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
 
+**Scouted (May 18, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit still `d17709a` / `fa170b2` batch (May 10) — upstream quiet for 8 days
+- PR #166 (CLOSED, May 10): "feat: multi-agent collaboration + Cursor hook event fix" — closed without merging; Cursor-specific, nothing to cherry-pick
+- PR #171 (island width for real notch): still open, T-021 unchanged
+- PR #175 (remove legacy Codex hooks config): Codex-specific, skip (unchanged)
+- Issues #170 (plan mode, May 15) and #179 (multi-terminal jump, May 15): both already documented in May 13 and May 16 scouts respectively; no upstream fixes yet
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- **No new actionable items.** All open tasks (T-016 through T-056) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
