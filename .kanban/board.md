@@ -595,6 +595,16 @@
 - [ ] Add test asserting the PermissionRequest response payload contains `questions`, `answers`, and `answer` fields when `toolInput` carries a `questions` array
 - [ ] `swift build && swift test` passes
 
+### T-057: Fix panel showing stale prompt after user answers in terminal CLI
+> When user answers a permission/question prompt directly in the terminal (not via island panel), panel stays stuck showing the pending item. Upstream issue #180 (May 18, 2026) — no upstream fix yet.
+- **priority**: low
+- **effort**: S
+#### Criteria
+- [ ] Detect that a pending `PermissionRequest` or `AskUserQuestion` was handled outside the panel (e.g. `PreToolUse` arriving for a tool whose permission was pending)
+- [ ] Dismiss the stale approval/question card from the panel when this is detected
+- [ ] Consider using existing 300s stuck-session auto-reset (T-016) as fallback if signal not available
+- [ ] `swift build && swift test` passes
+
 ## Doing
 
 ### [T-011: Cherry-pick features tu reference projects](tasks/T-011-reference-sync-apr09.md)

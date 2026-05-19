@@ -414,6 +414,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-056) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
 
+**Scouted (May 19, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit still `d17709a` / `fa170b2` batch (May 10) — upstream quiet for 9 days
+- PR #171 (island width for real notch): still open, T-021 unchanged
+- PR #175 (remove legacy Codex hooks config): Codex-specific, skip (unchanged)
+- **Issue #180** (open, May 18): "手动已经在 cli 里选择了操作，但是刘海屏仍然展示选项" — panel stays stuck showing approval/question prompt after user answers directly in the terminal CLI instead of via island panel. Affects Claude Code sessions. No upstream fix yet → **T-057** (new)
+- **Issue #181** (open, May 18): Codex auto-review mode triggers CodeIsland approval — Codex-specific, skip
+- **Issue #182** (open, May 18): respect user-deleted Codex hook entries — Codex-specific, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- **One new task added (T-057).** All other open tasks (T-016 through T-056) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
