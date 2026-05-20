@@ -424,6 +424,13 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **One new task added (T-057).** All other open tasks (T-016 through T-056) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
 
+**Scouted (May 20, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit still `d17709a` / `fa170b2` batch (May 10) — upstream quiet for 10 days
+- No new PRs (most recent activity May 12: PR #171 island-width for real notch, PR #175 legacy Codex hooks — both already tracked)
+- No new issues (most recent May 18: issues #180/#181/#182, all already documented in May 19 scout)
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- **No new actionable items.** All open tasks (T-016 through T-057) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
