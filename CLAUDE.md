@@ -431,6 +431,20 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-057) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
 
+**Scouted (May 22, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit still `d17709a` / `fa170b2` batch (May 10) — upstream quiet for 12 days
+- PR #171 (island width for real notch): still open — T-021 unchanged
+- PR #175 (remove legacy Codex hooks config): still open — Codex-specific, skip
+- **PR #187** (open, May 21): "Improve Buddy Bluetooth recovery and signing" — ESP32/BLE hardware companion; `ESP32BridgeManager`, `ESP32StatePublisher`, `ESP32Protocol` changes only; out of scope for our macOS-app-only fork; skip
+- **Issue #185** (open, May 21): "为什么我设置了外接显示器，但是我显示器还是没有？" — external monitor shows nothing; user confirms island only appears on MacBook built-in display even with external connected; screenshot provided; no upstream fix → reinforces T-056 (updated criteria)
+- **Issue #186** (open, May 21): "Cannot display island on external monitor when both displays are active" — M5 Pro + Samsung 4K; display selector dropdown shows only "Built-in Retina Display" with no external-monitor option; clamshell (lid-closed) mode works fine; active dual-display mode does not → adds a new concrete failure mode to T-056: `ScreenDetector` fails to enumerate or surface external monitors in the settings picker when both displays are active; no upstream fix → T-056 criteria updated
+- **Issue #188** (open, May 21): "Exploring an Apple ecosystem companion for CodeIsland" — proposal to build iPhone/Watch companion using MultipeerConnectivity; feature concept only, out of scope; skip
+- **Issue #169** (updated May 21): burst permission auto-rejection — still open, no new upstream fix; T-040 still the correct resolution path
+- **Issue #184** (open, May 20): "Windows version?" — out of scope; skip
+- **Issue #183** (open, May 20): "Support custom CLI tools?" — out of scope for Claude Code-only fork; skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- **T-056 updated** with new failure angle from issues #185/#186 (display picker missing external monitor option). No new tasks. All other open tasks (T-016 through T-057) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

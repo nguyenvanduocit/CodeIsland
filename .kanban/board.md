@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-16 -->
+<!-- Updated: 2026-05-22 -->
 
 ## Backlog
 
@@ -482,15 +482,17 @@
 - [ ] Skip L10n additions (we don't ship L10n)
 - [ ] `swift build && swift test` passes
 
-### T-056: Fix panel jumping between physical monitors in dual-screen setup
-> In a dual-monitor setup the panel jumps between screens unpredictably — users cannot pin it to their preferred display. Distinct from T-035 (macOS Space-switching latch).
+### T-056: Fix panel invisible / jumping on external monitors in dual-screen setup
+> Multiple external-monitor failure modes reported: (1) issue #176 (May 12): panel jumps between screens unpredictably in dual-monitor setup, users cannot pin it to preferred display. (2) issues #185/#186 (May 21): on M5 Pro + external 4K, display selector in Settings shows only "Built-in Retina Display" — no external monitor option at all; clamshell mode works but active dual-display does not. Both point to `ScreenDetector.swift` failing to enumerate or prioritise external monitors. Distinct from T-035 (macOS Space-switching latch).
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland issue #176 (May 12, 2026) — no upstream fix yet
+- **source**: wxtsky/CodeIsland issues #176 (May 12, 2026), #185/#186 (May 21, 2026) — no upstream fix yet
 #### Criteria
-- [ ] Investigate `ScreenDetector.swift` and `PanelWindowController.swift`: determine what heuristic selects the current screen (active app, cursor, or notch detection) and whether it creates the observed jump in dual-monitor setups
-- [ ] Confirm root cause: if panel follows active app across screens by design, add a "Lock to primary display" setting to let users opt out of screen-following
-- [ ] If unintentional: fix screen-selection logic to be stable across display arrangement changes and app focus switches
+- [ ] Investigate `ScreenDetector.swift`: verify it enumerates all connected `NSScreen.screens` entries and surfaces external monitors in the display picker; fix any filter or sort that hides non-primary screens
+- [ ] Investigate `PanelWindowController.swift`: determine what heuristic selects the current screen (active app, cursor, or notch detection) and whether it creates the observed jump in dual-monitor setups
+- [ ] Confirm root cause for jump: if panel follows active app across screens by design, add a "Lock to display" setting to let users pin it to a specific monitor
+- [ ] If jump is unintentional: fix screen-selection logic to be stable across display arrangement changes and app focus switches
+- [ ] Verify fix covers both failure modes: (a) display picker shows all active screens including external; (b) panel stays on selected screen without jumping
 - [ ] Implement after T-033 (reduce screen poll 1s → 5s) to lower jump frequency as a quick partial mitigation
 - [ ] `swift build && swift test` passes
 
