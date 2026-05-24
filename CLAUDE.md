@@ -454,6 +454,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-057) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
 
+**Scouted (May 24, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit still `7e9697a` (May 10) — upstream quiet for 14 days
+- **Issue #190** (open, May 23): "ssh 连接失败" — SSH remote connection failure; SSH remote monitoring feature, not applicable to our Claude Code-only fork; skip
+- PR #171 (island width for real notch): still open — T-021 unchanged
+- PR #175 (remove legacy Codex hooks config): still open — Codex-specific, skip
+- PR #187 (Buddy Bluetooth recovery): still open — ESP32/BLE hardware, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
+- **No new actionable items.** All open tasks (T-016 through T-057) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
