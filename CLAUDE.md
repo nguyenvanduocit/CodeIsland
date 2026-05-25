@@ -463,6 +463,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — docs/SEO only, nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-057) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
 
+**Scouted (May 25, 2026) — post-v1.0.24 activity:**
+- No new commits or releases since v1.0.24 (Apr 29); latest upstream commit still `7e9697a` (May 10) — upstream quiet for 15 days
+- **PR #191** (open, May 24): "fix(AskUserQuestion): always include questions key and use question text as answer key" — reveals a **second bug** in our AskUserQuestion response not covered by PR #153 or current T-053 criteria: answer key uses `header` field but Claude Code looks up answers via the question text (`answers[question.question]`); all answers silently return empty string. Also ensures `questions` is always present in `updatedInput`. Our `RequestQueueService.swift:111` has `let answerKey = pending.question.header ?? "answer"` — should be `pending.question.question` → **T-053 criteria updated to include answer-key fix**
+- PR #171 (island width for real notch): still open — T-021 unchanged
+- PR #175 (remove legacy Codex hooks config): Codex-specific, still open — skip
+- PR #187 (Buddy Bluetooth recovery): still open — ESP32/BLE hardware, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

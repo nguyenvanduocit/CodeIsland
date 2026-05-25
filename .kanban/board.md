@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-22 -->
+<!-- Updated: 2026-05-25 -->
 
 ## Backlog
 
@@ -586,15 +586,17 @@
 - [ ] Apply on top of T-020/T-039/T-044/T-045 (all touch `TerminalActivator.swift`) — port those first; add Zellij/Kaku on top
 - [ ] `swift build && swift test` passes
 
-### T-053: Fix AskUserQuestion answer broken in Claude Code ≥2.1.121 (missing questions in updatedInput)
-> Newer Claude Code versions require the original `questions` array echoed back inside `updatedInput` when answering AskUserQuestion via PermissionRequest. Our response omits it, causing a crash: `"undefined is not an object (evaluating 'H.map')"` (confirmed by upstream issue #157, May 7 2026). Root cause: `RequestQueueService.swift:answer()` builds `updatedInput` as `["answers": [answerKey: answer]]` only — drops `questions`.
+### T-053: Fix AskUserQuestion answer broken in Claude Code ≥2.1.121 (missing questions + wrong answer key)
+> Two bugs in `RequestQueueService.swift:answer()` break AskUserQuestion in newer Claude Code: (1) `updatedInput` omits `questions` array → crash `"undefined is not an object (evaluating 'H.map')"` (upstream issue #157); (2) answer key uses `header` field but Claude Code looks up answers via `questionText` → all answers return empty string (upstream PR #191, May 24 2026).
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #150 + PR #153 (MERGED May 10, `fa170b2`) + PR #158 (open May 7, simpler approach) — implement using PR #158 inline pattern (no helper needed; we have one answer path, not three); also confirms fix for plan-mode re-appearing questions (upstream issue #170, May 12)
+- **source**: wxtsky/CodeIsland issue #150 + PR #153 (MERGED May 10, `fa170b2`) + PR #158 (open May 7, simpler approach) + PR #191 (open May 24, adds answer-key fix) — implement both bugs together; use PR #158 inline pattern for questions; use PR #191 pattern for answer key; also confirms fix for plan-mode re-appearing questions (upstream issue #170, May 12)
 #### Criteria
-- [ ] In `RequestQueueService.swift` `answer()`, in the `isFromPermission` branch: build `updatedInput` as `var updatedInput: [String: Any] = ["answers": [answerKey: answer], "answer": answer]`; then if `pending.event.toolInput?["questions"]` is non-nil, add it to `updatedInput["questions"]` (mirrors PR #158 inline approach)
+- [ ] In `RequestQueueService.swift` `answer()`, in the `isFromPermission` branch: change `let answerKey = pending.question.header ?? "answer"` → `let answerKey = pending.question.question` (use question text as lookup key, matching Claude Code's `answers[question.question]` lookup)
+- [ ] Build `updatedInput` as `var updatedInput: [String: Any] = ["answers": [answerKey: answer], "answer": answer]`; then if `pending.event.toolInput?["questions"]` is non-nil, add it to `updatedInput["questions"]` (mirrors PR #158 inline approach); always include `questions` key to prevent `.map()` crash
 - [ ] Do NOT extract a helper method — we have a single answer path (T-018 multi-question wizard not yet implemented)
 - [ ] Add test asserting the PermissionRequest response payload contains `questions`, `answers`, and `answer` fields when `toolInput` carries a `questions` array
+- [ ] Add test asserting answer key equals the question text (not the header) — e.g., payload's `answers` dict keyed by `"Proceed with plan?"` not `"Confirm"`
 - [ ] `swift build && swift test` passes
 
 ### T-057: Fix panel showing stale prompt after user answers in terminal CLI
