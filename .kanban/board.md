@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-25 -->
+<!-- Updated: 2026-05-27 -->
 
 ## Backlog
 
@@ -163,7 +163,7 @@
 > Upstream added a 50%-150% width slider in Settings for users on non-notch Macs. Our width is fixed (panelWidth in NotchPanelView). PR #171 (open May 12, 2026) extends this to real notch MacBooks — implement both together.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland commit b51fd5f (issue #56) — 2026-04-11; PR #171 (open, May 12, 2026) extends to real notch
+- **source**: wxtsky/CodeIsland commit b51fd5f (issue #56) — 2026-04-11; PR #171 MERGED commit `0929926` (v1.0.25, May 26, 2026) extends to real notch
 #### Criteria
 - [ ] `Settings.swift` adds `islandWidthScale` key (default 1.0, range 0.5–1.5)
 - [ ] `NotchPanelView.panelWidth` reads `islandWidthScale` from settings
@@ -393,15 +393,17 @@
 > Upstream `0a6ab92` introduces a `PreToolUseRecord` cache keyed on `tool_use_id`. Duplicate PermissionRequest events (same tool_use_id) are deduplicated in-place; stale waiters are denied; orphaned requests drained on PostToolUse. This is the upstream fix for T-019.
 - **priority**: high
 - **effort**: M
-- **source**: wxtsky/CodeIsland commit `0a6ab92` (v1.0.22, Apr 23, 2026) — cherry-pick `AppState+ToolUseCache.swift` only
+- **source**: wxtsky/CodeIsland commit `0a6ab92` (v1.0.22, Apr 23, 2026) + `e1faa46` (v1.0.25, May 26, 2026) — cherry-pick `AppState+ToolUseCache.swift` only; port both commits together
 #### Criteria
 - [ ] Port `AppState+ToolUseCache.swift` (+112 lines) — `PreToolUseRecord` struct with TTL (15 min), insert on `PreToolUse` events, lookup on `PermissionRequest`
 - [ ] On duplicate `PermissionRequest` (same `tool_use_id`): replace queued entry in-place, deny stale waiter
+- [ ] **CRITICAL**: Before treating same-`tool_use_id` requests as duplicates, compare `toolInput` dictionaries — only deny stale waiter when both `tool_use_id` AND `toolInput` match; parallel tool calls (e.g. reading 4 files at once) share a `tool_use_id` but have distinct inputs and must queue independently (upstream fix `e1faa46`, May 26, 2026)
 - [ ] On `PostToolUse` / failure: purge completed records + drain orphaned permission requests
 - [ ] Backfill missing `PermissionRequest` metadata from cached `PreToolUse` record
 - [ ] Skip: `AppState+TranscriptTailer.swift` (separate concern) and `AppState+CodexAppServer.swift` (Codex-specific)
 - [ ] Verify `tool_use_id` field is present in our typed `HookEvent` / `EventMetadata`
 - [ ] Also port `e18f884` (Apr 30, 2026): replace "blanket drain" with surgical `tool_use_id`-targeted drain in `AppState.swift`; prevents parallel tool completions from falsely denying unrelated pending permissions; port 2 regression tests (`testStopEventDoesNotDenyPendingPermission`, `testParallelPostToolUseDoesNotDenyUnrelatedPendingPermission`)
+- [ ] Port `AppStateToolUseCacheTests.swift` parallel-reads regression test from `e1faa46` (2 parallel reads, same `tool_use_id`, different paths — both should queue independently)
 - [ ] `swift build && swift test` passes
 
 ### T-041: Default mascot setting + fix IDE smart-suppress
@@ -590,7 +592,7 @@
 > Two bugs in `RequestQueueService.swift:answer()` break AskUserQuestion in newer Claude Code: (1) `updatedInput` omits `questions` array → crash `"undefined is not an object (evaluating 'H.map')"` (upstream issue #157); (2) answer key uses `header` field but Claude Code looks up answers via `questionText` → all answers return empty string (upstream PR #191, May 24 2026).
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #150 + PR #153 (MERGED May 10, `fa170b2`) + PR #158 (open May 7, simpler approach) + PR #191 (open May 24, adds answer-key fix) — implement both bugs together; use PR #158 inline pattern for questions; use PR #191 pattern for answer key; also confirms fix for plan-mode re-appearing questions (upstream issue #170, May 12)
+- **source**: wxtsky/CodeIsland issue #150 + PR #153 (MERGED May 10, `fa170b2`) + PR #158 (open May 7, simpler approach) + PR #191 MERGED May 26 commit `29157ed` (v1.0.25, adds answer-key fix) — implement both bugs together; use PR #158 inline pattern for questions; use PR #191 pattern for answer key; also confirms fix for plan-mode re-appearing questions (upstream issue #170, May 12)
 #### Criteria
 - [ ] In `RequestQueueService.swift` `answer()`, in the `isFromPermission` branch: change `let answerKey = pending.question.header ?? "answer"` → `let answerKey = pending.question.question` (use question text as lookup key, matching Claude Code's `answers[question.question]` lookup)
 - [ ] Build `updatedInput` as `var updatedInput: [String: Any] = ["answers": [answerKey: answer], "answer": answer]`; then if `pending.event.toolInput?["questions"]` is non-nil, add it to `updatedInput["questions"]` (mirrors PR #158 inline approach); always include `questions` key to prevent `.map()` crash

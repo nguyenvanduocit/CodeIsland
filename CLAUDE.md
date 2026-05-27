@@ -482,6 +482,21 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-057) remain as previously documented. GitHub Issues are disabled in nguyenvanduocit/CodeIsland; all tracking via kanban board only.
 
+**Scouted (May 27, 2026) — v1.0.25 activity:**
+- v1.0.25 released 2026-05-26
+- **PR #171 MERGED** (`0929926`, v1.0.25): "feat: 支持灵动岛宽度设置" — island width slider now applies to real notch MacBooks, not just non-notch; was watching; T-021 criteria was already updated; source updated in kanban → **T-021 ready to implement**
+- **PR #191 MERGED** (`29157ed`, v1.0.25): "fix(AskUserQuestion): always include questions key and use question text as answer key" — confirms both T-053 bugs fixed upstream: (1) `questions` always in `updatedInput`, (2) answer key uses question text not header; T-053 criteria was already correct → no criteria change needed; source updated in kanban
+- **`e1faa46`** (v1.0.25): "fix(permissions): don't deny parallel tool calls sharing a tool_use_id (#169)" — follow-up fix to `AppState+ToolUseCache.swift` (T-040's target file); adds `toolInput` dictionary comparison before treating same-`tool_use_id` requests as duplicates; without this, parallel reads/writes (different paths, same `tool_use_id`) are incorrectly all denied; +11 lines + 43-line test; **T-040 criteria updated** to require porting `e1faa46` alongside `0a6ab92` → **must port both commits together**
+- `6392b30` (v1.0.25): fix SSH remote Hermes hook install — SSH remote, skip
+- `be8bec4` (v1.0.25): Codex hook auto-repair — Codex-specific, skip
+- `6c7d66c` (v1.0.25): Buddy Bluetooth recovery — ESP32/BLE hardware, skip
+- `14c2c10` (v1.0.25): silence JSONLTailer concurrent-capture test warnings — test-only, skip
+- Issue #192 (SSH custom CLI): closed or no new info; skip
+- PR #175 (remove legacy Codex hooks): Codex-specific, merged in this release — skip
+- PR #187 (Buddy Bluetooth recovery): merged in this release — hardware, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
