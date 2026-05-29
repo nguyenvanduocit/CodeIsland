@@ -497,6 +497,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
 
+**Scouted (May 29, 2026) — post-v1.0.25 activity:**
+- No new releases since v1.0.25 (May 26); upstream quiet for 3 days
+- PR #197 (open, May 27): pi + OMP coding-agent integration — non-Claude CLI, skip
+- Issue #196 (open, May 27): pi coding-agent integration request — non-Claude CLI, skip
+- PR #195 (closed immediately May 27): "Fix plan mode answer and reduce CPU/MEM usage" — opened and closed within 1 minute (erroneous/duplicate PR); no content to extract; skip
+- **Issue #198** (open, May 27): iTerm2 fullscreen/cross-Space jump failure — clicking a session card when iTerm2 is fullscreen or on another Space fails to focus the correct window/tab; no upstream fix yet; covered by T-020 (which includes iTerm2 in criteria); add explicit multi-window/fullscreen test scenario to T-020 criteria
+- Issue #199 (open, May 28): Cursor multi-workspace jump — Cursor-specific, skip
+- **Issue #200** (open, May 28): dual permission prompt — user reports that after installing CodeIsland, both the CodeIsland island panel AND Claude Code's own in-terminal prompt appear simultaneously for every `PermissionRequest`; must answer in both places for tool call to proceed. Our bridge already blocks on `recvAll()` and forwards the server response to stdout (lines 320–327 of `main.swift`). Likely cause: our `HookResponse.permission()` format (`{"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}}`) may not match what Claude Code's newer versions expect (`{"hookSpecificOutput": {"hookEventName": "PermissionRequest", "permissionDecision": "allow"}}`). No upstream fix yet — upstream is also investigating → **T-058** (new, high priority, XS)
+- **`be8bec4`** (v1.0.25, May 26, re-evaluated): "fix(codex): respect user-deleted hook events during auto-repair" — was classified "Codex-specific, skip" in May 27 scout, but on review the `shouldPreservePartialHooks` logic is a general `verifyAndRepair()` improvement: if a user intentionally deletes a subset of our `~/.claude/settings.json` hook events, we forcibly restore them on next repair. Applicable to our Claude Code installer. Low priority since the scenario is rare → **T-059** (new, low priority, XS)
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

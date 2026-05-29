@@ -1,9 +1,21 @@
 # Kanban Board
-<!-- Updated: 2026-05-27 -->
+<!-- Updated: 2026-05-29 -->
 
 ## Backlog
 
 ## Todo
+
+### T-058: Investigate and fix dual permission prompt (CodeIsland panel + Claude Code native)
+> Users see both the CodeIsland island panel AND Claude Code's own in-terminal PermissionRequest prompt simultaneously and must answer both. Root-cause: `HookResponse.permission()` format (`decision.behavior`) may not match what newer Claude Code versions expect (`permissionDecision` string), causing Claude Code to ignore the hook response and fall through to its native UI.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #200 (May 28, 2026) — no upstream fix yet; confirmed in our `Models.swift:317` and `main.swift:325`
+#### Criteria
+- [ ] Verify our `HookResponse.permission()` format: current output is `{"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}}` — confirm whether Claude Code ≥ 2.x accepts this format or now requires `{"hookSpecificOutput": {"hookEventName": "PermissionRequest", "permissionDecision": "allow"}}`
+- [ ] If format mismatch confirmed: update `HookResponse.permission()` in `Models.swift:317` to emit the `permissionDecision` key instead of nested `decision.behavior`; update `HookResponse.answer()` and `HookResponse.skipQuestion()` accordingly
+- [ ] Verify the bridge's `recvAll()` path actually blocks Claude Code from showing its native prompt (timeout is 86400s for blocking events — should be fine)
+- [ ] Check hook `timeout` value written by `ConfigInstaller.swift` in `~/.claude/settings.json`; confirm it is sufficient (86400) for PermissionRequest hooks
+- [ ] `swift build && swift test` passes
 
 ### T-048: Fix main-thread block in detectClaudeVersion() — app freezes on activation
 > `ConfigInstaller.detectClaudeVersion()` calls `proc.waitUntilExit()` synchronously. It is invoked from `checkAndRepairHooks()` on `@MainActor AppDelegate`, which runs on every app-activation event (user switching back to the app) and every 300 s via background timer. Slow Claude CLI startup or permission dialogs will freeze the entire app UI.
@@ -599,6 +611,16 @@
 - [ ] Do NOT extract a helper method — we have a single answer path (T-018 multi-question wizard not yet implemented)
 - [ ] Add test asserting the PermissionRequest response payload contains `questions`, `answers`, and `answer` fields when `toolInput` carries a `questions` array
 - [ ] Add test asserting answer key equals the question text (not the header) — e.g., payload's `answers` dict keyed by `"Proceed with plan?"` not `"Confirm"`
+- [ ] `swift build && swift test` passes
+
+### T-059: Respect user-deleted hook events in verifyAndRepair (shouldPreservePartialHooks)
+> If a user intentionally removes a subset of our hook events from `~/.claude/settings.json`, `verifyAndRepair()` detects the partial config as corrupt and forcibly restores all events on next app launch. Upstream `be8bec4` adds `shouldPreservePartialHooks`: only repair when ALL our events are missing or stale `async` entries need cleanup; a partial-but-intact config is left alone.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `be8bec4` (v1.0.25, May 26, 2026) — labeled "codex" but logic is general; re-evaluated in May 29 scout
+#### Criteria
+- [ ] In `ConfigInstaller.swift`, add `shouldPreservePartialHooks()` check before the early-return guard in `verifyAndRepair()`: return `false` (don't repair) when at least one of our events is present and none are stale/async; return `true` only when zero of our events remain or stale entries need removal
+- [ ] First-time install and explicit enable/disable paths are unaffected (always write full event list)
 - [ ] `swift build && swift test` passes
 
 ### T-057: Fix panel showing stale prompt after user answers in terminal CLI
