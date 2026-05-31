@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-29 -->
+<!-- Updated: 2026-05-31 -->
 
 ## Backlog
 
@@ -457,6 +457,7 @@
 - [ ] Uses `import SQLite3` (macOS SDK system library — no external dependencies added)
 - [ ] Coordinate with T-039 (Terminal.app fix also modifies `TerminalActivator.swift`) — port T-039 first
 - [ ] Note: supersedes T-020's partial Warp window-level approach; no need to implement T-020 separately
+- [ ] **Before implementing**, check if PR #205 (open May 30, 2026) has merged — it adds `NSWorkspace.openApplication` raise (more reliable than `activate()`), removes SQLite `nolock=1` (was silently failing on default macOS volumes), case-insensitive CWD matching, frontmost-wait before tab shortcut, and smart-suppress tab-awareness; port these alongside `65da9fb`
 - [ ] `swift build && swift test` passes
 
 ### T-045: Terminal jump robustness — Ghostty Accessibility fallback + Terminal.app variable shadowing
@@ -611,6 +612,17 @@
 - [ ] Do NOT extract a helper method — we have a single answer path (T-018 multi-question wizard not yet implemented)
 - [ ] Add test asserting the PermissionRequest response payload contains `questions`, `answers`, and `answer` fields when `toolInput` carries a `questions` array
 - [ ] Add test asserting answer key equals the question text (not the header) — e.g., payload's `answers` dict keyed by `"Proceed with plan?"` not `"Confirm"`
+- [ ] `swift build && swift test` passes
+
+### T-060: iTerm2 fullscreen/cross-Space window jump — add `select <window>` to all match paths
+> Clicking a session card when iTerm2 is in fullscreen mode or on another macOS Space activates the app but doesn't raise the window, leaving the user on their current Space. Fix: add `select <window>` to all three iTerm2 match paths (session-id, tty, cwd) and guard each with its own `try`.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commits `f42e264` + `2fad1b1` (v1.0.26, May 30, 2026) — fixes upstream issues #198 and #179
+#### Criteria
+- [ ] In `TerminalActivator.swift`, iTerm2 activation block: add `select <window>` AppleScript call before `select tab` on all three match paths (session-id, tty, cwd); wrap each in its own `try` so a window-mid-transition failure can't silently skip the subsequent tab/session select
+- [ ] Verify: with iTerm2 in fullscreen (its own Space), clicking a session card switches to that Space and focuses the correct tab/session; does not land on a different window
+- [ ] Apply on top of T-020/T-039/T-045 (all touch `TerminalActivator.swift`)
 - [ ] `swift build && swift test` passes
 
 ### T-059: Respect user-deleted hook events in verifyAndRepair (shouldPreservePartialHooks)
