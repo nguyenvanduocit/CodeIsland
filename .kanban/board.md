@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-05-31 -->
+<!-- Updated: 2026-06-01 -->
 
 ## Backlog
 
@@ -448,16 +448,18 @@
 > Clicking a session card should land Warp users in the exact pane matching their session's cwd. Currently all non-Ghostty terminals fall through to no-op activation.
 - **priority**: high
 - **effort**: M
-- **source**: wxtsky/CodeIsland commit `65da9fb` (v1.0.22, Apr 23, 2026) — missed from April 24 scout
+- **source**: wxtsky/CodeIsland commits `65da9fb` (v1.0.22, Apr 23, 2026) + `f878234` (post-v1.0.27, May 31, 2026, PR #205 merged)
 #### Criteria
 - [ ] Port `Sources/CodeIslandCore/WarpPaneResolver.swift` from `65da9fb` (219 lines) — `WarpPaneMatch` struct + `WarpPaneResolver` read-only SQLite reader with firmlink normalisation (`/tmp↔/private/tmp`, `/var↔/private/var`, `/etc↔/private/etc`)
-- [ ] `TerminalActivator.swift`: add Warp bundle-name check → `activateWarp(cwd:)` (+71 lines); `sendWarpGoToTab(position:)` synthesises `Cmd+<n>` via CoreGraphics for tabs 1–9
+- [ ] Open SQLite **without** `nolock=1` (per `f878234`) so WAL writes are honoured and the resolved tab state is fresh
+- [ ] Case-insensitive CWD matching (per `f878234`) — `WarpPaneResolver` uses case-insensitive path comparison for case-insensitive volumes
+- [ ] `TerminalActivator.swift`: add Warp bundle-name check → `activateWarp(cwd:)`; use `raiseAppWithoutQuickTerminal()` (per `f878234`) instead of `NSRunningApplication.activate()` to avoid triggering Ghostty Quick Terminal; send `Cmd+<n>` keystroke only once Warp is frontmost (retry loop, per `f878234`); Cmd+9 = last tab (not tab-9)
+- [ ] `TerminalVisibilityDetector.swift`: port `isWarpSessionTabActive()` (per `f878234`) — smart-suppress uses tab-level active state, not just "is Warp frontmost"
 - [ ] Fallback to plain app activation when SQLite file absent, query returns no match, or Accessibility permission denied
-- [ ] Port `Tests/CodeIslandCoreTests/WarpPaneResolverTests.swift` from upstream
+- [ ] Port `Tests/CodeIslandCoreTests/WarpPaneResolverTests.swift` from upstream (including case-insensitive + `isActiveTab` tests from `f878234`)
 - [ ] Uses `import SQLite3` (macOS SDK system library — no external dependencies added)
 - [ ] Coordinate with T-039 (Terminal.app fix also modifies `TerminalActivator.swift`) — port T-039 first
 - [ ] Note: supersedes T-020's partial Warp window-level approach; no need to implement T-020 separately
-- [ ] **Before implementing**, check if PR #205 (open May 30, 2026) has merged — it adds `NSWorkspace.openApplication` raise (more reliable than `activate()`), removes SQLite `nolock=1` (was silently failing on default macOS volumes), case-insensitive CWD matching, frontmost-wait before tab shortcut, and smart-suppress tab-awareness; port these alongside `65da9fb`
 - [ ] `swift build && swift test` passes
 
 ### T-045: Terminal jump robustness — Ghostty Accessibility fallback + Terminal.app variable shadowing

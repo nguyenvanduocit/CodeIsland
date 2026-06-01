@@ -516,11 +516,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `209959d` (v1.0.26, May 30): pi/OMP coding-agent integration — non-Claude CLI, skip
 - SSH remote changes bundled in `f42e264` (remote uid probe) and `ef7db33` (custom CLI remote hooks) — SSH remote feature, skip
 - **`c406771`** (v1.0.27, May 30): IDE multi-window CWD matching for agent sources — extends `activateIDEWindow(bundleId:cwd:)` to Cursor/Trae/Qoder/Factory *agent source* sessions when multiple workspace windows are open; NOT applicable to us (our sessions have terminal sources, not IDE agent sources; the existing `activateIDEWindow` path for IDE-integrated terminals was already correct); skip
-- **PR #205** (open, May 30): Warp tab activation improvements — `NSWorkspace.openApplication` raise (more reliable than `NSRunningApplication.activate()`); removes SQLite `nolock=1` flag (was failing on default macOS volumes); adds case-insensitive CWD matching; waits until Warp is frontmost before sending Cmd+digit tab shortcut; smart-suppress now checks Warp's active tab state (not just "is Warp frontmost"). Not yet merged; T-044 criteria updated to incorporate these improvements before implementing → **T-044 criteria updated**
+- **PR #205 MERGED** (May 31, commit `f878234`): Warp tab activation improvements — `NSWorkspace.openApplication` raise (more reliable than `NSRunningApplication.activate()`); removes SQLite `nolock=1` flag (was failing on default macOS volumes); adds case-insensitive CWD matching; waits until Warp is frontmost before sending Cmd+digit tab shortcut; smart-suppress now checks Warp's active tab state (not just "is Warp frontmost"). Merged into main after the v1.0.27 release tag → **T-044 gate cleared; ready to implement; update source to include `f878234`**
 - **Issue #200 closed "not_planned"** (May 30): upstream will not fix the dual permission prompt — T-058 must be resolved independently
 - **Issue #169 closed "completed"** (May 30): burst permission auto-rejection confirmed fixed upstream via `0a6ab92` + `e1faa46` (T-040 criteria already captures this)
 - **Issues #179, #198 closed "completed"** (May 30): multi-terminal jump and iTerm2 fullscreen jump — both closed after upstream fix in `f42e264`; confirms T-060 is the right cherry-pick
-- PR #207 (open, May 30): SSH stale socket cleanup — SSH remote, skip
+- **PR #207 MERGED** (May 31, commit `3eeafe9`): SSH stale remote socket cleanup before -R forwarding — SSH remote feature, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+
+**Scouted (June 1, 2026) — post-v1.0.27 activity:**
+- No new releases since v1.0.27 (May 30); latest upstream activity is May 31
+- **`f878234`** (May 31): **PR #205 MERGED** — Warp tab activation overhaul: `raiseAppWithoutQuickTerminal()` replaces blanket `NSRunningApplication.activate()` so Ghostty Quick Terminal is not triggered; Cmd+digit keystroke sent only once Warp is frontmost (retry loop); Cmd+9 maps to last tab (not 9th); SQLite opened without `nolock=1` (WAL writes now honoured); case-insensitive CWD matching. Also adds `isWarpSessionTabActive()` to `TerminalVisibilityDetector`. This was the explicit gate in T-044 criteria ("check if PR #205 has merged before implementing") → **T-044 gate cleared; source updated to include `f878234`; ready to implement**
+- `3eeafe9` (May 31): SSH stale remote socket cleanup (#206/#207) — SSH remote, skip
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
 
