@@ -531,6 +531,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
 
+**Scouted (June 2, 2026) — post-v1.0.27 activity:**
+- No new releases since v1.0.27 (May 30); only activity since May 31 scout is PR #205 merge commit and one SSH fix
+- **`f878234`** (May 31): Warp tab activation overhaul (PR #205 merged) — already documented in May 31 scout; T-044 gate cleared, no change
+- `3eeafe9` (May 31): SSH remote stale socket cleanup (PR #207 merged) — SSH remote, skip (unchanged)
+- **PR #208** (open, May 31): "Refine notch hover timing and width scaling" — new 3-state hover machine (`collapsed → prehover → expanded`); quick pass-through reverses first-stage animation instead of opening full panel; expand after 0.5s, collapse 0.5s after leave; width slider 1% steps (was 10%), range unchanged (50%–150%); constants centralised in `NotchWidthScale`. Not yet merged → **T-061** (new, watch). Note: the 1% slider refinement is a natural addition to **T-021** criteria — update T-021 to note this when implementing the width slider.
+- **Issue #212** (open, Jun 1): "使用 Cmux 多 session 时，所有会话会被一起展开" — user reports that with cmux + multiple sessions, ALL sessions in the panel expand simultaneously when one is clicked; no upstream fix yet; cmux is supported in our app (T-022 tracks pane-precise jump); this is a different issue (UI expand-group bug, not a jump bug) → **T-062** (new, investigate)
+- **Issue #210** (open, Jun 1): "How to temporarily hide AskUserQuestion panel?" — user wants to dismiss/defer question or have panel hide when terminal opens; reinforces T-057 (stuck panel after in-terminal answer) and T-027 (auto-collapse after jump); no new upstream fix → T-057 criteria updated to note this user scenario
+- **Issue #211** (open, Jun 1): Claude Desktop / Codex Desktop support request — out of scope for Claude Code-only fork; skip
+- **Issue #209** (open, Jun 1): Codex plan mode can't trigger CodeIsland — Codex-specific, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

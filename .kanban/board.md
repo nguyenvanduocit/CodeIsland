@@ -1,9 +1,33 @@
 # Kanban Board
-<!-- Updated: 2026-06-01 -->
+<!-- Updated: 2026-06-02 -->
 
 ## Backlog
 
 ## Todo
+
+### T-062: Investigate cmux multi-session expand-all bug
+> User report: when multiple cmux sessions are visible in the panel, clicking one card causes ALL session cards to expand simultaneously instead of just the clicked one. No upstream fix yet.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #212 (Jun 1, 2026) — no upstream fix; cmux pane support in our codebase via T-022
+#### Criteria
+- [ ] Reproduce the bug: run 2+ Claude Code sessions under cmux; verify whether our panel expands all cards on a single click
+- [ ] If reproduced: trace how cmux sessions are grouped/keyed in `SessionSnapshot` or `AppState`; determine whether sessions share a session ID or the expand gesture is broadcast to all visible cards
+- [ ] Fix the expand-group logic so only the clicked card expands
+- [ ] `swift build && swift test` passes
+
+### T-061: Refine notch hover interaction — prehover state machine (watch for upstream merge)
+> Upstream PR #208 (open May 31, 2026) adds a 3-state hover machine (collapsed → prehover → expanded). A quick mouse pass-through now reverses the first-stage animation instead of opening the full panel, reducing accidental panel pops. Expand delay: 0.5 s; collapse delay: 0.5 s after leave.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #208 (open, May 31, 2026) — not yet merged; watch for merge before implementing
+#### Criteria
+- [ ] **Gate**: wait for PR #208 to merge into wxtsky/CodeIsland main before implementing
+- [ ] Port the `collapsed / prehover / expanded` state enum and transition logic into `NotchPanelView` (or `PanelWindowController`)
+- [ ] `prehover`: triggered on cursor enter; starts a 0.5 s timer; if cursor leaves before timer fires, play reverse animation back to `collapsed`; if timer fires, transition to `expanded`
+- [ ] `collapsed → expanded` collapse delay: 0.5 s after mouse leave (no change to current collapse, just re-expressed via new state machine)
+- [ ] Visual: first-stage animation (e.g. slight scale/opacity) during `prehover` phase; full expand only on `expanded`
+- [ ] `swift build && swift test` passes
 
 ### T-058: Investigate and fix dual permission prompt (CodeIsland panel + Claude Code native)
 > Users see both the CodeIsland island panel AND Claude Code's own in-terminal PermissionRequest prompt simultaneously and must answer both. Root-cause: `HookResponse.permission()` format (`decision.behavior`) may not match what newer Claude Code versions expect (`permissionDecision` string), causing Claude Code to ignore the hook response and fall through to its native UI.
@@ -182,6 +206,7 @@
 - [ ] Settings → Appearance/Display page has a width scale slider (50% – 150%)
 - [ ] Setting persisted via UserDefaults and applied at runtime without restart
 - [ ] Remove `guard !hasNotch else { return notchW }` early-return — apply `collapsedWidthScale` to real notch Macs too (per PR #171 pattern); compact/idle placeholder widths unified to scaled value
+- [ ] Use **1% slider steps** (not 10%) and centralise constants in a `NotchWidthScale` enum — per upstream PR #208 (Jun 2 scout); finer granularity is important for non-notch Macs dialling in exact width
 - [ ] Port PR #171 unit tests for width scaling and boundary clamp
 - [ ] `swift build && swift test` passes
 
@@ -638,7 +663,7 @@
 - [ ] `swift build && swift test` passes
 
 ### T-057: Fix panel showing stale prompt after user answers in terminal CLI
-> When user answers a permission/question prompt directly in the terminal (not via island panel), panel stays stuck showing the pending item. Upstream issue #180 (May 18, 2026) — no upstream fix yet.
+> When user answers a permission/question prompt directly in the terminal (not via island panel), panel stays stuck showing the pending item. Upstream issue #180 (May 18, 2026); also confirmed by issue #210 (Jun 1, 2026) where user describes having to quit the app to get rid of the stuck panel. No upstream fix yet.
 - **priority**: low
 - **effort**: S
 #### Criteria
