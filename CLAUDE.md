@@ -543,6 +543,14 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
 
+**Scouted (June 3, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest upstream activity remains May 31 (same as June 1/2 scouts) — upstream quiet for 3 days
+- **Issue #213** (open, Jun 2): "Clicking a session should focus the corresponding terminal window/tab" — user running "Superset" terminal, an unsupported terminal app; `sessions.json` only contains `termApp`/`cliPid`/`sessionId` with no window/tab mapping; no upstream fix yet; not actionable for us (Superset is not a supported terminal); skip
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+- **No new actionable items.** All open tasks (T-016 through T-062) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
