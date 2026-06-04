@@ -551,6 +551,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
 - **No new actionable items.** All open tasks (T-016 through T-062) remain as previously documented.
 
+**Scouted (June 4, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest upstream commit remains `f878234` (May 31, Warp tab fix) — upstream quiet for 4 days
+- **Issue #215** (open, Jun 3): "Support Google Antigravity 2 hooks" — non-Claude CLI (Antigravity 2), skip
+- **Issue #214** (open, Jun 3): "Unable to reconnect to remote - 1.0.27 — ssh exited(255)" — SSH remote feature, not applicable to our Claude Code-only fork; skip
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+- **No new actionable items.** All open tasks (T-016 through T-062) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
