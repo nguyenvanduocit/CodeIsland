@@ -560,6 +560,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
 - **No new actionable items.** All open tasks (T-016 through T-062) remain as previously documented.
 
+**Scouted (June 5, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest upstream commit remains `f878234` (May 31, Warp tab fix) — upstream quiet for 5 days
+- **Issue #216** (open, Jun 4): "Permission approval panel does not auto-dismiss after approving from terminal" — third report of T-057 (after issue #180 May 18 and issue #210 Jun 1); user approves via terminal CLI, island panel stays stuck showing the pending item; no upstream fix yet → T-057 criteria already accurate; no priority change (still low)
+- **Issue #217** (open, Jun 4): "快捷键不生效" (keyboard shortcuts not working) — global hotkeys work briefly after restart but stop registering when the app loses focus; global shortcuts are explicitly listed as "Unsynced from v1.0.7" in our fork; not applicable
+- **PR #218** (open, Jun 4): "feat(companion): add iPhone Buddy app and watch sync" — full iOS/watchOS companion app (Dynamic Island, Lock Screen widget, Apple Watch app, Bluetooth sync bridge); out of scope for macOS-only fork; skip
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ Correction to prior scout note: GitHub Issues are **enabled** (not disabled) in `nguyenvanduocit/CodeIsland` — issues list is currently empty, not disabled. All task tracking remains in `.kanban/board.md`.
+- **No new actionable items.** All open tasks (T-016 through T-062) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
