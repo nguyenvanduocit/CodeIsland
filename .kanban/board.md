@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-06-02 -->
+<!-- Updated: 2026-06-07 -->
 
 ## Backlog
 
@@ -663,13 +663,24 @@
 - [ ] `swift build && swift test` passes
 
 ### T-057: Fix panel showing stale prompt after user answers in terminal CLI
-> When user answers a permission/question prompt directly in the terminal (not via island panel), panel stays stuck showing the pending item. Upstream issue #180 (May 18, 2026); also confirmed by issue #210 (Jun 1, 2026) where user describes having to quit the app to get rid of the stuck panel. No upstream fix yet.
+> When user answers a permission/question prompt directly in the terminal (not via island panel), panel stays stuck showing the pending item. Upstream issue #180 (May 18, 2026); also confirmed by issue #210 (Jun 1, 2026) where user describes having to quit the app to get rid of the stuck panel, and issue #216 (Jun 4, 2026) as third confirmation. No upstream fix yet.
 - **priority**: low
 - **effort**: S
 #### Criteria
 - [ ] Detect that a pending `PermissionRequest` or `AskUserQuestion` was handled outside the panel (e.g. `PreToolUse` arriving for a tool whose permission was pending)
 - [ ] Dismiss the stale approval/question card from the panel when this is detected
 - [ ] Consider using existing 300s stuck-session auto-reset (T-016) as fallback if signal not available
+- [ ] `swift build && swift test` passes
+
+### T-063: Investigate panel overlap with Bartender 5 on external display
+> User-reported visual overlap between the CodeIsland panel and Bartender 5's managed menu bar area when using an external monitor. Root cause unknown — likely panel Y-position calculation not accounting for Bartender 5's modified menu bar height or overlay layer on non-notch external displays. Distinct from T-056 (which is about which screen is selected and the display picker).
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #219 (Jun 6, 2026) — no upstream fix yet
+#### Criteria
+- [ ] Reproduce on an external display with Bartender 5 running: verify whether the panel overlaps the Bartender 5 overlay or managed-icon area
+- [ ] Investigate `PanelWindowController.swift` Y-position calculation on external (non-notch) displays: check whether it uses `NSStatusBar.system.thickness` or a hard-coded value; Bartender 5 and Ice can expand the visible menu bar area, making the effective usable height differ from the standard menu bar thickness
+- [ ] If reproducible: fix Y-position to query actual window-server menu bar height (e.g. via `NSScreen.visibleFrame` comparison) rather than assuming a fixed height
 - [ ] `swift build && swift test` passes
 
 ## Doing

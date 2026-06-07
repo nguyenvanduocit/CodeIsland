@@ -577,6 +577,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-062) remain as previously documented. GitHub issues list in `nguyenvanduocit/CodeIsland` remains empty (0 issues).
 
+**Scouted (June 7, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest commit remains `f878234` (May 31, Warp tab fix) — upstream quiet for 7 days
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- PR #218 (open, Jun 4): iPhone companion app — still open; hardware/iOS companion, skip (out of scope)
+- **Issue #219** (open, Jun 6): "外接显示器时与 Bartender 5 重叠" — panel visually overlaps with Bartender 5 (popular macOS menu bar manager) on external display; screenshot attached; no upstream fix yet; distinct from T-056 (which covers display picker enumeration and cross-screen jumping): this is a Y-position conflict with Bartender 5's managed menu bar overlay on non-notch external displays → **T-063** (new)
+- **Issue #216** (open, Jun 4): third confirmation of T-057 (stuck panel after in-terminal answer) — T-057 criteria updated to note this additional report
+- Issue #217 (open, Jun 4): global shortcuts stop registering after focus loss — global shortcuts explicitly "Unsynced from v1.0.7"; not applicable to our fork; skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
