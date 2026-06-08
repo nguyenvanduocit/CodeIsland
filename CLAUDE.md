@@ -587,6 +587,14 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
 
+**Scouted (June 8, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest commit remains `f878234` (May 31, Warp tab fix) — upstream quiet for 8 days
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- PR #218 (open, Jun 4): iPhone companion app — still open; hardware/iOS companion, skip (out of scope)
+- Issues: no new issues since June 7 scout; upstream issues page unchanged
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- **No new actionable items.** All open tasks (T-016 through T-063) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
