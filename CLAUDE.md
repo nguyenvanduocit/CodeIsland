@@ -595,6 +595,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-063) remain as previously documented.
 
+**Scouted (June 9, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest commit remains `f878234` (May 31, Warp tab fix) — upstream quiet for 9 days
+- **PR #222** (open, Jun 8): "feat: support Pi / OMP sessions and add a Pi mascot" — Pi/Oh-My-Pi is a non-Claude CLI; skip
+- **Issue #220** (open, Jun 8): "cursor终端中打开的cc显示cursor图标" — when Claude Code is launched from inside Cursor IDE's integrated terminal, the session card shows the Cursor icon instead of the Claude Code icon; `ProcessScanner` likely classifies the session as a Cursor source because Cursor is the nearest ancestor in the process tree; no upstream fix yet → **T-064** (new, low priority, XS)
+- Issue #221 (open, Jun 8): DingTalk robot approval push — request to integrate with DingTalk (Chinese enterprise messaging) for remote approval; external service integration, not applicable; skip
+- Issue #143 (updated Jun 8): pi-coding-agent support closed/completed upstream — Pi is non-Claude CLI; skip
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- PR #218 (open, Jun 4): iPhone companion app — still open; hardware/iOS companion, skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
