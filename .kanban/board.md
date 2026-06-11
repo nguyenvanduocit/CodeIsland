@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-06-09 -->
+<!-- Updated: 2026-06-11 -->
 
 ## Backlog
 
@@ -681,6 +681,17 @@
 - [ ] Reproduce on an external display with Bartender 5 running: verify whether the panel overlaps the Bartender 5 overlay or managed-icon area
 - [ ] Investigate `PanelWindowController.swift` Y-position calculation on external (non-notch) displays: check whether it uses `NSStatusBar.system.thickness` or a hard-coded value; Bartender 5 and Ice can expand the visible menu bar area, making the effective usable height differ from the standard menu bar thickness
 - [ ] If reproducible: fix Y-position to query actual window-server menu bar height (e.g. via `NSScreen.visibleFrame` comparison) rather than assuming a fixed height
+- [ ] `swift build && swift test` passes
+
+### T-065: Fix orphaned approval/question prompt after session ends
+> When a Claude Code session exits while a PermissionRequest or AskUserQuestion is queued in the panel, the approval/question bar remains visible indefinitely with no session behind it. Distinct from T-057 (session still running but user answered via terminal).
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #224 (Jun 10–11, 2026) — no upstream fix yet
+#### Criteria
+- [ ] In `AppState.executeEffect(.removeSession(sessionId:))`, drain all pending `RequestQueueService` items whose `sessionId` matches the removed session
+- [ ] If the drained item is the currently displayed approval/question bar item, call `showNextOrCollapse()` immediately so the bar advances or collapses
+- [ ] Verify: start session with a pending PermissionRequest → kill claude process → confirm approval bar disappears
 - [ ] `swift build && swift test` passes
 
 ### T-064: Investigate Claude Code showing Cursor icon when launched from Cursor integrated terminal

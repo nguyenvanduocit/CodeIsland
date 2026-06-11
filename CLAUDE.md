@@ -615,6 +615,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
 - **No new actionable items.** All open tasks (T-016 through T-064) remain as previously documented. GitHub issues list in `nguyenvanduocit/CodeIsland` is empty (0 issues open).
 
+**Scouted (June 11, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest upstream commit remains `f878234` (May 31, Warp tab fix) — upstream quiet for 11 days
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- PR #218 (open, Jun 4): iPhone companion app — still open; hardware/iOS companion, skip (out of scope)
+- PR #222 (open, Jun 8): Pi/OMP mascot — still open; non-Claude CLI, skip
+- **Issue #224** (open, ~Jun 10): "没有任何会话在运行中，但灵动岛还是弹出待确认的提示" — no sessions running but island still shows a pending approval/question prompt; session ended (Stop event, crash, or process exit) while a PermissionRequest or AskUserQuestion was queued; `RequestQueueService` retains the orphaned item and the bar remains rendered. Distinct from T-057 (session still alive, user answered via terminal). Fix: drain pending queue entries for the session in `.removeSession` side-effect handler → **T-065** (new, high priority, XS)
+- **Issue #225** (open, ~Jun 10): "性能释放问题,CPU占用过高" — "performance/resource release, CPU usage too high"; additional user report confirming T-033 (screen-poll interval 1s → 5s) is needed and still unimplemented; no new code to cherry-pick; T-033 criteria unchanged
+- vibeislandapp/vibe-island issue #107: "hooks 写入 settings.json 时把ccstatusLine 配置覆盖掉了" — hooks reformat settings.json and overwrite unrelated keys; same root cause as T-034 (destructive reformat via JSONSerialization + sortedKeys); upstream fix already available as `adf41b6`; T-034 criteria unchanged
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
