@@ -646,6 +646,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker remains empty (0 issues)
 - **No new actionable items.** All open tasks (T-016 through T-065) remain as previously documented.
 
+**Scouted (June 15, 2026) — post-v1.0.27 activity:**
+- No new commits or releases since v1.0.27 (May 30); latest upstream commit remains `f878234` (May 31, Warp tab fix) — upstream quiet for 15 days
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 unchanged
+- PR #218 (open, Jun 4): iPhone companion app — still open; hardware/iOS companion, skip (out of scope)
+- PR #222 (open, Jun 8): Pi/OMP mascot — still open; non-Claude CLI, skip
+- **Issue #226** (open, Jun 13): "hermes agent 通知不起作用" (Hermes agent notifications not working) — Hermes is a non-Claude CLI; skip
+- **Issue #225** (updated Jun 10): now has full body — CPU spike >100% for ~3 min on sleep/wake cycle on macOS 26.5.1 M1; specific reproducer: quit Claude Code → close lid → reopen → CPU spikes; root cause may be screen-poller or NWListener going haywire on wake; already catalogued as T-033 (screen-poll 1s→5s); noted for further investigation as T-033 may only partially address it
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker remains empty (0 issues)
+- **No new actionable items.** All open tasks (T-016 through T-065) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
