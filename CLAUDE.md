@@ -657,6 +657,26 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker remains empty (0 issues)
 - **No new actionable items.** All open tasks (T-016 through T-065) remain as previously documented.
 
+**Scouted (June 16, 2026) — v1.0.28 activity:**
+- v1.0.28 released 2026-06-15
+- **`09aab35`** (Jun 15): "fix(permission): auto-dismiss orphan permission cards on terminal approval (#216)" — adds `resolveOrphanPermissionsOnActivity`: when a follow-up activity event (e.g. `PreToolUse`) arrives for a session, any pending permission cards whose `tool_use_id` is empty/nil are resolved as approved-in-terminal; id-bearing requests left untouched (parallel-tool-call protection from e18f884 intact). Upstream fix for T-057 → **T-057 promote to implement, priority → high**
+- **`25acb1a`** (Jun 15): "fix(perf): pause mascot animation on sleep and while hidden (#225)" — introduces `MascotAnimationGate`: observes NSWorkspace sleep/wake + panel visibility; stops `TimelineView(.periodic)` animation when asleep or hidden; on re-show/wake bumps animation epoch so `TimelineView` re-anchors to now instead of replaying all missed ticks. Directly fixes the >100% CPU spike after sleep/wake (confirmed by issue #225). More comprehensive than T-033 poll-interval reduction → **T-033 criteria updated to include MascotAnimationGate**
+- **`c07272d`** (Jun 15): "fix(permission): omit rule specifier for MCP tool always-allow (#224)" — 'Always allow' for MCP tools was silently broken: rule emitted as `mcp__server__tool(*)` but MCP tool calls carry no input specifier → rule never matched → same approval re-appeared on every use. Fix: emit bare tool name (no `ruleContent`) for `mcp__`-prefixed tools; non-MCP tools keep the `*` wildcard → **T-066** (new, high priority, XS)
+- **`77e8c58`** (Jun 15): "fix(source): exclude desktop IDE hosts from ancestry inference (#220)" — when `claude` is run inside Cursor's integrated terminal, source inference picks up Cursor host process and mis-labels the session as Cursor source; fix excludes cursor/trae/qoder/codebuddy/stepfun/antigravity from `inferSource()` result. Upstream fix for T-064 → **T-064 source + criteria updated; promote to implement**
+- `eefb3e4` (Jun 15): Superset terminal support — best-effort app-raise only (no per-pane AppleScript API on Superset); low value; skip
+- `f2334944` (Jun 15): Carbon RegisterEventHotKey for global shortcuts — prerequisite for T-007; global shortcuts never implemented in our fork (unsynced since v1.0.7); skip until T-007 is started
+- `70c95de` (Jun 15): Google Antigravity/Gemini hooks — non-Claude CLI, skip
+- `27d96e1` (Jun 15): Hermes hooks to `~/.hermes/config.yaml` — non-Claude CLI, skip
+- `2d8d19d` (Jun 15): Codex Desktop plan-mode user-input requests — Codex-specific, skip
+- `8955e8` (Jun 15): iPhone Buddy iOS/watchOS companion (PR #218 merged) — out of scope, skip
+- `f3b8d36` (Jun 15): Pi/OMP mascot (PR #222 merged) — non-Claude CLI, skip
+- `0cf41a7` (Jun 15): drop unused Pi PR-preview PNG — repo chore, skip
+- **Issue #212 closed "completed"** (Jun 15): cmux expand-all-sessions bug (T-062) — upstream closed as completed with no identifiable commit in v1.0.28 batch; T-062 still needs investigation in our codebase
+- Issues #209, #213, #215, #216, #217, #220, #224, #225, #226 closed "completed" (Jun 15) — fixes for Claude Code-relevant ones captured above; others were Codex/non-Claude CLIs or SSH remote
+- PR #208 (open): "Refine notch hover timing and width scaling" — T-061, still open, unchanged
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

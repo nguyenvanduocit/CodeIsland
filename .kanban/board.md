@@ -1,15 +1,15 @@
 # Kanban Board
-<!-- Updated: 2026-06-11 -->
+<!-- Updated: 2026-06-16 -->
 
 ## Backlog
 
 ## Todo
 
 ### T-062: Investigate cmux multi-session expand-all bug
-> User report: when multiple cmux sessions are visible in the panel, clicking one card causes ALL session cards to expand simultaneously instead of just the clicked one. No upstream fix yet.
+> User report: when multiple cmux sessions are visible in the panel, clicking one card causes ALL session cards to expand simultaneously instead of just the clicked one. Upstream issue #212 closed "completed" in v1.0.28 (Jun 15, 2026) but no identifiable commit addresses it directly — may have been fixed as a side effect of another change.
 - **priority**: low
 - **effort**: S
-- **source**: wxtsky/CodeIsland issue #212 (Jun 1, 2026) — no upstream fix; cmux pane support in our codebase via T-022
+- **source**: wxtsky/CodeIsland issue #212 (Jun 1, 2026) — closed "completed" in v1.0.28 without clear commit; cmux pane support in our codebase via T-022
 #### Criteria
 - [ ] Reproduce the bug: run 2+ Claude Code sessions under cmux; verify whether our panel expands all cards on a single click
 - [ ] If reproduced: trace how cmux sessions are grouped/keyed in `SessionSnapshot` or `AppState`; determine whether sessions share a session ID or the expand gesture is broadcast to all visible cards
@@ -100,13 +100,16 @@
 - [ ] Unit tests cover dismiss-skip, re-display, and multi-session scenarios (ref: upstream `AppStatePermissionFlowTests.swift`)
 - [ ] `swift build && swift test` passes
 
-### T-033: Reduce screen-poll interval 1s → 5s to cut Energy Impact
-> `CGWindowListCopyWindowInfo` runs every 1 second as a fallback poller; measurably shows in Energy Impact. Notifications already cover common-path display switches — 5s is sufficient for the drag-across-displays edge case.
+### T-033: Reduce Energy Impact — screen-poll 1s → 5s + pause mascot animation on sleep/hide
+> `CGWindowListCopyWindowInfo` runs every 1 second; measurably shows in Energy Impact (fix: 5s). Separately, the idle mascot drives ~20fps `TimelineView` redraws forever and after sleep/wake `TimelineView` catches up all missed ticks — pinning CPU for minutes (fix: `MascotAnimationGate`). User-confirmed: CPU >100% for 3 min on sleep/wake on M1 macOS 26.5.1 (issue #225, closed in v1.0.28).
 - **priority**: high
-- **effort**: XS
-- **source**: wxtsky/CodeIsland commit `136737a` (v1.0.21, Apr 16, 2026) — fixes issue #92
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `136737a` (v1.0.21, Apr 16, 2026) — screen-poll fix; commit `25acb1a` (v1.0.28, Jun 15, 2026) — mascot animation gate
 #### Criteria
 - [ ] Change `Task.sleep(for: .seconds(1))` → `.seconds(5)` at `PanelWindowController.swift:426` in `configureAutoScreenPolling()`
+- [ ] Port `MascotAnimationGate` from `25acb1a`: new `@Observable` class observing `NSWorkspace.willSleepNotification` / `didWakeNotification` + panel visibility; exposes `isRunning: Bool`
+- [ ] `SpriteSheetView.swift` (where `TimelineView` lives): stop scheduling frames when `MascotAnimationGate.isRunning == false`; bump an `animationEpoch` integer on `isRunning` transition to `true` so `TimelineView` re-anchors its base time to now (avoids tick catch-up)
+- [ ] Panel visibility signal: wire from `NotchPanelView` or `PanelWindowController` into `MascotAnimationGate` so it knows when the panel is hidden
 - [ ] `swift build && swift test` passes
 
 ### T-032: Fix fenced code block rendering in chat view
@@ -663,13 +666,15 @@
 - [ ] `swift build && swift test` passes
 
 ### T-057: Fix panel showing stale prompt after user answers in terminal CLI
-> When user answers a permission/question prompt directly in the terminal (not via island panel), panel stays stuck showing the pending item. Upstream issue #180 (May 18, 2026); also confirmed by issue #210 (Jun 1, 2026) where user describes having to quit the app to get rid of the stuck panel, and issue #216 (Jun 4, 2026) as third confirmation. No upstream fix yet.
-- **priority**: low
-- **effort**: S
+> When user answers a permission prompt directly in the terminal (not via island panel), panel stays stuck showing the pending item. Confirmed by issues #180 (May 18), #210 (Jun 1), #216 (Jun 4). Upstream fix available in v1.0.28.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `09aab35` (v1.0.28, Jun 15, 2026) — `resolveOrphanPermissionsOnActivity`
 #### Criteria
-- [ ] Detect that a pending `PermissionRequest` or `AskUserQuestion` was handled outside the panel (e.g. `PreToolUse` arriving for a tool whose permission was pending)
-- [ ] Dismiss the stale approval/question card from the panel when this is detected
-- [ ] Consider using existing 300s stuck-session auto-reset (T-016) as fallback if signal not available
+- [ ] Add `resolveOrphanPermissionsOnActivity(sessionId:)` to `RequestQueueService` (or `AppState`): when a `PreToolUse` / `PostToolUse` activity event arrives for a session, resolve all queued permission items for that session whose `tool_use_id` is `nil` or empty string — mark them as approved-in-terminal and drain them from the queue
+- [ ] **MUST NOT** drain items with a non-empty `tool_use_id` — those are managed by the T-040 deduplication cache and parallel-tool-call protection (e18f884)
+- [ ] If the drained item is the currently displayed approval card, call `showNextOrCollapse()` immediately
+- [ ] Verify: start a Claude Code session with a pending PermissionRequest (no `tool_use_id`), approve in terminal → confirm island panel card dismisses within one `PreToolUse` event cycle
 - [ ] `swift build && swift test` passes
 
 ### T-063: Investigate panel overlap with Bartender 5 on external display
@@ -694,15 +699,26 @@
 - [ ] Verify: start session with a pending PermissionRequest → kill claude process → confirm approval bar disappears
 - [ ] `swift build && swift test` passes
 
-### T-064: Investigate Claude Code showing Cursor icon when launched from Cursor integrated terminal
-> User report: when `claude` is run inside Cursor IDE's integrated terminal, the session card displays the Cursor icon instead of the Claude Code icon. `ProcessScanner` likely classifies the session as a Cursor source because Cursor is the nearest ancestor in the process tree.
-- **priority**: low
+### T-066: Fix "Always allow" for MCP tools never sticking — wrong permission rule format
+> When the user clicks "Always allow" on an MCP tool permission prompt, the rule is written as `mcp__server__tool(*)` to `~/.claude/settings.json`. MCP tool calls carry no input specifier, so `mcp__server__tool(*)` never matches — the same approval prompt re-appears on every use of that tool.
+- **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #220 (Jun 8, 2026) — no upstream fix yet
+- **source**: wxtsky/CodeIsland commit `c07272d` (v1.0.28, Jun 15, 2026) — fixes upstream issue #224
 #### Criteria
-- [ ] Reproduce: run `claude` in Cursor's integrated terminal; verify the session card shows the Cursor icon and that `termApp`/`source` is set to `cursor` in the snapshot
-- [ ] In `ProcessScanner.swift`: inspect how `ClaudeProcessMatcher` walks the ancestor chain; determine whether it stops at the first IDE (Cursor/VS Code bundle ID) or continues looking for an external terminal
-- [ ] Fix: when the ancestor is an IDE (known bundle IDs: `com.todesktop.230313mzl4w4u92`, `com.microsoft.VSCode`, etc.), skip it and continue walking; or fall back to the `claude` process itself as the canonical source when no external terminal is found
+- [ ] Find where the "Always allow" `ruleContent` / permission rule entry is constructed — likely in `AppState.swift` or `HookServer.swift` where `autoApprovedTools` entries are serialised back to Claude Code's hook response or settings
+- [ ] For any tool name starting with `mcp__`: emit a **bare tool name** rule (no `ruleContent` / no `*` wildcard specifier); for all other tools: keep existing `*` wildcard
+- [ ] Verify: click "Always allow" on an MCP tool prompt; confirm the next invocation of that MCP tool is silently auto-approved without re-prompting; check `~/.claude/settings.json` shows `mcp__server__tool` (no parentheses)
+- [ ] `swift build && swift test` passes
+
+### T-064: Fix Claude Code showing Cursor icon when launched from Cursor integrated terminal
+> When `claude` is run inside Cursor's integrated terminal, `inferSource()` picks up the `/cursor` path in the ancestor chain and mis-labels the session as Cursor source. Upstream fix available in v1.0.28.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #220 (Jun 8, 2026); upstream fix in commit `77e8c58` (v1.0.28, Jun 15, 2026)
+#### Criteria
+- [ ] In `ProcessScanner.swift` `inferSource()`: add an exclusion set of desktop-IDE source names — `{"cursor", "trae", "qoder", "codebuddy", "stepfun", "antigravity"}` — that are never valid inference results for a Claude Code session
+- [ ] When the ancestry walk resolves to one of these names, treat it as no-source-found and fall back to `claude` as the canonical source
+- [ ] Verify: running `claude` inside Cursor's integrated terminal produces a session card with the Claude icon, not the Cursor icon
 - [ ] `swift build && swift test` passes
 
 ## Doing
