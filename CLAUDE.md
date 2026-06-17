@@ -677,6 +677,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains latest commit — nothing actionable
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 
+**Scouted (June 17, 2026) — post-v1.0.28 activity:**
+- No new commits or releases since v1.0.28 (Jun 15); latest upstream commit remains `09aab35` — upstream quiet for 2 days
+- **PR #228** (open, Jun 16): "fix(pi/omp): add pi/omp mascot option in setting view" — Pi/OMP is a non-Claude CLI; skip
+- **Issue #227** (open, Jun 16): "该issue还是会复现" — user reports that issue #224 (orphan permission card with no active session) **still recurs** after the v1.0.28 fix (`09aab35`). The v1.0.28 fix only handles the "activity event arrives → dismiss nil-tool_use_id orphans" path; it does not drain queued items when the session process exits. Our T-065 (drain on `.removeSession` side effect) is a distinct, complementary fix still needed. T-065 criteria unchanged.
+- **PR #208** status update: upstream owner reviewed and declined to merge in current form — PR bundles project rename (CodeIsland → UniIsland), ~1500 lines of new features including WeChat notification database access (requires Full Disk Access), and a `hideWhenNoSession` regression alongside the desired hover-timing and width-slider refinements. Owner requested a focused re-submission with just the hover/slider changes. T-061's gate ("wait for PR #208 to merge") now effectively means "wait for a focused re-PR" — update T-061 criteria accordingly.
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **No new actionable items.** All open tasks (T-016 through T-066) remain as previously documented. **T-061 gate updated**: not "PR #208 merges" but "a focused hover-timing re-PR merges."
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

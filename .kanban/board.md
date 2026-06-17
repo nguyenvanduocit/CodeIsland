@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-06-16 -->
+<!-- Updated: 2026-06-17 -->
 
 ## Backlog
 
@@ -16,13 +16,13 @@
 - [ ] Fix the expand-group logic so only the clicked card expands
 - [ ] `swift build && swift test` passes
 
-### T-061: Refine notch hover interaction — prehover state machine (watch for upstream merge)
-> Upstream PR #208 (open May 31, 2026) adds a 3-state hover machine (collapsed → prehover → expanded). A quick mouse pass-through now reverses the first-stage animation instead of opening the full panel, reducing accidental panel pops. Expand delay: 0.5 s; collapse delay: 0.5 s after leave.
+### T-061: Refine notch hover interaction — prehover state machine (watch for focused re-PR)
+> Upstream PR #208 (open May 31, 2026) adds a 3-state hover machine (collapsed → prehover → expanded). A quick mouse pass-through now reverses the first-stage animation instead of opening the full panel, reducing accidental panel pops. Expand delay: 0.5 s; collapse delay: 0.5 s after leave. PR #208 was declined by upstream maintainer (Jun 16, 2026) because it bundled a project rename, ~1500 lines of unrelated features including WeChat notification database access (Full Disk Access required), and a `hideWhenNoSession` regression. Owner asked author to resubmit with just the hover/slider changes as a focused PR.
 - **priority**: low
 - **effort**: S
-- **source**: wxtsky/CodeIsland PR #208 (open, May 31, 2026) — not yet merged; watch for merge before implementing
+- **source**: wxtsky/CodeIsland PR #208 (open, May 31, 2026) — declined in current form Jun 16, 2026; watch for focused re-PR with just hover-timing + width-slider changes
 #### Criteria
-- [ ] **Gate**: wait for PR #208 to merge into wxtsky/CodeIsland main before implementing
+- [ ] **Gate**: wait for a focused hover-timing/width-slider PR to merge into wxtsky/CodeIsland main before implementing (PR #208 will not merge as-is; author needs to resubmit)
 - [ ] Port the `collapsed / prehover / expanded` state enum and transition logic into `NotchPanelView` (or `PanelWindowController`)
 - [ ] `prehover`: triggered on cursor enter; starts a 0.5 s timer; if cursor leaves before timer fires, play reverse animation back to `collapsed`; if timer fires, transition to `expanded`
 - [ ] `collapsed → expanded` collapse delay: 0.5 s after mouse leave (no change to current collapse, just re-expressed via new state machine)
