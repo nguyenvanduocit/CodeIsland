@@ -210,6 +210,7 @@
 - [ ] Setting persisted via UserDefaults and applied at runtime without restart
 - [ ] Remove `guard !hasNotch else { return notchW }` early-return — apply `collapsedWidthScale` to real notch Macs too (per PR #171 pattern); compact/idle placeholder widths unified to scaled value
 - [ ] Use **1% slider steps** (not 10%) and centralise constants in a `NotchWidthScale` enum — per upstream PR #208 (Jun 2 scout); finer granularity is important for non-notch Macs dialling in exact width
+- [ ] Update setting label to reflect it applies to both notch and non-notch displays (upstream issue #231 Jun 18: label "non-notch only" is misleading after PR #171 broadened scope)
 - [ ] Port PR #171 unit tests for width scaling and boundary clamp
 - [ ] `swift build && swift test` passes
 

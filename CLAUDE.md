@@ -686,6 +686,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **No new actionable items.** All open tasks (T-016 through T-066) remain as previously documented. **T-061 gate updated**: not "PR #208 merges" but "a focused hover-timing re-PR merges."
 
+**Scouted (June 20, 2026) — post-v1.0.28 activity:**
+- No new commits or releases since v1.0.28 (Jun 15); latest upstream commit remains `09aab35` — upstream quiet for 5 days
+- **PR #233** (open, Jun 19): "fix: support Google Antigravity tool-use approval and details" — Google Antigravity is non-Claude CLI; skip
+- **PR #228** (open, Jun 16): "fix(pi/omp): add pi/omp mascot option in setting view" — Pi/OMP non-Claude CLI; skip (unchanged)
+- **PR #208** (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 (gate: focused re-PR); unchanged
+- **Issue #232** (open, Jun 18): "TRAE IDE不识别hooks" — TRAE is non-Claude CLI; skip
+- **Issue #231** (open, Jun 18): "Island width setting applies to notch and non-notch displays" — bug report on v1.0.28: the width slider (labeled "non-notch only") affects both notch and non-notch displays since PR #171 broadened scope in v1.0.25; upstream label is misleading; when implementing T-021 in our fork, either restrict to non-notch-only or update the setting label to reflect both → **T-021 criteria updated**
+- **Issue #230** (open, Jun 18): "CodeIsland buddy english localization" — Buddy is the ESP32/BLE hardware companion; skip
+- **Issue #229** (open, Jun 17): "能不能适配14以下系统和intel旧机型" — request to support macOS <14 and Intel Macs; out of scope (we target macOS 14+ with `@Observable`); skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **No new actionable items.** T-021 criteria updated with label-accuracy note. All other open tasks (T-016 through T-066) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
