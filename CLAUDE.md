@@ -699,6 +699,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **No new actionable items.** T-021 criteria updated with label-accuracy note. All other open tasks (T-016 through T-066) remain as previously documented.
 
+**Scouted (June 21, 2026) — post-v1.0.28 activity:**
+- No new commits or releases since v1.0.28 (Jun 15); latest upstream commit remains `09aab35` — upstream quiet for 6 days
+- **PR #234** (open, Jun 20): "Add German localization and improve macOS signing support" — German L10n (we don't ship L10n) + DMG signing improvements (CI/release only); skip
+- **PR #233** (open, Jun 19): Google Antigravity support — non-Claude CLI; skip (unchanged from Jun 20 scout)
+- **PR #228** (open, Jun 16): Pi/OMP mascot option — non-Claude CLI; skip (unchanged)
+- **PR #208** (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 (gate: focused re-PR); unchanged
+- vibeislandapp/vibe-island issue #148 (Jun 14, closed Jun 20): Claude Desktop workflow false-completion bug — Claude Desktop App, not Claude Code CLI; skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-066) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
