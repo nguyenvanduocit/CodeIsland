@@ -710,6 +710,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-066) remain as previously documented.
 
+**Scouted (June 22, 2026) — post-v1.0.28 activity:**
+- No new commits or releases since v1.0.28 (Jun 15); latest upstream commit remains `09aab35` — upstream quiet for 7 days
+- **Issue #235** (open, Jun 21): "Feature Request: Add OpenClaw support" — OpenClaw is a non-Claude CLI; skip
+- PR #234 (open, Jun 20): German L10n + macOS signing — skip (unchanged from Jun 21 scout)
+- PR #233 (open, Jun 19): Google Antigravity support — non-Claude CLI; skip (unchanged)
+- PR #228 (open, Jun 16): Pi/OMP mascot option — non-Claude CLI; skip (unchanged)
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 (gate: focused re-PR); unchanged
+- vibeislandapp/vibe-island: 4 commits on Jun 21 (`a5aa8fd`, `744605b`, `a2bd5d3`, `c0cc7f7`) — docs/issue-template cleanup only (README streamline, removed Chinese from templates); no code changes; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-066) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
