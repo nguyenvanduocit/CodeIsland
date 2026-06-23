@@ -721,6 +721,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-066) remain as previously documented.
 
+**Scouted (June 23, 2026) — post-v1.0.28 activity:**
+- No new commits or releases since v1.0.28 (Jun 15); latest upstream commit remains `09aab35` — upstream quiet for 8 days
+- **PR #237** (open, Jun 22): "feat(activator): jump to host GUI client that embeds an agent as a server" — introduces `resolveHostClientBundleId(for:)`: walks process ancestry (max 32 hops, uses `proc_pidinfo()`), builds exclusion set of known terminals + agent apps, returns first regular GUI app not in the exclusion set; no hardcoded bundle IDs. Intended for scenarios where a CLI agent runs as a managed server inside a desktop client (e.g. OpenChamber) rather than a terminal. For our Claude Code-only fork, claude always runs in a real terminal — server-mode embedding is uncommon. Not yet merged → **T-067** (new, low priority, watch for merge)
+- **PR #238** (open, Jun 22): "feat(ios): native iPad support + notch-aligned companion UI" — iOS/watchOS companion; macOS app untouched; out of scope; skip
+- **Issue #236** (open, Jun 22): "Codex Desktop sessions are not shown while Claude sessions work" — Codex-specific; skip
+- **Issue #239** (open, Jun 22): "Support for the herdr terminal multiplexer" — niche multiplexer; no upstream implementation, just a feature request; skip
+- **Issue #240** (open, Jun 22): "远程SSH时，会看到其他人的对话和对话面板" — SSH remote session isolation request; SSH remote feature not applicable to our fork; skip
+- vibeislandapp/vibe-island: `3e1e1e2` (Jun 22) — docs: streamline community templates and README — docs only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **One new watch item (T-067).** All other open tasks (T-016 through T-066) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
