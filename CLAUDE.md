@@ -732,6 +732,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **One new watch item (T-067).** All other open tasks (T-016 through T-066) remain as previously documented.
 
+**Scouted (June 24, 2026) — post-v1.0.28 activity:**
+- No new commits or releases since v1.0.28 (Jun 15); latest upstream commit remains `09aab35` — upstream quiet for 9 days
+- PR #237 (open, Jun 22): "feat(activator): jump to host GUI client..." — T-067, still open, unchanged
+- PR #238 (open, Jun 23): "feat(ios): native iPad support + notch-aligned companion UI" — still open; iOS/watchOS companion, skip (out of scope)
+- Issues #236/#239/#240: all already documented in June 23 scout; no change
+- vibeislandapp/vibe-island: **issue #150** (open, Jun 21): "Claude/Codex sessions running in a git worktree under `.claude/worktrees/` are never shown in the island" — detailed root-cause analysis reveals `claudeProjectDirEncoded()` only replaces `/` not `.`, while Claude Code encodes both; any session cwd with a `.` path component (e.g. `.claude/worktrees/<branch>`) builds a wrong transcript path → `SessionTitleStore` and `SessionUsageReader` silently find nothing; session visibility unaffected (driven by hook events); title and usage data broken → confirmed in our `AppState.swift:731` → **T-068** (new, high priority, XS)
+- vibeislandapp/vibe-island: issue #149 (closed Jun 21, duplicate of #150) — no additional content
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (issues API returns 410 — disabled)
+- **One new task (T-068).** All other open tasks (T-016 through T-067) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

@@ -1,9 +1,20 @@
 # Kanban Board
-<!-- Updated: 2026-06-17 -->
+<!-- Updated: 2026-06-24 -->
 
 ## Backlog
 
 ## Todo
+
+### T-068: Fix `claudeProjectDirEncoded()` missing dot-encoding — breaks title/usage for worktree sessions
+> `claudeProjectDirEncoded()` only replaces `/`, spaces, and non-ASCII with `-`, but Claude Code also replaces `.`. Any session whose cwd contains a `.` component (e.g. `.claude/worktrees/<branch>`) builds a wrong transcript path, so `SessionTitleStore` and `SessionUsageReader` silently fail — session title and token usage/cost not displayed.
+- **priority**: high
+- **effort**: XS
+- **source**: vibeislandapp/vibe-island issue #150 (Jun 21, 2026) — bug identified in open-vibe-island reference code; confirmed in our `AppState.swift:731`
+#### Criteria
+- [ ] In `claudeProjectDirEncoded()` (`AppState.swift:731`), add `c == "."` to the replacement condition so dots are encoded as `-`, matching Claude Code's own encoding
+- [ ] Add unit test: encode `"/home/user/proj/.claude/worktrees/jovial-hamilton-f836c1"` and verify output is `-home-user-proj--claude-worktrees-jovial-hamilton-f836c1` (note double-dash from `/.`)
+- [ ] Verify `SessionTitleStore.claudeTitle()` and `SessionUsageReader.transcriptPath()` find the correct file for a worktree session after the fix
+- [ ] `swift build && swift test` passes
 
 ### T-062: Investigate cmux multi-session expand-all bug
 > User report: when multiple cmux sessions are visible in the panel, clicking one card causes ALL session cards to expand simultaneously instead of just the clicked one. Upstream issue #212 closed "completed" in v1.0.28 (Jun 15, 2026) but no identifiable commit addresses it directly — may have been fixed as a side effect of another change.
