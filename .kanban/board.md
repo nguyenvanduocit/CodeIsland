@@ -1,9 +1,21 @@
 # Kanban Board
-<!-- Updated: 2026-06-24 -->
+<!-- Updated: 2026-06-25 -->
 
 ## Backlog
 
 ## Todo
+
+### T-069: Fix compact bar overflow when tool_use name is too long
+> Long tool names (e.g. `mcp__someServer__doComplexOperation`) overflow the compact notch bar's center `Text`, pushing `CompactLeftWing` (mascot) and `CompactRightWing` (session count) off-screen. Upstream fix: new `enum ToolNameDisplay { compact() }` truncates to 24 chars; `CompactRightWing` also gains a project name display (CWD basename).
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commits `a06ad44` + `b426e93` (Jun 24, 2026) — fixes upstream issue #241
+#### Criteria
+- [ ] Add `enum ToolNameDisplay` to `NotchPanelView.swift` with `static let compactMaxCharacters = 24`, `static let compactMaxWidth: CGFloat = 120`, and `static func compact(_ tool: String, maxCharacters: Int = compactMaxCharacters) -> String` that trims and appends `"..."` for strings exceeding the limit
+- [ ] Apply `ToolNameDisplay.compact()` to the center text in `NotchPanelView.body` (line 68) — wrap `msg` before display
+- [ ] (Optional) Update `CompactRightWing` to show CWD basename (project name) alongside session count when screen width allows — add `private var projectName: String?` computed from `displaySession?.cwd`
+- [ ] Verify: run a Claude Code session with a long MCP tool name (e.g. `mcp__filesystem__read_multiple_files`) and confirm mascot and session count remain visible in compact bar
+- [ ] `swift build && swift test` passes
 
 ### T-068: Fix `claudeProjectDirEncoded()` missing dot-encoding — breaks title/usage for worktree sessions
 > `claudeProjectDirEncoded()` only replaces `/`, spaces, and non-ASCII with `-`, but Claude Code also replaces `.`. Any session whose cwd contains a `.` component (e.g. `.claude/worktrees/<branch>`) builds a wrong transcript path, so `SessionTitleStore` and `SessionUsageReader` silently fail — session title and token usage/cost not displayed.

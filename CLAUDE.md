@@ -742,6 +742,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (issues API returns 410 — disabled)
 - **One new task (T-068).** All other open tasks (T-016 through T-067) remain as previously documented.
 
+**Scouted (June 25, 2026) — v1.0.29 + post-v1.0.28 activity:**
+- **`a06ad44`** (Jun 24, direct push): "fix: resolve tool label and Trae hook issues" (fixes upstream #241, #231, #232) — adds `enum ToolNameDisplay` with `compact(_ tool:)` helper (24-char cap + `"..."` truncation) to `NotchPanelView.swift`; applies it to the compact bar center text; `CompactRightWing` description updated to "project name + session count" (gains `projectName` computed from `session.cwd`). Issue #241 was: long MCP tool names overflow the compact bar, pushing mascot and session count off-screen. We have the same bug in our `liveToolText` path. → **T-069** (new, high priority, XS)
+- **`b426e93`** (Jun 24): "fix: resolve actionable issue regressions" — follow-up fix addressing regressions from the batch PR merges (mostly non-Claude CLIs); no additional action for our fork beyond T-069
+- **PR #237 MERGED** (Jun 24, commit `0aece00`): "feat(activator): jump to host GUI client embedding the agent as server" — T-067 gate cleared. For our Claude Code-only fork: `resolveHostClientBundleId()` returns nil for terminal sessions (terminals are in the exclusion set); our `nativeAppBundles` is already `[:]` so the changed fallback path is also a no-op → **T-067 skip** (no action needed for our fork)
+- **PR #238 MERGED** (Jun 24): "feat(ios): native iPad support + notch-aligned companion UI" — iOS companion; out of scope; skip. Note: bundled compile fix `PixelCharacterView` reads `mascotAnimationsActive/Epoch` env keys missing from iOS targets — not applicable (we have no iOS target)
+- **PR #234 MERGED** (Jun 24): German L10n + macOS signing improvements — includes minor "Fix AppState deinit main-actor cleanup"; L10n skip; deinit fix is cosmetic (no crash in practice); skip
+- **PR #233 MERGED** (Jun 24): Google Antigravity support — non-Claude CLI; skip
+- **PR #228 MERGED** (Jun 24): Pi/OMP mascot option — non-Claude CLI; skip
+- vibeislandapp/vibe-island: no new commits since Jun 22 — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: disabled (API returns 410) — all tracking via kanban board only
+- **One new task (T-069).** T-067 retired (no-op for our fork). All other open tasks (T-016 through T-068) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
