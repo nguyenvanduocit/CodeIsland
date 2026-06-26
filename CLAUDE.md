@@ -754,6 +754,14 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: disabled (API returns 410) — all tracking via kanban board only
 - **One new task (T-069).** T-067 retired (no-op for our fork). All other open tasks (T-016 through T-068) remain as previously documented.
 
+**Scouted (June 26, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jun 24); latest upstream commits are `597b5ce` + `b426e93` (Jun 24) — upstream quiet for 2 days
+- **`597b5ce`** (Jun 24): "fix: align antigravity permission routing" — modifies `HookServer.swift`, `AppState.swift`, `EventNormalizer.swift`, `CodeIslandBridge/main.swift` to route Gemini CLI/Google Antigravity `PreToolUse` events through the permission UI; changes `EventNormalizer` to treat "BeforeTool" as "PermissionRequest" for non-Claude sources; Antigravity/Gemini-specific → **skip**
+- **Issue #242** (open, Jun 25): "ssh 的时候会覆盖我原来的hook" — SSH remote feature overwrites user's existing hooks; SSH remote monitoring not applicable to our Claude Code-only fork → skip
+- vibeislandapp/vibe-island: no new commits since Jun 22 — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: disabled (API returns 410) — all tracking via kanban board only
+- **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
