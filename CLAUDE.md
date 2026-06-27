@@ -762,6 +762,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: disabled (API returns 410) — all tracking via kanban board only
 - **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
 
+**Scouted (June 27, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jun 24); latest upstream commit remains `b426e93` (Jun 24) — upstream quiet for 3 days
+- **`b426e93`** (Jun 24, missed from June 26 scout): "fix: resolve actionable issue regressions" — most changes are Codex-specific (`AppState+CodexAppServer.swift` adds `codexAppServerExecutableURL()` helper, `CodexPermissionRules.swift` +130 lines, test coverage); the one Claude Code-adjacent change is `AppState.swift`: refactors `shouldSuppressAppLevel()` → extracts `shouldAutoOpenPendingSurface()` helper with injectable `isTerminalFrontmost` closure for testability (logic unchanged, no user-visible bug fix). No action needed; testability improvement only → **skip**
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 (gate: focused re-PR); unchanged
+- Issue #242 (open, Jun 25): SSH remote hooks overwrite — SSH remote feature, skip (unchanged)
+- vibeislandapp/vibe-island: no new commits since Jun 22 — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
