@@ -779,6 +779,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
 
+**Scouted (June 30, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jun 24); latest upstream commit remains `b426e93` (Jun 24) — upstream quiet for 6 days
+- **Issue #243** (open, Jun 29): "CodeIsland repeatedly sends SIGTERM to launchd-managed daemon (Hermes gateway)" — our fork has the same `kill(pid, SIGTERM)` orphaned-process logic at `AppState.swift:225`; however it only fires for processes already in our sessions dict, which can only contain Claude Code hook-registered sessions; a launchd-managed daemon (ppid=1 always) would never enter our sessions dict in a Claude Code-only fork → **not applicable to our fork, skip**
+- **Issue #244** (open, Jun 29): OMP (Oh My Pi) `ask` tool not triggering question UI — OMP is a non-Claude CLI; skip
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — still open, T-061 (gate: focused re-PR); unchanged
+- vibeislandapp/vibe-island: issues #155 (OpenCode session deduplication) and #151 (Gajae Code support) updated — both non-applicable to our Claude Code-only fork; skip
+- vibeislandapp/vibe-island: `ba1c889` (Apr 22) remains the latest commit — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
