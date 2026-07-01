@@ -789,6 +789,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
 
+**Scouted (July 1, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jun 24); latest upstream commit remains `b426e93` (Jun 24) — upstream quiet for 7 days
+- No new PRs since Jun 24; PR #208 (open, May 31): "Refine notch hover timing and width scaling" — T-061 (gate: focused re-PR); unchanged
+- No new issues since Jun 29 (issues #243/#244 already documented in Jun 30 scout)
+- vibeislandapp/vibe-island: `24bbaf4` (Jun 30): "ci: auto-triage CLI-created issues" — CI-only, skip
+- vibeislandapp/vibe-island issue #153 (closed Jun 30): "Usage bridge falsely reports 'script doesn't exist' for statusLine commands that use $HOME" — vibe-island's `fileExists` check expands `~` but not `$HOME`; fixed on their `main` (planned v1.0.40). **Not applicable to our fork** (we have no statusLine installation or bridge-installer UI)
+- vibeislandapp/vibe-island issue #147 (open, updated Jun 30): sub-worker auto-approval not firing in on-my-claudecode /team mode — maintainer investigating; newer on-my-claudecode starts workers with `bypassPermissions` so the issue may be version-specific; no upstream fix yet; no action needed
+- vibeislandapp/vibe-island issue #127 (open, updated Jun 25): Warp Tab Jumping sends layout-dependent keycodes and loops on Swiss QWERTZ — ongoing; our planned T-044 implementation uses Cmd+digit keystrokes (same approach) and would be subject to the same layout-dependency issue; note as a risk when implementing T-044
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
