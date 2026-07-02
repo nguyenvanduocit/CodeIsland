@@ -800,6 +800,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
 
+**Scouted (July 2, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jun 24); search returns 0 commits since Jun 30 — upstream quiet for 8 days
+- No new PRs created after Jun 25; PR #208 (open, May 31): "Refine notch hover timing and width scaling" — T-061 (gate: focused re-PR); unchanged
+- wxtsky/CodeIsland issue #245 (Jul 1): zcode support request — non-Claude CLI; skip
+- vibeislandapp/vibe-island: no new PRs; issues #150 (worktree path encoding, closed Jun 30) and #153 ($HOME expansion, closed Jun 30) already documented in prior scouts
+- vibeislandapp/vibe-island issue #147 (open): sub-worker auto-approval in on-my-claudecode /team mode — still open; no upstream fix; no new action
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
