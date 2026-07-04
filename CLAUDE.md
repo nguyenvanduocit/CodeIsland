@@ -818,6 +818,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
 
+**Scouted (July 4, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jun 24); latest upstream commit remains `b426e93` (Jun 24) — upstream quiet for 10 days
+- ⚠️ Note: v1.0.29 git tag not visible via `git fetch --tags` (highest visible tag is v1.0.28); CLAUDE.md references to "v1.0.29" were based on GitHub Releases UI (API inaccessible in this environment). The 8 commits above v1.0.28 (`a06ad44` through `b426e93`) are confirmed present on `upstream/main` — the release was shipped, tag status unclear.
+- No new PRs or issues accessible (GitHub API scoped to our repo only; confirmed via git that no new commits exist since Jun 24)
+- PR #208 (open, May 31): "Refine notch hover timing and width scaling" — T-061 (gate: focused re-PR); unchanged
+- vibeislandapp/vibe-island: `24bbaf4` (Jun 30, CI auto-triage) remains the latest commit — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
