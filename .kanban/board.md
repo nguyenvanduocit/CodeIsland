@@ -1,9 +1,22 @@
 # Kanban Board
-<!-- Updated: 2026-06-25 -->
+<!-- Updated: 2026-07-06 -->
 
 ## Backlog
 
 ## Todo
+
+### T-070: Support Claude Code Desktop sessions (com.anthropic.claudefordesktop)
+> Anthropic's native macOS Claude Code Desktop app shares `~/.claude/settings.json` with the CLI and fires the same hooks (PreToolUse, PostToolUse, AskUserQuestion, PermissionRequest). Users running Claude Code from the desktop app get no visibility in CodeIsland today — sessions are unrecognized. Upstream fix: `4fbd0f9` (Jul 5, 2026).
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `4fbd0f9` (Jul 5, 2026) — closes upstream issue #211
+#### Criteria
+- [ ] `Sources/CodeIslandCore/SessionSnapshot.swift`: add `"com.anthropic.claudefordesktop": "Claude"` to bundle ID → source name mapping; desktop sessions receive the "Claude" host tag and exemption from terminal-orphan cleanup (no terminal parent PID to check)
+- [ ] `Sources/CodeIsland/AppState.swift`: recognize Claude Code Desktop in native-app mode detection — check if session cwd paths contain `/claude.app/contents/` or similar app-container prefix; apply native-app lifecycle rules (no terminal process monitoring, no PID-based orphan cleanup)
+- [ ] `Sources/CodeIsland/TerminalActivator.swift`: register bundle ID `com.anthropic.claudefordesktop` with display name `"Claude"` for session card labeling; **exclude** from click-to-jump fallback mapping — desktop sessions have no terminal window to jump to; attempting activation would steal focus from terminal CLI sessions
+- [ ] Verify: running Claude Code from the Desktop app produces a session card with the Claude icon; approval/question prompts appear and respond correctly; clicking the session card does nothing (or shows a "no terminal to jump to" hint) rather than stealing focus
+- [ ] Port `ClaudeDesktopSupportTests.swift` coverage: native app mode detection, activation conflict prevention (bundle ID in exclusion list)
+- [ ] `swift build && swift test` passes
 
 ### T-069: Fix compact bar overflow when tool_use name is too long
 > Long tool names (e.g. `mcp__someServer__doComplexOperation`) overflow the compact notch bar's center `Text`, pushing `CompactLeftWing` (mascot) and `CompactRightWing` (session count) off-screen. Upstream fix: new `enum ToolNameDisplay { compact() }` truncates to 24 chars; `CompactRightWing` also gains a project name display (CWD basename).
@@ -39,17 +52,19 @@
 - [ ] Fix the expand-group logic so only the clicked card expands
 - [ ] `swift build && swift test` passes
 
-### T-061: Refine notch hover interaction — prehover state machine (watch for focused re-PR)
-> Upstream PR #208 (open May 31, 2026) adds a 3-state hover machine (collapsed → prehover → expanded). A quick mouse pass-through now reverses the first-stage animation instead of opening the full panel, reducing accidental panel pops. Expand delay: 0.5 s; collapse delay: 0.5 s after leave. PR #208 was declined by upstream maintainer (Jun 16, 2026) because it bundled a project rename, ~1500 lines of unrelated features including WeChat notification database access (Full Disk Access required), and a `hideWhenNoSession` regression. Owner asked author to resubmit with just the hover/slider changes as a focused PR.
-- **priority**: low
+### T-061: Refine notch hover interaction — prehover state machine
+> Upstream commit `e3ac11c` (Jul 5, 2026) adds a 3-state hover machine (collapsed → prehover → expanded). A quick mouse pass-through triggers only the first-stage prehover animation then reverses, preventing accidental full panel opens. Expand delay: 0.5 s; collapse delay: 0.5 s after leave. Gate cleared — PR #208 was declined but the feature was committed directly to upstream main.
+- **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland PR #208 (open, May 31, 2026) — declined in current form Jun 16, 2026; watch for focused re-PR with just hover-timing + width-slider changes
+- **source**: wxtsky/CodeIsland commit `e3ac11c` (Jul 5, 2026) — direct commit to main; PR #208 closed
 #### Criteria
-- [ ] **Gate**: wait for a focused hover-timing/width-slider PR to merge into wxtsky/CodeIsland main before implementing (PR #208 will not merge as-is; author needs to resubmit)
-- [ ] Port the `collapsed / prehover / expanded` state enum and transition logic into `NotchPanelView` (or `PanelWindowController`)
-- [ ] `prehover`: triggered on cursor enter; starts a 0.5 s timer; if cursor leaves before timer fires, play reverse animation back to `collapsed`; if timer fires, transition to `expanded`
-- [ ] `collapsed → expanded` collapse delay: 0.5 s after mouse leave (no change to current collapse, just re-expressed via new state machine)
-- [ ] Visual: first-stage animation (e.g. slight scale/opacity) during `prehover` phase; full expand only on `expanded`
+- [ ] Add `NotchHoverPhase` enum (`collapsed`, `prehover`, `expanded`) to `NotchPanelView.swift`
+- [ ] Implement `NotchHoverInteraction` struct with timing constants: prehover animation 0.21 s, expand delay 0.5 s, collapse delay 0.5 s after leave
+- [ ] On cursor enter → `prehover`: slight width delta (+7 pt) + scale (1.004) as immediate feedback; start 0.5 s timer; if cursor leaves before timer fires, play reverse animation back to `collapsed`; if timer fires, transition to `expanded`
+- [ ] Add `hoverPrehover` animation constant to animation constants file (0.21 s duration)
+- [ ] Sync phase when surface changes externally (e.g. panel hidden by another event while prehovered)
+- [ ] Width-scale slider: change from `step: 10` to `step: 1` in `SettingsView.swift` (1% increments) — implement alongside T-021 which also touches the width slider
+- [ ] Port upstream unit tests covering: quick pass-through (no expand), dwell > 0.5 s (expands), width-scale bounds
 - [ ] `swift build && swift test` passes
 
 ### T-058: Investigate and fix dual permission prompt (CodeIsland panel + Claude Code native)
@@ -123,16 +138,16 @@
 - [ ] Unit tests cover dismiss-skip, re-display, and multi-session scenarios (ref: upstream `AppStatePermissionFlowTests.swift`)
 - [ ] `swift build && swift test` passes
 
-### T-033: Reduce Energy Impact — screen-poll 1s → 5s + pause mascot animation on sleep/hide
-> `CGWindowListCopyWindowInfo` runs every 1 second; measurably shows in Energy Impact (fix: 5s). Separately, the idle mascot drives ~20fps `TimelineView` redraws forever and after sleep/wake `TimelineView` catches up all missed ticks — pinning CPU for minutes (fix: `MascotAnimationGate`). User-confirmed: CPU >100% for 3 min on sleep/wake on M1 macOS 26.5.1 (issue #225, closed in v1.0.28).
+### T-033: Reduce Energy Impact — screen-poll 1s → 5s + universal mascot frame-loop gate
+> `CGWindowListCopyWindowInfo` runs every 1 second; measurably shows in Energy Impact (fix: 5s). Separately, ALL mascot views drive raw `TimelineView(.periodic)` loops at 16–33fps around the clock — even when panel is hidden — and replay all missed ticks in a burst after wake, causing >100% CPU spikes (user-confirmed issue #225, M1 macOS 26.5.1). Fix: `MascotAnimationGate` for Clawd (`25acb1a`, v1.0.28), then universal `MascotTimeline` wrapper for all 18 mascots (`0971ad3`, Jul 5, 2026). Also: 8fps cap for idle scenes (`d5fe917`).
 - **priority**: high
 - **effort**: S
-- **source**: wxtsky/CodeIsland commit `136737a` (v1.0.21, Apr 16, 2026) — screen-poll fix; commit `25acb1a` (v1.0.28, Jun 15, 2026) — mascot animation gate
+- **source**: wxtsky/CodeIsland commit `136737a` (v1.0.21, Apr 16, 2026) — screen-poll fix; commit `25acb1a` (v1.0.28, Jun 15, 2026) — mascot animation gate (Clawd only); commit `0971ad3` (Jul 5, 2026) — universal `MascotTimeline` wrapper for all mascots; commit `d5fe917` (Jul 5, 2026) — 8fps idle scene cap
 #### Criteria
 - [ ] Change `Task.sleep(for: .seconds(1))` → `.seconds(5)` at `PanelWindowController.swift:426` in `configureAutoScreenPolling()`
-- [ ] Port `MascotAnimationGate` from `25acb1a`: new `@Observable` class observing `NSWorkspace.willSleepNotification` / `didWakeNotification` + panel visibility; exposes `isRunning: Bool`
-- [ ] `SpriteSheetView.swift` (where `TimelineView` lives): stop scheduling frames when `MascotAnimationGate.isRunning == false`; bump an `animationEpoch` integer on `isRunning` transition to `true` so `TimelineView` re-anchors its base time to now (avoids tick catch-up)
-- [ ] Panel visibility signal: wire from `NotchPanelView` or `PanelWindowController` into `MascotAnimationGate` so it knows when the panel is hidden
+- [ ] Create `MascotTimeline` SwiftUI `View` wrapper: observes `NSWorkspace.willSleepNotification` / `didWakeNotification` + panel visibility; stops driving `TimelineView` when hidden/asleep; bumps an `animationEpoch` integer on wake/show so `TimelineView` re-anchors to now (avoids burst tick catch-up); enforces a 20 fps interval floor suitable for menu-bar animations; handles speed scaling via `@Environment(\.mascotAnimationsActive)` and `@Environment(\.mascotAnimationEpoch)`
+- [ ] Replace all individual `TimelineView(.periodic)` calls in mascot view files (`SpriteSheetView.swift`, `SpriteMascotView.swift`, `BuddyView.swift`, `PixelCharacterView.swift`, and any others) with `MascotTimeline`
+- [ ] Cap idle-state mascot scenes to 8fps per `d5fe917` — when mascot task is `.idle` and no active session, reduce `MascotTimeline` interval to `1.0 / 8.0` s
 - [ ] `swift build && swift test` passes
 
 ### T-032: Fix fenced code block rendering in chat view
@@ -679,6 +694,18 @@
 - [ ] Apply on top of T-020/T-039/T-045 (all touch `TerminalActivator.swift`)
 - [ ] `swift build && swift test` passes
 
+### T-071: Surface keyboard shortcut badges on approval card buttons
+> When a user has configured global approve/deny keyboard shortcuts in Settings, the shortcuts are invisible during the approval workflow — the user has to navigate to Settings to discover them. Upstream `eb3ad03` (Jul 5, 2026) adds small faded shortcut badges directly on the Allow/Deny buttons. Badges only appear when the corresponding shortcut is enabled; no UI clutter for users without shortcuts configured. **Depends on T-007 (global shortcuts) being implemented first.**
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `eb3ad03` (Jul 5, 2026)
+#### Criteria
+- [ ] **Gate**: implement T-007 (global keyboard shortcuts) before this task — badges only make sense when shortcuts exist
+- [ ] Add `static func shortcutHint(for action: ShortcutAction) -> String?` helper: returns formatted key string (e.g. `"⌘⇧A"`) when the shortcut is enabled in settings, `nil` otherwise
+- [ ] Extend approval card Allow/Deny buttons to accept an optional `hint: String?` parameter; when non-nil, render the hint as a small faded monospaced badge in an `HStack` alongside the button label
+- [ ] Apply to both Allow and Deny buttons in `Sources/CodeIsland/Views/ApprovalBarView.swift`
+- [ ] `swift build && swift test` passes
+
 ### T-059: Respect user-deleted hook events in verifyAndRepair (shouldPreservePartialHooks)
 > If a user intentionally removes a subset of our hook events from `~/.claude/settings.json`, `verifyAndRepair()` detects the partial config as corrupt and forcibly restores all events on next app launch. Upstream `be8bec4` adds `shouldPreservePartialHooks`: only repair when ALL our events are missing or stale `async` entries need cleanup; a partial-but-intact config is left alone.
 - **priority**: low
@@ -701,15 +728,19 @@
 - [ ] Verify: start a Claude Code session with a pending PermissionRequest (no `tool_use_id`), approve in terminal → confirm island panel card dismisses within one `PreToolUse` event cycle
 - [ ] `swift build && swift test` passes
 
-### T-063: Investigate panel overlap with Bartender 5 on external display
-> User-reported visual overlap between the CodeIsland panel and Bartender 5's managed menu bar area when using an external monitor. Root cause unknown — likely panel Y-position calculation not accounting for Bartender 5's modified menu bar height or overlay layer on non-notch external displays. Distinct from T-056 (which is about which screen is selected and the display picker).
-- **priority**: low
-- **effort**: XS
-- **source**: wxtsky/CodeIsland issue #219 (Jun 6, 2026) — no upstream fix yet
+### T-063: Auto-dodge third-party menu bar icons on external screens (Bartender 5 / Ice)
+> Upstream `4fdf5af` (Jul 5, 2026) adds automatic panel positioning to slide the island into the nearest clear gap when third-party menu bar managers (Bartender 5, Ice) occupy the space where the panel would center on external non-notch displays. New `MenuBarIconAvoidance.swift` helper does the placement math; `PanelWindowController.swift` integrates it; opt-out toggle added to Settings.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `4fdf5af` (Jul 5, 2026) — closes upstream issue #219
 #### Criteria
-- [ ] Reproduce on an external display with Bartender 5 running: verify whether the panel overlaps the Bartender 5 overlay or managed-icon area
-- [ ] Investigate `PanelWindowController.swift` Y-position calculation on external (non-notch) displays: check whether it uses `NSStatusBar.system.thickness` or a hard-coded value; Bartender 5 and Ice can expand the visible menu bar area, making the effective usable height differ from the standard menu bar thickness
-- [ ] If reproducible: fix Y-position to query actual window-server menu bar height (e.g. via `NSScreen.visibleFrame` comparison) rather than assuming a fixed height
+- [ ] Create `Sources/CodeIsland/MenuBarIconAvoidance.swift` (~114 lines): helper enum with pure placement math — queries visible windows on layer 25 (status bar layer) via `CGWindowListCopyWindowInfo`, excluding own windows; identifies occupied menu bar ranges; generates candidate positions (left and right of icon clusters); selects nearest viable position to preferred center, capped at 25% of screen width to prevent extreme displacement
+- [ ] Integrate into `PanelWindowController.swift` panel-positioning path: call `MenuBarIconAvoidance.adjustedOrigin(preferred:screen:)` (or equivalent) when computing panel X on non-notch external displays
+- [ ] `Settings.swift`: add `avoidMenuBarIcons` Bool key (default `true`)
+- [ ] Settings → Appearance/Display page: add toggle "Avoid menu bar icons" (enabled by default); guard avoidance logic on this setting
+- [ ] Port `MenuBarIconAvoidanceTests.swift` unit tests for placement math (candidate generation, cap enforcement, empty-menu-bar passthrough)
+- [ ] Skip L10n additions — use plain English labels
+- [ ] Verify: on external display with Bartender 5 or Ice running, panel visibly shifts away from icon clusters; disabling the toggle returns to centered behavior
 - [ ] `swift build && swift test` passes
 
 ### T-065: Fix orphaned approval/question prompt after session ends

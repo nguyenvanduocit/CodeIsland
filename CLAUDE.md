@@ -827,6 +827,25 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
 
+**Scouted (July 6, 2026) — v1.0.30 activity (upstream batch Jul 5, 2026):**
+- Upstream pushed a large batch of 13 commits on Jul 5, 2026 — likely v1.0.30 (not yet confirmed in releases API)
+- **`4fbd0f9`**: "feat: recognize Claude Code Desktop sessions (#211)" — Claude Code Desktop (`com.anthropic.claudefordesktop`) shares `~/.claude/settings.json` and fires the same hooks; `SessionSnapshot.swift` bundle-ID mapping, `AppState.swift` native-app mode, `TerminalActivator.swift` exclusion from click-to-jump → **T-070** (new, high priority, S)
+- **`4fdf5af`**: "feat(panel): auto-dodge third-party menu bar icons on external screens (#219)" — new `MenuBarIconAvoidance.swift` + `PanelWindowController.swift` integration; slides panel into nearest clear gap when Bartender 5/Ice occupy center space; upstream fix for T-063 → **T-063 promote to implement, priority medium** (updated criteria, source, and effort)
+- **`e3ac11c`**: "feat(notch): three-stage hover interaction + 1% width-scale steps" — `collapsed → prehover → expanded` state machine; prehover visual (+7pt, 1.004 scale) while 0.5s timer runs; quick pass-through reverses without full expand; width slider 10% → 1% steps; 49-line unit test suite; **T-061 gate cleared** (PR #208 was closed, feature committed directly to main) → T-061 criteria updated, gate condition removed, priority raised to medium
+- **`eb3ad03`**: "feat(ux): surface enabled approve/deny shortcuts on the approval card" — small shortcut badges on Allow/Deny buttons when global shortcuts are enabled; single-file change +34/-17 lines → **T-071** (new, low priority, XS; depends on T-007)
+- **`0971ad3`**: "perf: gate every mascot's frame loop, not just Clawd's (#225 follow-up)" — new universal `MascotTimeline` wrapper replaces 4 raw `TimelineView(.periodic)` loops in all 17 non-Claude mascot views; 20fps floor; epoch re-anchor on wake; **T-033 criteria extended** to require universal wrapper (not just `PixelCharacterView` gate)
+- **`d5fe917`**: "perf: 8fps idle mascot scenes + lazy BLE peripheral init" — caps idle mascot animation to 8fps; BLE init irrelevant; added to T-033 criteria as optional idle-fps cap
+- **`2a289f9`**: "feat(mascots): motion-polish pass across all 18 characters (#15)" — visual polish of sprite animations; our mascot system uses separate sprite PNGs; low relevance since we only have Claude's sprite sheet; skip
+- **`cf624dd`**: "fix: never SIGTERM launchd-managed daemons in orphan cleanup (#243)" — ppid=1 guard before `kill()`; previously evaluated as "not applicable to our fork"; maintaining skip (our sessions dict only contains Claude Code hook-registered sessions which always have a terminal parent)
+- **`4f8308b`**: "feat(remote): per-host working-directory filter" — SSH remote feature; skip
+- **`ee23ccf`**: "feat(omp/pi): bridge ask tool to question UI" — OMP/Pi non-Claude CLI; skip
+- **`27837c0`**: "fix(remote): merge hooks instead of replacing event keys" — SSH remote; skip
+- **`10fb1b2`**: "fix(companion): watchOS crash-loop self-healing" — hardware companion; skip
+- **`779d755`**: "fix(mascot): map cursor-cli and qoder-cli to mascots" — non-Claude CLIs; skip
+- **PR #208 CLOSED** (Jul 5): "Refine notch hover timing and width scaling" — declined in prior form; features extracted and committed as `e3ac11c`; T-061 gate condition removed
+- **vibeislandapp/vibe-island**: `b80886a` (Jul 5) — "docs: expand README into full product overview" — docs only, nothing actionable
+- **New tasks added**: T-070 (Claude Code Desktop), T-071 (shortcut badges); **tasks updated**: T-061 (gate cleared), T-063 (upstream fix available), T-033 (universal MascotTimeline)
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
