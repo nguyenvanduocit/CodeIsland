@@ -827,8 +827,8 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-069) remain as previously documented.
 
-**Scouted (July 6, 2026) — v1.0.30 activity (upstream batch Jul 5, 2026):**
-- Upstream pushed a large batch of 13 commits on Jul 5, 2026 — likely v1.0.30 (not yet confirmed in releases API)
+**Scouted (July 6, 2026) — v1.0.29 activity (upstream batch Jul 5–6, 2026):**
+- Upstream pushed a large batch of 13 commits on Jul 5, 2026; confirmed as **v1.0.29** (git tag `73756d1 release: v1.0.29` on Jul 6). Prior CLAUDE.md entries citing "v1.0.29 released 2026-06-24" were incorrect — that batch (Jun 24 commits `a06ad44`–`b426e93`) shipped without a visible git tag at the time and was still under v1.0.28; the Jul 5–6 batch is the actual v1.0.29 release.
 - **`4fbd0f9`**: "feat: recognize Claude Code Desktop sessions (#211)" — Claude Code Desktop (`com.anthropic.claudefordesktop`) shares `~/.claude/settings.json` and fires the same hooks; `SessionSnapshot.swift` bundle-ID mapping, `AppState.swift` native-app mode, `TerminalActivator.swift` exclusion from click-to-jump → **T-070** (new, high priority, S)
 - **`4fdf5af`**: "feat(panel): auto-dodge third-party menu bar icons on external screens (#219)" — new `MenuBarIconAvoidance.swift` + `PanelWindowController.swift` integration; slides panel into nearest clear gap when Bartender 5/Ice occupy center space; upstream fix for T-063 → **T-063 promote to implement, priority medium** (updated criteria, source, and effort)
 - **`e3ac11c`**: "feat(notch): three-stage hover interaction + 1% width-scale steps" — `collapsed → prehover → expanded` state machine; prehover visual (+7pt, 1.004 scale) while 0.5s timer runs; quick pass-through reverses without full expand; width slider 10% → 1% steps; 49-line unit test suite; **T-061 gate cleared** (PR #208 was closed, feature committed directly to main) → T-061 criteria updated, gate condition removed, priority raised to medium
@@ -845,6 +845,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - **PR #208 CLOSED** (Jul 5): "Refine notch hover timing and width scaling" — declined in prior form; features extracted and committed as `e3ac11c`; T-061 gate condition removed
 - **vibeislandapp/vibe-island**: `b80886a` (Jul 5) — "docs: expand README into full product overview" — docs only, nothing actionable
 - **New tasks added**: T-070 (Claude Code Desktop), T-071 (shortcut badges); **tasks updated**: T-061 (gate cleared), T-063 (upstream fix available), T-033 (universal MascotTimeline)
+
+**Scouted (July 7, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jul 6); latest upstream commit remains `73756d1` — upstream quiet
+- `202ea87` (Jul 6, post-release): "feat(mascots): Kiro ghost + complete the settings mascot gallery" — Kiro is a non-Claude CLI; settings gallery now includes Kiro, Molty (OpenClaw), and Google Antigravity entries; not applicable to our fork; skip
+- `531cf8c` (Jul 6, post-release): "docs: document keyboard shortcuts in both READMEs (#31)" — docs only; skip
+- `4418d64` (Jul 6, post-release): "feat: OpenClaw integration — plugin pack, Molty mascot, installer (#235)" — OpenClaw (formerly Clawdbot/Moltbot) is a non-Claude CLI with a launchd daemon architecture; not applicable to our Claude Code-only fork; skip
+- `73756d1` (Jul 6): "release: v1.0.29" — release chore; skip
+- vibeislandapp/vibe-island: `018b06f` (Jul 7) "docs: align tagline agent count with section header" and `b80886a` (Jul 6, already in Jul 6 scout) "docs: expand README" — docs only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues, 0 closed issues
+- **No new actionable items.** All open tasks (T-016 through T-071) remain as previously documented.
 
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
