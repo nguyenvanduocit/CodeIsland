@@ -1,9 +1,21 @@
 # Kanban Board
-<!-- Updated: 2026-07-06 -->
+<!-- Updated: 2026-07-10 -->
 
 ## Backlog
 
 ## Todo
+
+### T-072: Add Terax terminal click-to-jump support
+> Terax (`app.crynta.terax`) is not in `knownTerminals`; clicking a session card for an agent in Terax misroutes or falls back to Terminal.app. Upstream PR #253 adds a two-line fix: register bundle ID + route to `activateByBundleId` (same pattern as Superset, since Terax's webview tabs have no AppleScript API). Gate: wait for PR #253 to merge into upstream main.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland PR #253 (open, Jul 7, 2026) — not yet merged
+#### Criteria
+- [ ] Gate: confirm PR #253 is merged into upstream main before implementing
+- [ ] Add `("Terax", "app.crynta.terax")` to `knownTerminals` array in `TerminalActivator.swift`
+- [ ] Add activation branch: when `session.termBundleId == "app.crynta.terax"` call `activateByBundleId("app.crynta.terax")` (mirrors Superset pattern)
+- [ ] Port `TeraxSupportTests` from upstream PR: verify Terax recognized in `knownTerminals` and routed correctly
+- [ ] `swift build && swift test` passes
 
 ### T-070: Support Claude Code Desktop sessions (com.anthropic.claudefordesktop)
 > Anthropic's native macOS Claude Code Desktop app shares `~/.claude/settings.json` with the CLI and fires the same hooks (PreToolUse, PostToolUse, AskUserQuestion, PermissionRequest). Users running Claude Code from the desktop app get no visibility in CodeIsland today — sessions are unrecognized. Upstream fix: `4fbd0f9` (Jul 5, 2026).

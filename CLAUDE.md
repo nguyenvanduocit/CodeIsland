@@ -856,6 +856,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues, 0 closed issues
 - **No new actionable items.** All open tasks (T-016 through T-071) remain as previously documented.
 
+**Scouted (July 10, 2026) — post-v1.0.29 activity:**
+- No new commits or releases since v1.0.29 (Jul 6); latest upstream commit remains `73756d1` — upstream quiet for 4 days
+- **PR #253** (open, Jul 7): "fix(activator): recognize Terax terminal for click-to-jump" — Terax (`app.crynta.terax`) is a real macOS terminal app; clicking a session card when Claude Code runs inside Terax falls back to Terminal.app; fix adds Terax to `knownTerminals` and routes to `activateByBundleId` (same pattern as Superset — webview tabs, no AppleScript); 2 files, ~52 additions + new `TeraxSupportTests`; not yet merged → **T-072** (new, low priority, XS; gate: wait for PR #253 to merge)
+- **PR #255** (open, Jul 9): "fix: complete cursor-cli and qoder-cli routing (#248 follow-up)" — cursor-cli/qoder-cli session grouping and display fixes; non-Claude CLIs; skip
+- **PR #252** (open, Jul 7): "修复 Codex 多行命令规则的字符串转义" — Codex Starlark rules string escaping; Codex-specific; skip
+- **PR #251** (open, Jul 7): "Add Traditional Chinese (zh-Hant) localization" — L10n; skip
+- Issue #254 (open, Jul 7): "是否可以增加一个定时任务的功能" — scheduled-task feature request; out of scope; skip
+- Issue #250 (open, Jul 6): Starlark rules multiline string bug (`~/.codex/rules/`) — Codex-specific; skip
+- Issue #244 (closed Jul 10): OMP ask tool support — non-Claude CLI; skip
+- vibeislandapp/vibe-island: `018b06f` (Jul 7) remains the latest commit — docs only, nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **One new task (T-072).** All other open tasks (T-016 through T-071) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
