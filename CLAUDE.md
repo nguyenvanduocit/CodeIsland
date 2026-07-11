@@ -869,6 +869,26 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **One new task (T-072).** All other open tasks (T-016 through T-071) remain as previously documented.
 
+**Scouted (July 11, 2026) — v1.0.30 activity:**
+- v1.0.30 released 2026-07-10 — large batch of 19 commits
+- **PR #253 MERGED** (`def6162`, v1.0.30): Terax terminal click-to-jump — was watching; gate cleared → **T-072 gate removed, ready to implement**
+- **`6bffcfd` + `c62ace8` + `a30462a`** (v1.0.30): "feat(sessions): git branch / worktree indicator on session cards" — new `GitBranchReader.swift` reads `.git/HEAD` without spawning git; walks up max 12 dirs; distinguishes linked worktrees (`⧉` badge) from submodules; `GitBranchInfo(branch:isWorktree:)` stored on `SessionSnapshot` (non-persisted); refreshes on cwd change + Stop; off-reducer detached task (per `a30462a`) prevents main-actor blocking on network-mounted cwds; toggle in Appearance settings; 137-line test suite → **T-074** (new, medium priority, S)
+- **`73e7463` + `9814945` + `a30462a`** (v1.0.30): "feat(usage): Claude token-usage footer from local transcripts" — new `ClaudeUsageScanner.swift` aggregates token usage from `~/.claude/projects/**/*.jsonl`; deduplicates on `message.id` (tool-use continuation lines repeat ID); incremental per-file byte-offset reads (`FileCache`); shows last-5h + today windows + 12h hourly sparkline; lazy refresh throttled to 2 min; no API calls; toggle in Appearance; 87-assertion test suite → **T-073** (new, medium priority, M)
+- **`8cd27ea`** (v1.0.30): "feat(behavior): glance completion mode — collapsed dot instead of expanding" — three-way `completionNotificationStyle` ("expand"/"glance"/"off") replacing the boolean `autoExpandOnCompletion`; migration provided; glance mode shows green dot on compact right wing, 10-min failsafe clears it on next panel open → **T-050 superseded**: update criteria from boolean to three-way mode; effort bumped XS → S
+- **`da5f80b`** (v1.0.30): "feat(sound): quiet hours — mute event sounds inside a configured window" — `[start, end)` minute-of-day window; midnight-spanning (`start > end`) works correctly; settings previews stay audible; `nonisolated static isInQuietHours()` for testability → **T-075** (new, low priority, XS)
+- **`d4dce1c`** (v1.0.30): "fix: always surface blocking AskUserQuestion cards under Smart Suppress (#256)" — adds `shouldAutoOpenQuestionSurface()` that bypasses Smart Suppress for AskUserQuestion (CLI blocks until answered so no terminal fallback exists); 115-line test suite; **not applicable to our fork** — we don't have the Smart Suppress feature; note: add to T-041 criteria when implementing Smart Suppress
+- **`29e5256`** (v1.0.30): "fix: keep Cursor-scoped transcript_path cwd extraction Claude-safe" — scopes `.cursor/projects/` path fallback in `extractMetadata` to prevent cwd hijacking for Claude sessions in `$HOME`; **not applicable to our fork** — we don't have the Cursor `transcript_path` cwd extraction code; skip
+- `0c19dc6`: ZCode integration — non-Claude CLI, skip
+- `091dc74`: QoderWork integration — non-Claude CLI, skip
+- `e69abbd`: cursor-cli/qoder-cli routing — non-Claude CLIs, skip
+- `b59989b`: Traditional Chinese L10n — skip (we don't ship L10n)
+- `ced6b6d`: Codex Starlark rules fix — Codex-specific, skip
+- `2f84622`: Settings CLI row icons (mascot gallery) — mostly affects other-CLI settings rows; our Claude Code row uses the Claude mascot sprite; low value for Claude-only fork; skip
+- `a7999c2`: --preview mode seeding — development chore, skip
+- vibeislandapp/vibe-island: `018b06f` (Jul 7) remains the latest commit — nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Three new tasks (T-073, T-074, T-075). T-072 gate cleared. T-050 criteria updated to three-way glance mode.**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

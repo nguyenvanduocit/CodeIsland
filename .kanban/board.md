@@ -1,17 +1,57 @@
 # Kanban Board
-<!-- Updated: 2026-07-10 -->
+<!-- Updated: 2026-07-11 -->
 
 ## Backlog
 
 ## Todo
 
-### T-072: Add Terax terminal click-to-jump support
-> Terax (`app.crynta.terax`) is not in `knownTerminals`; clicking a session card for an agent in Terax misroutes or falls back to Terminal.app. Upstream PR #253 adds a two-line fix: register bundle ID + route to `activateByBundleId` (same pattern as Superset, since Terax's webview tabs have no AppleScript API). Gate: wait for PR #253 to merge into upstream main.
+### T-075: Quiet hours — mute event sounds during a configured time window
+> Add a configurable quiet-hours gate to `SoundManager`: a half-open `[start, end)` minute-of-day window during which event sounds and the boot chime are silenced. Settings previews stay audible. `start > end` spans midnight correctly; `start == end` never mutes (use master sound toggle for that).
 - **priority**: low
 - **effort**: XS
-- **source**: wxtsky/CodeIsland PR #253 (open, Jul 7, 2026) — not yet merged
+- **source**: wxtsky/CodeIsland commit `da5f80b` (v1.0.30, Jul 10, 2026)
 #### Criteria
-- [ ] Gate: confirm PR #253 is merged into upstream main before implementing
+- [ ] `Settings.swift`: add `quietHoursEnabled` Bool (default false), `quietHoursStart` Int (minutes since midnight, default 1320 = 22:00), `quietHoursEnd` Int (default 420 = 07:00)
+- [ ] `SoundManager.swift`: add `nonisolated static func isInQuietHours(minutesSinceMidnight:start:end:) -> Bool` covering normal + midnight-spanning windows; add `private var quietHoursActive: Bool` that reads settings + current time; gate `handleEvent()` and `playBoot()` on `!quietHoursActive`; `storedMinutes()` helper falls back to `SettingsDefaults` when key is absent (to avoid `integer(forKey:)` returning 0 for unset)
+- [ ] Settings → Sound page: toggle + two time pickers (start / end)
+- [ ] Port `QuietHoursTests.swift`: normal window, midnight-spanning, same-start-end edge case
+- [ ] `swift build && swift test` passes
+
+### T-074: Git branch / worktree indicator on session cards
+> Show the checked-out git branch name on each session card; flag linked worktrees with ⧉. Reads `.git/HEAD` (and `gitdir:` pointer for worktrees) directly — no `git` subprocess. Refreshes on cwd changes and at Stop. Toggle in Settings → Appearance. Upstream: `GitBranchReader.swift` (new Core file, ~85 lines + 137-line test suite).
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `6bffcfd` + `c62ace8` + relevant parts of `a30462a` (v1.0.30, Jul 10, 2026)
+#### Criteria
+- [ ] Add `Sources/CodeIslandCore/GitBranchReader.swift` — pure enum, walks up max 12 dirs from `cwd`, reads `.git/HEAD`; distinguishes linked worktrees (`/.git/worktrees/` path) from submodules (`.git/modules/…`); returns `GitBranchInfo(branch:isWorktree:)?`
+- [ ] `Sources/CodeIslandCore/SessionSnapshot.swift`: add `public var gitBranch: GitBranchInfo?`; exclude from `CodingKeys` (not persisted — branch may change between runs)
+- [ ] `Sources/CodeIsland/AppState.swift`: fire branch resolution **off the reducer** via `Task.detached` after `reduceEvent()` completes, not inside the reducer; guard `remoteHostId == nil` before reading local filesystem; re-read branch for persisted sessions on restore (`c62ace8`)
+- [ ] `Sources/CodeIsland/NotchPanelView.swift`: add small branch label (+ ⧉ badge for worktrees) on session card below display name
+- [ ] `Sources/CodeIsland/Settings.swift`: `showGitBranch` Bool key (default true)
+- [ ] `Sources/CodeIsland/SettingsView.swift`: Appearance page toggle
+- [ ] Port `GitBranchReaderTests.swift` — HEAD parsing, detached HEAD short SHA, gitdir pointer, worktree detection
+- [ ] `swift build && swift test` passes
+
+### T-073: Claude token-usage footer from local transcripts
+> Add a session-list footer that aggregates token usage across all Claude Code transcripts (`~/.claude/projects/**/*.jsonl`) in real time. Shows last-5h and today totals, with a 12h hourly sparkline. Incremental reads (per-file byte offsets) — never re-reads the full file. Local-only, no API calls. Toggle in Settings → Appearance. New Core file: `ClaudeUsageScanner.swift`.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `73e7463` + `9814945` + relevant scanner parts of `a30462a` (v1.0.30, Jul 10, 2026)
+#### Criteria
+- [ ] Add `Sources/CodeIslandCore/ClaudeUsageScanner.swift` — `ClaudeUsageTotals` struct, `ClaudeUsageScanner.Snapshot`, `ClaudeUsageScanner.FileCache` (incremental per-file state), `scan(claudeHome:now:cache:)` static method; deduplicates on `message.id` within each file; handles truncation reset; `a30462a` incremental optimization is already folded into upstream's final state
+- [ ] `Sources/CodeIsland/AppState.swift`: own a `ClaudeUsageScanner.FileCache` instance; trigger lazy `scan()` on panel expansion, throttled to 2-minute minimum; store result as `@Published var usageSnapshot: ClaudeUsageScanner.Snapshot?`
+- [ ] `Sources/CodeIsland/NotchPanelView.swift`: add footer row below session list showing "5h: Xk out / Xk in" and today totals; sparkline (12 hourly bars); tooltip with cache detail; hidden when `usageSnapshot == nil` or toggle off
+- [ ] `Sources/CodeIsland/Settings.swift`: `showUsageFooter` Bool key (default true)
+- [ ] `Sources/CodeIsland/SettingsView.swift`: Appearance toggle
+- [ ] Port `ClaudeUsageScannerTests.swift` (~87 assertions) — window dedup, incremental reads, truncation, sparkline bucketing
+- [ ] `swift build && swift test` passes
+
+### T-072: Add Terax terminal click-to-jump support
+> Terax (`app.crynta.terax`) is not in `knownTerminals`; clicking a session card for an agent in Terax misroutes or falls back to Terminal.app. Fix: register bundle ID + route to `activateByBundleId` (same pattern as Superset, since Terax's webview tabs have no AppleScript API). Gate cleared — PR #253 merged as `def6162` in v1.0.30 (Jul 10, 2026).
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `def6162` (v1.0.30, Jul 10, 2026) — PR #253 merged
+#### Criteria
 - [ ] Add `("Terax", "app.crynta.terax")` to `knownTerminals` array in `TerminalActivator.swift`
 - [ ] Add activation branch: when `session.termBundleId == "app.crynta.terax"` call `activateByBundleId("app.crynta.terax")` (mirrors Superset pattern)
 - [ ] Port `TeraxSupportTests` from upstream PR: verify Terax recognized in `knownTerminals` and routed correctly
@@ -612,15 +652,18 @@
 - [ ] Extract subagent tooltip builder to a dedicated `@ViewBuilder` helper outside the main `body` (avoids recomputing on every `ViewBuilder` pass — perf fix from `2cf2960`)
 - [ ] `swift build && swift test` passes
 
-### T-050: Setting to disable auto-expand panel on agent completion
-> Add a toggle so users who find the panel auto-expanding after every agent task can opt out. Defaults to enabled to preserve current behaviour.
+### T-050: Three-way completion notification style (expand / glance / off)
+> Replace the planned boolean auto-expand toggle with a three-way picker: **expand** (current behaviour — panel opens to show completion card), **glance** (panel stays collapsed but lights a green dot on the right wing for ~10 min or until panel next opens), **off** (no notification). Upstream commit `8cd27ea` (v1.0.30) supersedes the `d71b11e` boolean approach. Migration: `autoExpandOnCompletion=false` → "off"; unset/true → "expand".
 - **priority**: medium
-- **effort**: XS
-- **source**: wxtsky/CodeIsland commit `d71b11e` (v1.0.24, Apr 29, 2026) — upstream fix available
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `d71b11e` (v1.0.24) superseded by `8cd27ea` (v1.0.30, Jul 10, 2026)
 #### Criteria
-- [ ] `Settings.swift` adds `autoExpandOnCompletion` Bool key (default `true`)
-- [ ] In `CompletionQueueService.enqueueCompletion()` (or wherever panel expansion is triggered), guard on `SettingsManager.autoExpandOnCompletion`; skip expansion when `false`
-- [ ] Settings → Behavior page adds a toggle row for this setting
+- [ ] Add `CompletionNotificationStyle` enum (`expand`, `glance`, `off`) with `RawRepresentable` String backing
+- [ ] `Settings.swift`: add `completionNotificationStyle` String key (default `"expand"`); keep `autoExpandOnCompletion` Bool key for migration only
+- [ ] `AppState.swift`: `completionStyle` computed property reads new key with migration from legacy bool; `enqueueCompletion()` guards on `.off`; `.glance` sets a new `completionDotVisible` Bool on `AppState` and starts a 10-min failsafe timer to clear it
+- [ ] `NotchPanelView.swift` (compact right wing): show a small green dot when `completionDotVisible == true`; clear on `surface` `didSet` when panel expands
+- [ ] Settings → Behavior page: three-way picker row (replaces the toggle planned in d71b11e)
+- [ ] Port `CompletionStyleTests.swift` from upstream: migration logic, glance dot lifecycle, 10-min failsafe
 - [ ] `swift build && swift test` passes
 
 ### T-051: Plugin sub-sessions mode — separate / merge / hide
