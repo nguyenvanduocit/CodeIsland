@@ -889,6 +889,13 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Three new tasks (T-073, T-074, T-075). T-072 gate cleared. T-050 criteria updated to three-way glance mode.**
 
+**Scouted (July 12, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 2 days
+- **vibeislandapp/vibe-island**: `3bb9959` (Jul 11) "Fix Discord community routing" + `83fed33` "Avoid duplicate Discord issue notifications" — CI/Discord webhook only; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410, creation attempts confirm) — all tracking via kanban board only
+- Kanban board already up to date from Jul 11 scout (T-073, T-074, T-075 in Todo)
+- **No new actionable items.** All open tasks (T-016 through T-075) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
