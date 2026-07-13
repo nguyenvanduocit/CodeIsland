@@ -896,6 +896,14 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - Kanban board already up to date from Jul 11 scout (T-073, T-074, T-075 in Todo)
 - **No new actionable items.** All open tasks (T-016 through T-075) remain as previously documented.
 
+**Scouted (July 13, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 3 days
+- **PR #257** (open, Jul 10): "fix: restore OpenCode plugin support for v2 events" — 4 files changed: `codeisland-opencode.js`, `codeisland-opencode-remote.js`, `RemoteInstaller.swift`, `ConfigInstaller.swift`; ESM migration + `session.next.*` / `permission.v2.*` / `question.v2.*` event mapping for OpenCode v2 runtime; OpenCode-specific, skip
+- **Issue #258** (open, Jul 10): "Zcode 能否加入执行的按钮？" — user requests Allow/Always Allow/Deny permission controls for Zcode; non-Claude CLI, skip
+- vibeislandapp/vibe-island: no new commits since Jul 11 (Discord routing fixes, CI-only) — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (tracker enabled, empty)
+- **No new actionable items.** All open tasks (T-016 through T-075) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
