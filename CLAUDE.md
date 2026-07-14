@@ -904,6 +904,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (tracker enabled, empty)
 - **No new actionable items.** All open tasks (T-016 through T-075) remain as previously documented.
 
+**Scouted (July 14, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 4 days
+- **PR #259** (closed/abandoned, Jul 13): "chore(ios): retarget companion to local bundle ID and refresh icons" — iOS companion app icon chore; iOS-specific, out of scope; skip
+- **Issue #260** (open, Jul 13): "Request for English language on the iOS app" — iOS companion app L10n request; out of scope; skip
+- PR #256 (merged, Jul 10): "修复：智能抑制下 OMP 提问卡片无法操作" — confirmed AskUserQuestion always-surface fix under Smart Suppress; already captured as `d4dce1c` in Jul 11 scout; applicable only when T-041 (Smart Suppress) is implemented; no separate action
+- PR #257 (open): OpenCode v2 events — still open, unchanged from Jul 13 scout; skip
+- Issue #258 (open): Zcode permission button — non-Claude CLI; skip (unchanged from Jul 13 scout)
+- vibeislandapp/vibe-island: `3bb9959` (Jul 11) remains the latest commit — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-075) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
