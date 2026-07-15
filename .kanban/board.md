@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-07-11 -->
+<!-- Updated: 2026-07-15 -->
 
 ## Backlog
 
@@ -36,10 +36,10 @@
 > Add a session-list footer that aggregates token usage across all Claude Code transcripts (`~/.claude/projects/**/*.jsonl`) in real time. Shows last-5h and today totals, with a 12h hourly sparkline. Incremental reads (per-file byte offsets) — never re-reads the full file. Local-only, no API calls. Toggle in Settings → Appearance. New Core file: `ClaudeUsageScanner.swift`.
 - **priority**: medium
 - **effort**: M
-- **source**: wxtsky/CodeIsland commits `73e7463` + `9814945` + relevant scanner parts of `a30462a` (v1.0.30, Jul 10, 2026)
+- **source**: wxtsky/CodeIsland commits `73e7463` + `9814945` + relevant scanner parts of `a30462a` (v1.0.30, Jul 10, 2026); `ProjectsWatcherBox` pattern from open PR #262 (Jul 14, not yet merged — port alongside scanner to avoid `assumeIsolated` trap in deinit)
 #### Criteria
 - [ ] Add `Sources/CodeIslandCore/ClaudeUsageScanner.swift` — `ClaudeUsageTotals` struct, `ClaudeUsageScanner.Snapshot`, `ClaudeUsageScanner.FileCache` (incremental per-file state), `scan(claudeHome:now:cache:)` static method; deduplicates on `message.id` within each file; handles truncation reset; `a30462a` incremental optimization is already folded into upstream's final state
-- [ ] `Sources/CodeIsland/AppState.swift`: own a `ClaudeUsageScanner.FileCache` instance; trigger lazy `scan()` on panel expansion, throttled to 2-minute minimum; store result as `@Published var usageSnapshot: ClaudeUsageScanner.Snapshot?`
+- [ ] `Sources/CodeIsland/AppState.swift`: add `ProjectsWatcherBox` (thread-safe weak-ref box with NSLock + cancelled flag) for the FSEvents stream callback — prevents `assumeIsolated` trap when AppState is released off the main actor in async tests; own a `ClaudeUsageScanner.FileCache` instance; trigger lazy `scan()` on panel expansion, throttled to 2-minute minimum; store result as `@Published var usageSnapshot: ClaudeUsageScanner.Snapshot?`
 - [ ] `Sources/CodeIsland/NotchPanelView.swift`: add footer row below session list showing "5h: Xk out / Xk in" and today totals; sparkline (12 hourly bars); tooltip with cache detail; hidden when `usageSnapshot == nil` or toggle off
 - [ ] `Sources/CodeIsland/Settings.swift`: `showUsageFooter` Bool key (default true)
 - [ ] `Sources/CodeIsland/SettingsView.swift`: Appearance toggle

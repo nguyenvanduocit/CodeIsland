@@ -915,6 +915,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-075) remain as previously documented.
 
+**Scouted (July 15, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 5 days
+- **PR #262** (open, Jul 14): "fix(appstate): allow AppState deinit off the main actor" — introduces `ProjectsWatcherBox` (thread-safe weak-ref box, NSLock guard, cancelled flag) so FSEvents callbacks reach AppState without holding a strong reference or calling `assumeIsolated` in deinit; fixes async XCTest teardown trap; this is specifically for the `~/.claude/projects/` watcher introduced by ClaudeUsageScanner (T-073); not yet merged → add to T-073 criteria: port `ProjectsWatcherBox` pattern alongside `ClaudeUsageScanner.swift` to avoid the same trap in our fork's tests
+- PR #257 (open): OpenCode v2 events — Codex/OpenCode-specific; skip (unchanged)
+- Issue #258 (open): Zcode permission button — non-Claude CLI; skip (unchanged)
+- vibeislandapp/vibe-island: `3bb9959` (Jul 11) remains the latest commit — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** T-073 criteria updated with `ProjectsWatcherBox` note. All other open tasks (T-016 through T-075) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
