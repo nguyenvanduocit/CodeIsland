@@ -1,7 +1,19 @@
 # Kanban Board
-<!-- Updated: 2026-07-15 -->
+<!-- Updated: 2026-07-16 -->
 
 ## Backlog
+
+### T-076: Investigate panel detach from notch on macOS 27.0 beta
+> Panel intermittently shifts from the physical notch center to the upper-left corner beneath the menu bar; reported on MacBook Pro M5 Pro (Mac17,9), macOS 27.0 beta (26A5378j), CodeIsland v1.0.30; no upstream fix yet.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #263 (Jul 14, 2026) — no upstream fix yet; macOS 27.0 beta only
+#### Criteria
+- [ ] Reproduce on macOS 27.0 beta with a notch display; determine whether the drift is caused by `NSScreen` frame reporting changes in macOS 27 or a `PanelWindowController` positioning race
+- [ ] If a screen-coordinate API changed in macOS 27: update `PanelWindowController.swift` notch-center calculation to use the stable API
+- [ ] If a positioning race: add a post-layout re-anchor step that re-centers the panel after any screen-change notification fires
+- [ ] Monitor upstream for fix (likely lands when macOS 27 beta matures); update task with upstream commit reference when available
+- [ ] `swift build && swift test` passes on macOS 27.0 beta
 
 ## Todo
 

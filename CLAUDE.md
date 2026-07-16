@@ -924,6 +924,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** T-073 criteria updated with `ProjectsWatcherBox` note. All other open tasks (T-016 through T-075) remain as previously documented.
 
+**Scouted (July 16, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 6 days
+- **Issue #263** (open, Jul 14): "[Bug] Notch panel detaches from the MacBook notch and moves to the upper-left corner" — MacBook Pro M5 Pro (Mac17,9), macOS 27.0 beta (26A5378j), CodeIsland v1.0.30, 3024×1964 Retina display; panel intermittently shifts from center notch to upper-left area beneath menu bar with no consistent repro trigger; no upstream fix yet → **T-076** (new, investigate, macOS 27.0 beta)
+- **Issue #265** (open, Jul 15): "Does not display Cursor question prompts and stays stuck on 'thinking'" — Cursor-specific (user confirmed running Cursor IDE, not Claude Code CLI); skip
+- **PR #264** (open, Jul 15): "修复(OMP)：终端原生 Ask 与 CodeIsland 并行回答" — OMP non-Claude CLI; skip
+- **PR #262** (open, Jul 14, now shows as): "fix(sessions): fold Cursor Tasks under Agent Sub-Sessions like Codex" — Cursor-specific; skip (note: Jul 14/15 scout referenced this PR number for the AppState deinit PR; T-073 criteria already updated with ProjectsWatcherBox note regardless of PR number)
+- PR #257 (open): OpenCode v2 events — Codex/OpenCode-specific; skip (unchanged)
+- vibeislandapp/vibe-island: `3bb9959` (Jul 11) remains the latest commit — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **One new watch item (T-076 — macOS 27.0 beta panel detach, no upstream fix yet).** All other open tasks (T-016 through T-075) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
