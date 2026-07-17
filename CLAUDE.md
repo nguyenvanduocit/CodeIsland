@@ -935,6 +935,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **One new watch item (T-076 — macOS 27.0 beta panel detach, no upstream fix yet).** All other open tasks (T-016 through T-075) remain as previously documented.
 
+**Scouted (July 17, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 7 days
+- **PR #266** (open, Jul 16): "fix(trae): support Trae CLI Next hooks" — Trae CLI is a non-Claude CLI; skip
+- **PR #264** (open, Jul 15, draft): OMP terminal fix — OMP non-Claude CLI; skip (unchanged)
+- **PR #262** (open, Jul 14): "fix(sessions): fold Cursor Tasks under Agent Sub-Sessions like Codex" — Cursor-specific; skip (unchanged)
+- **Issue #265** (open, Jul 15): Cursor question prompts not displayed — Cursor-specific; skip (unchanged from Jul 16 scout)
+- **Issue #261** (open, Jul 14): "Code Island Buddy keeps disconnecting" — Buddy hardware companion; skip
+- vibeislandapp/vibe-island: `22c6f31` (Jul 16) "docs: add YouTube demo video link to hero image" — docs only, nothing actionable
+- **vibeislandapp/vibe-island issue #166** (open, Jul 16): "Jump silently no-ops for Claude Code sessions hosted by the background daemon (`bg-pty-host`)" — Claude Code now optionally runs the session engine under a per-user daemon; process tree becomes `launchd → bg-pty-host → engine (no TTY)`; ancestry walk in `ProcessScanner.findTerminalBundleId(for:)` stops at ppid=1, returns nil; bridge `getppid()` chain leads to daemon, not terminal; click-to-jump silently fails; confirmed same code pattern in our `ProcessScanner.swift:193` and `CodeIslandBridge/main.swift:75`; no upstream fix yet in wxtsky/CodeIsland → **T-077** (new, high priority, M)
+- **vibeislandapp/vibe-island issue #165** (open, Jul 15): "Claude usage quota not displayed when using Claude Code in Claude Desktop" — vibe-island usage footer doesn't recognise Claude Desktop sessions; note for when T-073 and T-070 are implemented: Claude Desktop (`com.anthropic.claudefordesktop`) sessions may need special-casing in `ClaudeUsageScanner` since their transcript paths differ from CLI sessions; no separate task yet
+- **One new task (T-077).** All other open tasks (T-016 through T-076) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

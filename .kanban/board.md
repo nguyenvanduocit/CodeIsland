@@ -1,7 +1,20 @@
 # Kanban Board
-<!-- Updated: 2026-07-16 -->
+<!-- Updated: 2026-07-17 -->
 
 ## Backlog
+
+### T-077: Claude Code daemon (`bg-pty-host`) breaks process-ancestry terminal detection — click-to-jump silently fails
+> When Claude Code runs the session engine under its per-user daemon (`bg-pty-host`), the process tree is `launchd → daemon → engine` (no controlling TTY). Our ancestry walk stops at `ppid > 1`, so `findTerminalBundleId` returns nil and `termBundleId` is nil — click-to-jump silently does nothing.
+- **priority**: high
+- **effort**: M
+- **source**: vibeislandapp/vibe-island issue #166 (Jul 16, 2026) — no upstream fix yet in wxtsky/CodeIsland
+#### Criteria
+- [ ] Confirm that a Claude Code version using `bg-pty-host` exists and is reachable (check `bg-pty-host` process ancestry on a real machine); update this task with the Claude Code version that introduced it
+- [ ] When `findTerminalBundleId(for:)` returns nil (ppid chain hits 1 before reaching a `.app`), fall back to scanning running processes for a `claude` attach-client that: (a) has the same CWD as the hook event, and (b) has a non-nil `ttyPath(for:)` — walk that process's ancestry to find the terminal bundle ID
+- [ ] Update `ProcessScanner.findCLIAncestorPid` / bridge `main.swift` if the attach-client correlation requires a different PID to be stamped in `_ppid`
+- [ ] Verify: with daemon-hosted Claude Code session, clicking the session card jumps to the correct terminal window/tab
+- [ ] Minimum viable fallback if attach-client approach is not feasible: show a "no terminal linked" hint on the session card instead of silently doing nothing
+- [ ] `swift build && swift test` passes
 
 ### T-076: Investigate panel detach from notch on macOS 27.0 beta
 > Panel intermittently shifts from the physical notch center to the upper-left corner beneath the menu bar; reported on MacBook Pro M5 Pro (Mac17,9), macOS 27.0 beta (26A5378j), CodeIsland v1.0.30; no upstream fix yet.
