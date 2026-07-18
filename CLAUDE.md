@@ -947,6 +947,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - **vibeislandapp/vibe-island issue #165** (open, Jul 15): "Claude usage quota not displayed when using Claude Code in Claude Desktop" — vibe-island usage footer doesn't recognise Claude Desktop sessions; note for when T-073 and T-070 are implemented: Claude Desktop (`com.anthropic.claudefordesktop`) sessions may need special-casing in `ClaudeUsageScanner` since their transcript paths differ from CLI sessions; no separate task yet
 - **One new task (T-077).** All other open tasks (T-016 through T-076) remain as previously documented.
 
+**Scouted (July 18, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 8 days
+- PR #266 (open, Jul 16): Trae CLI Next hooks — non-Claude CLI; skip (unchanged)
+- PR #264 (open, Jul 15, draft): OMP terminal fix — non-Claude CLI; skip (unchanged)
+- PR #262 (open, Jul 14): fold Cursor Tasks — Cursor-specific; skip (unchanged)
+- **vibeislandapp/vibe-island issue #170** (open, Jul 17): "Session question doesn't get noticed as done" — user reports pressing Escape on a question prompt in Ghostty doesn't dismiss the panel in vibe-island v1.0.41; resolves after ~5 min; additional confirmation of T-057 pattern (stuck panel after in-terminal action); no upstream code fix yet
+- **vibeislandapp/vibe-island issue #168** (open, Jul 17): "Vibe Island on multiple screens" — feature request to show island on all connected screens simultaneously; reinforces T-056 (display picker / multi-display); no upstream code fix yet
+- vibeislandapp/vibe-island issue #167 (open, Jul 17): "[Bug]" (limits display, Warp, macOS 26.5.2) — insufficient detail; no upstream fix; skip
+- vibeislandapp/vibe-island issue #169 (open, Jul 17): Portuguese L10n — skip (we don't ship L10n)
+- **No new actionable items.** All open tasks (T-016 through T-077) remain as previously documented. GitHub issues list in `nguyenvanduocit/CodeIsland` remains empty (0 issues).
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
