@@ -958,6 +958,21 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island issue #169 (open, Jul 17): Portuguese L10n — skip (we don't ship L10n)
 - **No new actionable items.** All open tasks (T-016 through T-077) remain as previously documented. GitHub issues list in `nguyenvanduocit/CodeIsland` remains empty (0 issues).
 
+**Scouted (July 19, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 9 days
+- PR #266 (open, Jul 16): Trae CLI Next hooks — non-Claude CLI; skip (unchanged)
+- PR #264 (open, Jul 15, draft): OMP terminal fix — non-Claude CLI; skip (unchanged)
+- PR #262 (open, Jul 14): fold Cursor Tasks — Cursor-specific; skip (unchanged)
+- PR #257 (open, Jul 10): OpenCode v2 events — OpenCode-specific; skip (unchanged)
+- wxtsky/CodeIsland issue #263 (open, Jul 14): panel detach from notch on macOS 27.0 beta — T-076, no upstream fix yet; unchanged
+- wxtsky/CodeIsland issue #265 (open, Jul 15): Cursor question prompts stuck — Cursor-specific; skip
+- **vibeislandapp/vibe-island issue #171** (open, Jul 18): "使用Claude code的computer use时vibe island阻止点击" — when Claude Code's `computer_use` tool issues pixel-coordinate clicks, any coordinate landing on the island panel is rejected with "Click at these coordinates would land on 'Vibe Island', which is not in the allowed applications."; root cause: panel window captures mouse events at those coordinates, making the top-of-screen dead zone for AI agents; our `PanelWindowController` has the same behavior; fix is likely `NSWindow.ignoresMouseEvents = true` in collapsed state → **T-078** (new, low priority, XS)
+- vibeislandapp/vibe-island issue #172 (open, Jul 18): Remote Connection to Windows — out of scope (macOS only); skip
+- vibeislandapp/vibe-island issue #173 (open, Jul 18): Settings sub-option refresh bug for "Show Usage Limit" — vibe-island specific settings feature we don't have; skip
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains latest commit — docs only, nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **One new task added (T-078).** All other open tasks (T-016 through T-077) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

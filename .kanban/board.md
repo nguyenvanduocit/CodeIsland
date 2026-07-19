@@ -1,7 +1,18 @@
 # Kanban Board
-<!-- Updated: 2026-07-17 -->
+<!-- Updated: 2026-07-19 -->
 
 ## Backlog
+
+### T-078: Panel window intercepts mouse events during Claude Code computer_use
+> When Claude Code's `computer_use` tool issues pixel-coordinate clicks, any coordinate landing on the collapsed island panel is rejected with "not in the allowed applications." The panel window captures mouse events in its frame, making those screen coordinates a dead zone for AI agents.
+- **priority**: low
+- **effort**: XS
+- **source**: vibeislandapp/vibe-island issue #171 (Jul 18, 2026) — no upstream fix yet
+#### Criteria
+- [ ] Reproduce: run a Claude Code session with `computer_use` tool; confirm that click coordinates under the collapsed notch panel are blocked
+- [ ] In `PanelWindowController.swift`: set `window.ignoresMouseEvents = true` when panel is in collapsed/compact state; restore to `false` when expanded (user is intentionally interacting); the toggle must track the `IslandSurface` expanded vs collapsed state
+- [ ] Verify: with panel collapsed, clicks at notch-bar coordinates pass through to the window below; with panel expanded, the panel remains interactive
+- [ ] `swift build && swift test` passes
 
 ### T-077: Claude Code daemon (`bg-pty-host`) breaks process-ancestry terminal detection — click-to-jump silently fails
 > When Claude Code runs the session engine under its per-user daemon (`bg-pty-host`), the process tree is `launchd → daemon → engine` (no controlling TTY). Our ancestry walk stops at `ppid > 1`, so `findTerminalBundleId` returns nil and `termBundleId` is nil — click-to-jump silently does nothing.
