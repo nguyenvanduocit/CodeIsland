@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-07-19 -->
+<!-- Updated: 2026-07-20 -->
 
 ## Backlog
 
@@ -865,6 +865,18 @@
 - [ ] In `ProcessScanner.swift` `inferSource()`: add an exclusion set of desktop-IDE source names — `{"cursor", "trae", "qoder", "codebuddy", "stepfun", "antigravity"}` — that are never valid inference results for a Claude Code session
 - [ ] When the ancestry walk resolves to one of these names, treat it as no-source-found and fall back to `claude` as the canonical source
 - [ ] Verify: running `claude` inside Cursor's integrated terminal produces a session card with the Claude icon, not the Cursor icon
+- [ ] `swift build && swift test` passes
+
+### T-079: Honor $CLAUDE_CONFIG_DIR instead of hardcoding ~/.claude
+> Users who set the `$CLAUDE_CONFIG_DIR` environment variable (supported by Claude Code 2.x) get zero session detection and broken hook installation because our app hardcodes `~/.claude` in 8 places. Since we launch as a Login Item without inheriting shell env, we also need a Settings preference field.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #270 + issue #269 (Jul 19, 2026) — PR open, not yet merged
+#### Criteria
+- [ ] Introduce a `claudeConfigDir() -> String` helper (in `Settings.swift` or a new `ClaudeConfigPaths.swift`) that returns the resolved Claude config directory in this priority order: (1) `claudeConfigDir` user preference (new `Settings` key), (2) `CLAUDE_CONFIG_DIR` env var, (3) `~/.claude` fallback; XDG probe (`~/.config/claude-code`) optional — only add if we can test it
+- [ ] Replace all 8 hardcoded `~/.claude` references: `ConfigInstaller.swift:30-32,40,70`, `SessionTitleStore.swift:20`, `SessionUsageReader.swift:67`, `ProcessScanner.swift:37`
+- [ ] Add a "Claude config directory" text field to Settings (General or Behavior page) with a placeholder `~/.claude`; clearing it resets to auto-detect
+- [ ] Verify: set `Settings.claudeConfigDir` to a temp dir, symlink `~/.claude/projects` there, confirm sessions appear; verify no regression when field is empty (defaults to `~/.claude`)
 - [ ] `swift build && swift test` passes
 
 ## Doing

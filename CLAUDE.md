@@ -958,6 +958,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - vibeislandapp/vibe-island issue #169 (open, Jul 17): Portuguese L10n — skip (we don't ship L10n)
 - **No new actionable items.** All open tasks (T-016 through T-077) remain as previously documented. GitHub issues list in `nguyenvanduocit/CodeIsland` remains empty (0 issues).
 
+**Scouted (July 20, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 10 days
+- **PR #270** (open, Jul 19): "fix: honor $CLAUDE_CONFIG_DIR instead of hardcoding ~/.claude" — introduces `ClaudeConfigPaths` resolver with priority order: user pref → `$CLAUDE_CONFIG_DIR` env var → `~/.config/claude-code` XDG probe → `~/.claude` fallback; adds Settings preference field (needed because Login-Item launch doesn't inherit shell env); 17 new tests, 560 passing. Confirmed same bug in our fork at `ConfigInstaller.swift:30-32,40,70`, `SessionTitleStore.swift:20`, `SessionUsageReader.swift:67`, `ProcessScanner.swift:37` → **T-079** (new, high priority, S)
+- **Issue #269** (open, Jul 19): "No Claude sessions detected when $CLAUDE_CONFIG_DIR is set" — user report confirming T-079; PR #270 is the upstream fix
+- **Issue #271** (open, Jul 19): "Follow-up: remote-host and hook-cleanup gaps around $CLAUDE_CONFIG_DIR" — gaps 1–2 (RemoteInstaller) not applicable (we have no SSH remote); gap 3 (orphaned hooks on config-dir change) is applicable but low priority; no separate task yet
+- **Issue #268** (open, Jul 19): "Changing Island Width doesn't do anything" — regression in upstream affecting T-021; we haven't implemented the width slider yet so not directly applicable to our fork
+- **PR #267** (open, Jul 19): "fix: support Codex Desktop hosted by ChatGPT" — Codex-specific; skip
+- **PR #266** (open, Jul 16): "fix(trae): support Trae CLI Next hooks" — Trae CLI non-Claude CLI; skip
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest commit — docs only, nothing actionable
+- ⚠️ GitHub Issues API unavailable for wxtsky/CodeIsland (403 from network policy); PRs/issues accessed via GitHub web pages instead
+- ⚠️ Attempted to create GitHub issue in nguyenvanduocit/CodeIsland for T-079 but GitHub returned persistent 503; tracked in kanban as T-079 instead
+
 **Scouted (July 19, 2026) — post-v1.0.30 activity:**
 - No new commits or releases since v1.0.30 (Jul 10); latest upstream commit remains `3e2aec7` — upstream quiet for 9 days
 - PR #266 (open, Jul 16): Trae CLI Next hooks — non-Claude CLI; skip (unchanged)
