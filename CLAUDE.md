@@ -985,6 +985,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **One new task added (T-078).** All other open tasks (T-016 through T-077) remain as previously documented.
 
+**Scouted (July 21, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); confirmed 0 commits on wxtsky/CodeIsland since Jul 20 — upstream quiet for 11 days
+- PR #272 (open, Jul 20): "fix(qoder): install permission request hooks" — Qoder non-Claude CLI; skip
+- PR #273 (open, Jul 20): "feat(remote): add Qoder to remote hook installer" — Qoder + remote feature; skip
+- PR #270 (open, Jul 19): $CLAUDE_CONFIG_DIR support — still open, T-079 unchanged; confirm not yet merged
+- vibeislandapp/vibe-island: `22c6f31` (Jul 16) remains the latest commit — docs only, nothing actionable
+- vibeislandapp/vibe-island issues updated Jul 20: closures of old backlog (fullscreen menu bar #21 → not planned; hover animation stutter #44 → closed without fix details); no actionable code changes
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (confirmed via API)
+- **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
