@@ -995,6 +995,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (confirmed via API)
 - **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
 
+**Scouted (July 22, 2026) — post-v1.0.30 activity:**
+- No new commits or releases since v1.0.30 (Jul 10); wxtsky/CodeIsland HEAD remains `3e2aec7` (Jul 10) — upstream quiet for 12 days
+- PR #274 (open, Jul 21): "fix: detect Kimi Code CLI under ~/.kimi-code" — Kimi Code is non-Claude CLI; skip
+- PR #275 (open, Jul 21): "Windows port" — out of scope (macOS only); skip
+- PR #276 (closed, Jul 21): "Use Buddy push as the sole away channel" — ESP32/BLE Buddy hardware companion; skip
+- PR #270 (open, Jul 19): $CLAUDE_CONFIG_DIR support — still open, T-079 unchanged
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest commit — nothing actionable
+- vibeislandapp/vibe-island issues #178 (Qwen in Claude Code, Jul 21) and #179 (Antigravity CLI, Jul 21) newly opened — both non-Claude CLIs, skip; bulk issue triage closures on Jul 21 are housekeeping with no code changes
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
