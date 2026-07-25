@@ -1006,6 +1006,26 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
 
+**Scouted (July 25, 2026) — v1.0.31 activity:**
+- v1.0.31 released 2026-07-23
+- **`ee36a64`** (Jul 23): "fix(panel): keep island glued to the notch after system window re-placement" — AppKit's `constrainFrameRect` clamps borderless windows below the menu bar on display reconfigures and wakes; on macOS 27 beta this intermittently parked the island under the menu bar. Fix overrides `constrainFrameRect` to return frame unchanged + snaps back via `windowDidMove` when panel drifts off top edge. 19 additions + 1 deletion to `PanelWindowController.swift`. Upstream fix for **T-076** → **T-076 promote to implement, priority → high**
+- **`b2db895`** + **`1d92797`** (Jul 23): "fix: honor $CLAUDE_CONFIG_DIR instead of hardcoding ~/.claude" + "chore: post-merge tweaks" — adds new `Sources/CodeIslandCore/ClaudeConfigPaths.swift` with priority resolver: (1) user pref, (2) `$CLAUDE_CONFIG_DIR` env var, (3) `~/.config/claude` XDG probe (note: `1d92797` adds `~/.config/claude` before `~/.config/claude-code`), (4) `~/.claude` fallback; 14 files changed, 560 tests pass; upstream implementation now merged. Upstream fix for **T-079** → **T-079 source updated to `b2db895` + `1d92797` (v1.0.31, Jul 23); no longer "PR open, not yet merged"**
+- **`4df923e`** (Jul 23): "fix(settings): island width slider now works on notched displays" — the collapsed-width scale silently ignored notched screens since PR #171 broadened scope; fix prevents narrowing below physical notch width while allowing expansion. When implementing **T-021**, port this fix to `effectiveNotchWidth()` in `NotchPanelView.swift` alongside the slider feature → **T-021 criteria updated**
+- **`1f45e93`** (Jul 23): "fix(tailer): advance read offset by bytes read, not fragment-adjusted count" — critical performance bug in `JSONLTailer.swift`: offset drifted past EOF after each partial-line episode, causing every subsequent small append to be misdetected as truncation and triggering full-file rescan from byte 0; pins CPU to ~100% on overnight-grown transcripts. Fix: advance offset by `appended.count` (bytes read from disk) not `combined.count - trailingFragment.count`. Must include when implementing **T-073** → **T-073 criteria updated to include this fix**
+- `55b7bc5` (Jul 23): fix(cursor): surface AskQuestion waits for Cursor agent — Cursor-specific, skip
+- `8a8ae68`, `d716c2b` (Jul 23): iOS companion app reconnect + English L10n — iOS companion, skip
+- `b9105d1` (Jul 23): feat(zcode): ZCode PermissionRequest routing — non-Claude CLI, skip
+- `66365ad` (Jul 23): fix(ssh): SSH stderr readability handler EOF — SSH remote feature, skip
+- `dcc63be` (Jul 23): fix(codex): unhook pipe readabilityHandlers on EOF to stop CPU spin — `CodexAppServerClient.swift`; Codex-specific file even though the underlying issue (EOF tight-loop on pipe) is general; skip (we have no equivalent subprocess in our fork)
+- `8287a78` (Jul 23): fix(trae): Trae CLI Next hooks — non-Claude CLI, skip
+- `d041a14` (Jul 23): fix(sessions): fold Cursor Tasks under Agent Sub-Sessions — Cursor-specific, skip
+- `48f2cdc`, `ed6f1bb` (Jul 23): Kimi Code + Codex Desktop hosted by ChatGPT — non-Claude/Codex, skip
+- `d8ce338` (Jul 23): fix(codex): cap SessionEnd hook timeout 3s — Codex-specific, skip
+- `9e3a1eb` (Jul 23): release tag — skip
+- vibeislandapp/vibe-island: no new commits since Jul 17 (`22c6f31`) — nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **Three task updates**: T-076 promoted to high-priority implement (upstream fix `ee36a64`, 20-line patch); T-079 source updated (now merged in v1.0.31); T-021 and T-073 criteria updated. GitHub issue created for T-076 promotion.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

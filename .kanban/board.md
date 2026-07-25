@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-07-20 -->
+<!-- Updated: 2026-07-25 -->
 
 ## Backlog
 
@@ -27,19 +27,19 @@
 - [ ] Minimum viable fallback if attach-client approach is not feasible: show a "no terminal linked" hint on the session card instead of silently doing nothing
 - [ ] `swift build && swift test` passes
 
-### T-076: Investigate panel detach from notch on macOS 27.0 beta
-> Panel intermittently shifts from the physical notch center to the upper-left corner beneath the menu bar; reported on MacBook Pro M5 Pro (Mac17,9), macOS 27.0 beta (26A5378j), CodeIsland v1.0.30; no upstream fix yet.
-- **priority**: low
-- **effort**: S
-- **source**: wxtsky/CodeIsland issue #263 (Jul 14, 2026) — no upstream fix yet; macOS 27.0 beta only
-#### Criteria
-- [ ] Reproduce on macOS 27.0 beta with a notch display; determine whether the drift is caused by `NSScreen` frame reporting changes in macOS 27 or a `PanelWindowController` positioning race
-- [ ] If a screen-coordinate API changed in macOS 27: update `PanelWindowController.swift` notch-center calculation to use the stable API
-- [ ] If a positioning race: add a post-layout re-anchor step that re-centers the panel after any screen-change notification fires
-- [ ] Monitor upstream for fix (likely lands when macOS 27 beta matures); update task with upstream commit reference when available
-- [ ] `swift build && swift test` passes on macOS 27.0 beta
-
 ## Todo
+
+### T-076: Fix panel detaching from notch after display reconfigure / wake (macOS 27 beta)
+> Panel intermittently shifts from the physical notch center to the upper-left corner beneath the menu bar on macOS 27.0 beta; root cause: AppKit's `constrainFrameRect` clamps borderless windows below the menu bar on display reconfigure and wake — a stricter enforcement in macOS 27. Upstream fix available in v1.0.31.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #263 (Jul 14, 2026) + commit `ee36a64` (v1.0.31, Jul 23, 2026) — upstream fix available
+#### Criteria
+- [ ] In `PanelWindowController.swift` `KeyablePanel` subclass, override `constrainFrameRect(_:to:)` to return the proposed rect unchanged — prevents AppKit from clamping the borderless panel below the menu bar on display reconfigures and wakes
+- [ ] In `windowDidMove` delegate: compare `window.frame.origin.y` to the expected top-of-screen position; if panel has drifted downward (more than 4pt below the notch), call `repositionWindow()` to snap it back — handles any post-sleep re-placement that bypasses `constrainFrameRect`
+- [ ] Port from upstream `ee36a64` (19 additions, 1 deletion in `PanelWindowController.swift`)
+- [ ] Verify on macOS 27.0 beta: panel stays at notch after display sleep/wake and display reconfiguration; no regression on macOS 14/15 (existing `repositionWindow` path must still work)
+- [ ] `swift build && swift test` passes
 
 ### T-075: Quiet hours — mute event sounds during a configured time window
 > Add a configurable quiet-hours gate to `SoundManager`: a half-open `[start, end)` minute-of-day window during which event sounds and the boot chime are silenced. Settings previews stay audible. `start > end` spans midnight correctly; `start == end` never mutes (use master sound toggle for that).
@@ -72,13 +72,14 @@
 > Add a session-list footer that aggregates token usage across all Claude Code transcripts (`~/.claude/projects/**/*.jsonl`) in real time. Shows last-5h and today totals, with a 12h hourly sparkline. Incremental reads (per-file byte offsets) — never re-reads the full file. Local-only, no API calls. Toggle in Settings → Appearance. New Core file: `ClaudeUsageScanner.swift`.
 - **priority**: medium
 - **effort**: M
-- **source**: wxtsky/CodeIsland commits `73e7463` + `9814945` + relevant scanner parts of `a30462a` (v1.0.30, Jul 10, 2026); `ProjectsWatcherBox` pattern from open PR #262 (Jul 14, not yet merged — port alongside scanner to avoid `assumeIsolated` trap in deinit)
+- **source**: wxtsky/CodeIsland commits `73e7463` + `9814945` + relevant scanner parts of `a30462a` (v1.0.30, Jul 10, 2026); `ProjectsWatcherBox` pattern from PR #262; **critical bugfix `1f45e93` (v1.0.31, Jul 23, 2026) — must include when implementing**
 #### Criteria
 - [ ] Add `Sources/CodeIslandCore/ClaudeUsageScanner.swift` — `ClaudeUsageTotals` struct, `ClaudeUsageScanner.Snapshot`, `ClaudeUsageScanner.FileCache` (incremental per-file state), `scan(claudeHome:now:cache:)` static method; deduplicates on `message.id` within each file; handles truncation reset; `a30462a` incremental optimization is already folded into upstream's final state
 - [ ] `Sources/CodeIsland/AppState.swift`: add `ProjectsWatcherBox` (thread-safe weak-ref box with NSLock + cancelled flag) for the FSEvents stream callback — prevents `assumeIsolated` trap when AppState is released off the main actor in async tests; own a `ClaudeUsageScanner.FileCache` instance; trigger lazy `scan()` on panel expansion, throttled to 2-minute minimum; store result as `@Published var usageSnapshot: ClaudeUsageScanner.Snapshot?`
 - [ ] `Sources/CodeIsland/NotchPanelView.swift`: add footer row below session list showing "5h: Xk out / Xk in" and today totals; sparkline (12 hourly bars); tooltip with cache detail; hidden when `usageSnapshot == nil` or toggle off
 - [ ] `Sources/CodeIsland/Settings.swift`: `showUsageFooter` Bool key (default true)
 - [ ] `Sources/CodeIsland/SettingsView.swift`: Appearance toggle
+- [ ] **Port `1f45e93` fix in `JSONLTailer.swift`**: advance read offset by `appended.count` (bytes read from disk) NOT `combined.count - trailingFragment.count`; the original formula drifts offset past EOF after each partial-line episode, causing every subsequent small append to be misdetected as truncation and triggering a full-file rescan — pins CPU to ~100% on overnight-grown transcripts; also port the three regression tests from `JSONLTailerTests.swift`
 - [ ] Port `ClaudeUsageScannerTests.swift` (~87 assertions) — window dedup, incremental reads, truncation, sparkline bucketing
 - [ ] `swift build && swift test` passes
 
@@ -328,16 +329,17 @@
 > Upstream added a 50%-150% width slider in Settings for users on non-notch Macs. Our width is fixed (panelWidth in NotchPanelView). PR #171 (open May 12, 2026) extends this to real notch MacBooks — implement both together.
 - **priority**: medium
 - **effort**: S
-- **source**: wxtsky/CodeIsland commit b51fd5f (issue #56) — 2026-04-11; PR #171 MERGED commit `0929926` (v1.0.25, May 26, 2026) extends to real notch
+- **source**: wxtsky/CodeIsland commit b51fd5f (issue #56) — 2026-04-11; PR #171 MERGED commit `0929926` (v1.0.25, May 26, 2026) extends to real notch; `4df923e` (v1.0.31, Jul 23, 2026) fixes regression where notch Macs could narrow below physical notch width
 #### Criteria
 - [ ] `Settings.swift` adds `islandWidthScale` key (default 1.0, range 0.5–1.5)
 - [ ] `NotchPanelView.panelWidth` reads `islandWidthScale` from settings
 - [ ] Settings → Appearance/Display page has a width scale slider (50% – 150%)
 - [ ] Setting persisted via UserDefaults and applied at runtime without restart
 - [ ] Remove `guard !hasNotch else { return notchW }` early-return — apply `collapsedWidthScale` to real notch Macs too (per PR #171 pattern); compact/idle placeholder widths unified to scaled value
+- [ ] **Port `4df923e` fix**: in `effectiveNotchWidth()`, clamp the scaled width to `max(physicalNotchWidth, scaledWidth)` on notched displays — must never narrow below the hardware cutout even when slider is below 1.0
 - [ ] Use **1% slider steps** (not 10%) and centralise constants in a `NotchWidthScale` enum — per upstream PR #208 (Jun 2 scout); finer granularity is important for non-notch Macs dialling in exact width
 - [ ] Update setting label to reflect it applies to both notch and non-notch displays (upstream issue #231 Jun 18: label "non-notch only" is misleading after PR #171 broadened scope)
-- [ ] Port PR #171 unit tests for width scaling and boundary clamp
+- [ ] Port PR #171 unit tests for width scaling and boundary clamp; also port `4df923e` test cases (slider <1.0 on notched display never narrows below physical notch; slider >1.0 expands correctly)
 - [ ] `swift build && swift test` passes
 
 ### T-022: cmux surface-level precise terminal jump
@@ -871,12 +873,13 @@
 > Users who set the `$CLAUDE_CONFIG_DIR` environment variable (supported by Claude Code 2.x) get zero session detection and broken hook installation because our app hardcodes `~/.claude` in 8 places. Since we launch as a Login Item without inheriting shell env, we also need a Settings preference field.
 - **priority**: high
 - **effort**: S
-- **source**: wxtsky/CodeIsland PR #270 + issue #269 (Jul 19, 2026) — PR open, not yet merged
+- **source**: wxtsky/CodeIsland PR #270 + issue #269 (Jul 19, 2026); **merged** as `b2db895` + `1d92797` (v1.0.31, Jul 23, 2026) — upstream implementation available; reference `ClaudeConfigPaths.swift`
 #### Criteria
-- [ ] Introduce a `claudeConfigDir() -> String` helper (in `Settings.swift` or a new `ClaudeConfigPaths.swift`) that returns the resolved Claude config directory in this priority order: (1) `claudeConfigDir` user preference (new `Settings` key), (2) `CLAUDE_CONFIG_DIR` env var, (3) `~/.claude` fallback; XDG probe (`~/.config/claude-code`) optional — only add if we can test it
-- [ ] Replace all 8 hardcoded `~/.claude` references: `ConfigInstaller.swift:30-32,40,70`, `SessionTitleStore.swift:20`, `SessionUsageReader.swift:67`, `ProcessScanner.swift:37`
-- [ ] Add a "Claude config directory" text field to Settings (General or Behavior page) with a placeholder `~/.claude`; clearing it resets to auto-detect
-- [ ] Verify: set `Settings.claudeConfigDir` to a temp dir, symlink `~/.claude/projects` there, confirm sessions appear; verify no regression when field is empty (defaults to `~/.claude`)
+- [ ] Introduce `Sources/CodeIslandCore/ClaudeConfigPaths.swift` (port from upstream `b2db895`): priority resolver: (1) `claudeConfigDir` user pref, (2) `CLAUDE_CONFIG_DIR` env var, (3) `~/.config/claude` XDG probe (`1d92797`: must probe `~/.config/claude` BEFORE `~/.config/claude-code`), (4) `~/.config/claude-code`, (5) `~/.claude` fallback; memoized; NFC-normalised; absolute-path validated
+- [ ] Replace all 8 hardcoded `~/.claude` references: `ConfigInstaller.swift:30-32,40,70`, `SessionTitleStore.swift:20`, `SessionUsageReader.swift:67`, `ProcessScanner.swift:37`; route through resolver
+- [ ] Add `claudeConfigDir` String key to `Settings.swift`; add a "Claude config directory" text field to Settings (General or Behavior page) with placeholder `~/.claude`; clearing it resets to auto-detect
+- [ ] Port `ClaudeConfigPathsTests.swift` (16+ test cases from upstream) including `~/.config/claude` priority ordering
+- [ ] Verify: set preference to a temp dir with projects; confirm sessions appear; verify empty field defaults to `~/.claude`
 - [ ] `swift build && swift test` passes
 
 ## Doing
