@@ -1026,6 +1026,21 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **Three task updates**: T-076 promoted to high-priority implement (upstream fix `ee36a64`, 20-line patch); T-079 source updated (now merged in v1.0.31); T-021 and T-073 criteria updated. GitHub issue created for T-076 promotion.
 
+**Scouted (July 26, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 3 days
+- **PR #287** (open, Jul 24): "fix(pi): skip terminal permission-gate after island allow" — Pi-specific; uses a TypeScript `globalThis.__codeislandAllowedToolCalls` marker in `codeisland-pi.ts v3`; not applicable to our binary bridge (T-058 is a different mechanism entirely); skip
+- **PR #285** (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open; two parts: (1) `closedSubagentIds` ordered list with 256-item cap + O(1) lookup (may be relevant when implementing T-049); (2) AppState FSEvents/timer teardown cleanup in one main-queue `deinit` hop (relevant when implementing T-073, since `ProjectsWatcherBox` already noted in criteria); Kimi-specific portions skip; wait for merge
+- **Issue #286** (open, Jul 24): "fix(pi): island Allow still requires terminal permission-gate confirmation" — Pi non-Claude CLI; skip
+- **Issue #283** (open, Jul 23): "CodeIsland blocks Antigravity in Turbo Mode" — Antigravity non-Claude CLI; skip
+- **Issue #280** (open, Jul 23): "fix(codex): restore Desktop discovery and lifecycle tracking" — Codex-specific; skip
+- **Issue #281** (open, Jul 23): "feat(grok): add Grok CLI integration" — non-Claude CLI; skip
+- **PR #284** (closed without merging, Jul 23): "Sync fork with upstream + show CLI identity on approval card" — third-party fork sync PR; the "show CLI identity on approval card" reads `_source` field in no-session fallback of `ApprovalBar`; not merged into upstream; skip
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest commit — docs only, nothing actionable
+- **vibeislandapp/vibe-island issue #186** (open, Jul 24): "Session cards foreground the app but don't jump to the exact window/tab or its Space" — additional report on jump accuracy (Apple Terminal + Claude Desktop cases); already captured by T-020/T-039/T-045/T-070; no new code to cherry-pick; note for T-070: Claude Desktop sessions lack per-window handle → `foreground_no_tab_check` suppresses tab targeting
+- **vibeislandapp/vibe-island issue #181** (open, Jul 22): "VibeIsland overwrites iTerm2 tab title" — vibe-island sets custom iTerm2 tab titles; our `TerminalActivator.swift` uses TTY/session-ID matching and does not set custom tab titles → **not applicable to our fork**
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
+- **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
