@@ -1041,6 +1041,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
 - **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
 
+**Scouted (July 27, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 4 days
+- **Issue #288** (open, Jul 26): "codebuddy 每次开始新会话的时候 codeisland 会启动两条会话" — CodeBuddy CLI triggers two session cards per new session; CodeBuddy is a non-Claude CLI; skip
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching; no change from Jul 26 scout
+- PR #287 (open, Jul 24): Pi permission-gate — Pi non-Claude CLI; skip (unchanged)
+- vibeislandapp/vibe-island: `22c6f31` (Jul 16) remains the latest commit — nothing actionable
+- vibeislandapp/vibe-island open issues #181–#186: all already documented in Jul 26 scout; no new issues
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
