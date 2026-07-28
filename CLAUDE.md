@@ -1051,6 +1051,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
 
+**Scouted (July 28, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 5 days
+- No new PRs since Jul 26; highest PR ref is still #287 (confirmed via git ls-remote)
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching; not merged into upstream/main; unchanged
+- PR #287 (open, Jul 24): Pi permission-gate — Pi non-Claude CLI; skip (unchanged)
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest commit — upstream quiet for 11 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
