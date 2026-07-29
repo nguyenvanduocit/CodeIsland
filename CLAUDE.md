@@ -1060,6 +1060,21 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-079) remain as previously documented.
 
+**Scouted (July 29, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); wxtsky/CodeIsland HEAD remains `9e3a1eb` — upstream quiet for 6 days
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching; unchanged
+- PR #287 (open, Jul 24): Pi permission-gate — Pi non-Claude CLI; skip (unchanged)
+- PR #275 (open, Jul 21): Windows port — out of scope; skip
+- **Issue #293** (closed Jul 28, "completed"): "Feature Request: Support for Orca (stablyai/orca)" — Orca wraps Claude Code and fires standard `~/.claude/settings.json` hooks; our bridge receives all hook events from any process using the standard hook config, so Orca sessions appear as Claude Code sessions automatically; no special support needed in our Claude Code-only fork; skip
+- **Issue #292** (open, Jul 28): "Option to disable auto-expand on permission request when other apps are focused" — when a non-terminal app is frontmost and a PermissionRequest arrives, the notch panel auto-expands and interrupts the user; request: apply Smart Suppress logic to permission prompts too (not just completion events). No upstream implementation yet → **T-080** (new, low priority, XS; watch for upstream implementation)
+- Issue #291 (open, Jul 27): Grok Build support — non-Claude CLI, skip
+- Issue #290 (open, Jul 27): CodeBuddy Notification hook — CodeBuddy-specific; skip
+- Issue #289 (open, Jul 27): Qoder 国行版 recognition — Qoder-specific; skip
+- **vibeislandapp/vibe-island**: batch of 11 issues closed as "completed" on Jul 28, indicating a new release (v1.0.43+); commit search returned 0 results (possible search-index lag). Key closures relevant to our fork: #170 (stuck question/answer panel — same as T-057, confirms fix was shipped); #165 (Claude usage quota in Claude Desktop — same concern as T-070+T-073 combo); #68 (WezTerm pane jump — T-055 territory); #175 (Show subagent model per session card — new feature inspiration; no upstream commits yet visible, watch for landing in wxtsky too)
+- New vibe-island issues: #190 (session cards dropped, Codex-context) — not actionable; #188 (Cursor API usage clipped — Cursor-specific, skip); #186 (exact window/tab jump — covered by T-020/T-039/T-060)
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **One new task added (T-080 watch).** All other open tasks (T-016 through T-079) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
