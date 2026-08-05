@@ -556,6 +556,7 @@
 - [ ] Explicitly activate + unhide Terminal.app in Swift before AppleScript runs so hidden windows come to front
 - [ ] Coordinate with T-020 (broader terminal activation overhaul) — both touch `TerminalActivator.swift`; port T-039 first as it is narrower
 - [ ] Verify with multiple Terminal.app windows open simultaneously: clicking a session card focuses the correct window, not an arbitrary one (regression scenario from upstream issue #179, May 15 2026)
+- [ ] Wrap each window's `tabs of w` access in its own `try` in all three AppleScript matching strategies — Terminal.app can expose invisible utility windows with no tabs; accessing their `tabs` property raises error -10000 and aborts the entire `tell` block, preventing all subsequent windows from being searched (upstream PR #295, open Aug 3, 2026 — gate: include when PR merges)
 - [ ] `swift build && swift test` passes
 
 ### T-040: Port tool_use_id deduplication cache to fix burst PermissionRequest rejection
@@ -688,6 +689,8 @@
 - [ ] In `NotchPanelView.swift` (or `SessionListView.swift`), add `.help()` tooltip to each `MiniAgentIcon`: text = "{agentType} — {currentTool}" when tool active, or just "{agentType}" when idle
 - [ ] Add a `SessionTag` displaying "+N Sub" in purple to the session header when `subagentCount > 0`
 - [ ] Extract subagent tooltip builder to a dedicated `@ViewBuilder` helper outside the main `body` (avoids recomputing on every `ViewBuilder` pass — perf fix from `2cf2960`)
+- [ ] Use an ordered list with 256-item cap + O(1) Set for `closedSubagentIds` tombstones (pattern from upstream PR #285) to prevent closed sub-agent IDs from accumulating unboundedly when sessions run many sub-agents across a long working session
+- [ ] Verify that `reduceEvent()` `Stop` handling scopes session removal to the specific sub-agent session ID and does not affect the parent session (regression scenario from vibeislandapp/vibe-island issue #202, Aug 3, 2026)
 - [ ] `swift build && swift test` passes
 
 ### T-050: Three-way completion notification style (expand / glance / off)

@@ -1075,6 +1075,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **One new task added (T-080 watch).** All other open tasks (T-016 through T-079) remain as previously documented.
 
+**Scouted (August 5, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 13 days
+- **PR #295** (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — wraps each window's `tabs of w` access in its own `try` in all three `activateTerminalApp()` matching strategies; Terminal.app can contain invisible utility windows (no tabs, error -10000) that abort the outer `tell` block, preventing any subsequent windows from being processed; mirrors iTerm2 hardening from upstream PR #202; not yet merged → **T-039 criteria updated to include this guard**
+- **Issue #294** (open, Aug 3): "Terminal.app: window enumeration aborts on a tab-less invisible window (-10000)" — root-cause analysis confirms the bug PR #295 addresses; reproducer: 3 windows, window 2 invisible and tab-less, window 3 session never receives focus; no code beyond PR #295 to cherry-pick
+- **Issue #299** (open, Aug 1): "[Performance] v1.0.31 sustains ~10% CPU while idle; render loop and polling remain active" — five identified contributors: (1) mascot animation — T-033 covers MascotAnimationGate + 8fps idle + universal MascotTimeline; (2) cleanup polling every 3s via `NSWorkspace.runningApplications` — our fork already uses 5s light + 30s heavy, not applicable; (3) screen polling every 5s — our fork still polls at 1s, T-033 covers the fix; (4) 500ms session observation — upstream-specific pattern not present in our fork; (5) bridge per-event without debouncing — architectural, no upstream fix; T-033 is the correct resolution path for our fork; no new task needed
+- **Issue #298** (open, Jul 31): "feature: 希望优化 island 的展开和收缩动画效果" — expand/collapse animation polish request; covered by T-061 (three-stage hover now merged as `e3ac11c` in v1.0.29); no separate task
+- **PR #296** (open, Jul 30): "fix(cursor): fold merge/hide Tasks via safe _ppid parent" — Cursor-specific; skip
+- **PR #285** (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, watching; `closedSubagentIds` ordered list with 256-item cap + O(1) lookup is relevant to T-049 when implementing subagent display; **T-049 criteria updated** to note this pattern
+- **vibeislandapp/vibe-island issues #200, #201, #203** (open, Aug 2–3): three independent reports of Claude Code Desktop — ghost sessions accumulating and click-to-jump silently failing; all reinforce T-070 urgency; no new code to cherry-pick; T-070 criteria already accurate
+- **vibeislandapp/vibe-island issue #202** (open, Aug 3): "启动子agent时，子agent结束后状态栏的回话也结束消失了" — main session card disappears when sub-agent session fires a `Stop` event; vibe-island lifecycle code differs from our fork; verify that our `reduceEvent()` `Stop` handling scopes removal to the specific session ID and does not affect parent sessions → note added to T-049 criteria as investigation point
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new tasks. Two criteria updates (T-039: PR #295 invisible-window guard; T-049: closedSubagentIds pattern + lifecycle investigation).**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
