@@ -1088,6 +1088,15 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new tasks. Two criteria updates (T-039: PR #295 invisible-window guard; T-049: closedSubagentIds pattern + lifecycle investigation).**
 
+**Scouted (August 7, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 15 days
+- PR #295 (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — still open, T-039 criteria already updated; unchanged
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching (T-049); unchanged
+- PR #296 (open, Jul 30): "fix(cursor): fold merge/hide Tasks via safe _ppid parent" — Cursor-specific; skip (unchanged)
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest commit — docs only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-080) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
