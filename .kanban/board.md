@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-07-25 -->
+<!-- Updated: 2026-08-08 -->
 
 ## Backlog
 
@@ -28,6 +28,17 @@
 - [ ] `swift build && swift test` passes
 
 ## Todo
+
+### T-081: Fix panel invisible on HiDPI displays — clamp window height to screen
+> `panelSize(for:)` computes height as `maxSessions * 90 + 60` with no upper bound. On Retina displays the oversized backing store can trigger macOS WindowServer GPU-memory optimisation that blanks the panel until a mouse event forces recomposition. Fix: clamp to `screen.visibleFrame.height`.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland PR #305 (open, Aug 6, 2026) + issue #304 — confirmed same bug in our `PanelWindowController.swift:119–124`
+#### Criteria
+- [ ] In `PanelWindowController.swift` `panelSize(for screen:)`: rename `maxH` to `desiredH`, then add `let maxH = min(desiredH, screen.visibleFrame.height)` — the session list already scrolls internally so clamping the window never hides content
+- [ ] Gate on PR #305 merge or implement independently (the fix is a confirmed one-liner regardless of merge status)
+- [ ] Verify: on a HiDPI Retina display, the panel remains continuously visible with no blank/invisible episodes; `isVisible` and `alphaValue` stay consistent on macOS 26
+- [ ] `swift build && swift test` passes
 
 ### T-076: Fix panel detaching from notch after display reconfigure / wake (macOS 27 beta)
 > Panel intermittently shifts from the physical notch center to the upper-left corner beneath the menu bar on macOS 27.0 beta; root cause: AppKit's `constrainFrameRect` clamps borderless windows below the menu bar on display reconfigure and wake — a stricter enforcement in macOS 27. Upstream fix available in v1.0.31.

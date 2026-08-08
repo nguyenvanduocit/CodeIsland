@@ -1097,6 +1097,20 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-080) remain as previously documented.
 
+**Scouted (August 8, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 16 days
+- **PR #305** (open, Aug 6): "fix(panel): clamp panel window height to screen (#304)" — `panelSize(for:)` computes height as `maxSessions * 90 + 60` with no upper bound; with a large `maxVisibleSessions` the window becomes enormous (e.g. 8970pt → ~18k pixels on Retina); macOS 26 WindowServer disables compositing for oversized idle backing stores, making the panel render blank until a mouse event forces a redraw; fix: `let maxH = min(desiredH, screen.visibleFrame.height)`; not yet merged → **T-081** (new, high priority, XS; confirmed same bug in our `PanelWindowController.swift:119–124`)
+- **Issue #304** (open, Aug 6): "Question and permission panel becomes invisible after around 2s on some screens" — root-cause report for PR #305; reproduced on M1 Pro and M4 Pro on HiDPI displays; confirms the compositing bypass is the cause; no code beyond PR #305
+- **Issue #302** (open, Aug 5): "click-to-jump fails when multiple Orca worktrees with same project name" — Orca is a non-Claude AI CLI (stablyai/orca); bug is Orca-specific (project-name-based matching); our Claude Code sessions use full CWD from hook events for matching; not applicable to our fork; skip
+- PR #301 (open, Aug 5): "fix(qoder): omit scalar answer key for AskUserQuestion strict schema" — Qoder-specific; skip
+- Issue #303 (open, Aug 5): Hermes sessions stuck "running" — Hermes non-Claude CLI; skip
+- Issue #300 (open, Aug 5): qodercli interaction failure — Qoder-specific; skip
+- PR #295 (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — still open, T-039 criteria already updated; unchanged
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching (T-049); unchanged
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest commit — docs only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: disabled (API returns 410) — all tracking via kanban board only
+- **One new task (T-081).** All other open tasks (T-016 through T-080) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
