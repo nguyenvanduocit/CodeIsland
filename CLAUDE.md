@@ -1111,6 +1111,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: disabled (API returns 410) — all tracking via kanban board only
 - **One new task (T-081).** All other open tasks (T-016 through T-080) remain as previously documented.
 
+**Scouted (August 9, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 17 days
+- **Issue #306** (open, Aug 8): "Remote SSH: Codex CLI approval requests are not shown in CodeIsland" — Codex + SSH remote approval gap; not applicable to our Claude Code-only fork; skip
+- PR #305 (open, Aug 6): "fix(panel): clamp panel window height to screen" — still open, T-081 unchanged
+- PR #295 (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — still open, T-039 criteria already updated; unchanged
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching (T-049); unchanged
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest commit — no new code commits; nothing actionable
+- **vibeislandapp/vibe-island issue #210** (open, Aug 7): "[Feature] Multi-account limits" — user reports that usage numbers from a previously logged-out account persist when switching to a new account; directly relevant to T-073 (ClaudeUsageScanner): when implementing, ensure usage is scoped to the currently active account/profile so switching accounts clears stale numbers → **T-073 criteria updated**
+- **vibeislandapp/vibe-island issue #209** (open, Aug 7): "[Feature] Add support for the new prime-agent" — prime-agent is a non-Claude CLI; skip
+- **vibeislandapp/vibe-island issue #208** (closed, Aug 6): "Session-file watcher: 30 lsof children stuck in uninterruptible wait for 22h" — vibe-island's file-watcher implementation spawns `lsof` subprocesses that can become permanently stuck; no fix code merged; our T-073 implementation uses `FSEvents`/`JSONLTailer` (not `lsof`) so the specific mechanism differs, but reinforces the importance of correct watcher teardown in T-073 → **T-073 criteria updated to note teardown requirement**
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new tasks.** T-073 criteria updated with multi-account scope note and watcher teardown note. All other open tasks (T-016 through T-081) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-08-08 -->
+<!-- Updated: 2026-08-09 -->
 
 ## Backlog
 
@@ -92,6 +92,8 @@
 - [ ] `Sources/CodeIsland/SettingsView.swift`: Appearance toggle
 - [ ] **Port `1f45e93` fix in `JSONLTailer.swift`**: advance read offset by `appended.count` (bytes read from disk) NOT `combined.count - trailingFragment.count`; the original formula drifts offset past EOF after each partial-line episode, causing every subsequent small append to be misdetected as truncation and triggering a full-file rescan — pins CPU to ~100% on overnight-grown transcripts; also port the three regression tests from `JSONLTailerTests.swift`
 - [ ] Port `ClaudeUsageScannerTests.swift` (~87 assertions) — window dedup, incremental reads, truncation, sparkline bucketing
+- [ ] **Account scope**: display and cache must be scoped to the currently active Claude account; switching accounts (log-out + log-in) must clear stale usage numbers — do not persist across account changes (vibe-island issue #210, Aug 7, 2026)
+- [ ] **Watcher teardown**: on `AppState.deinit` (or app termination), cancel FSEvents stream and ensure all file descriptors are closed; watcher must not outlive AppState and must not leave zombie children or leaked pipe descriptors (vibe-island issue #208, Aug 6, 2026)
 - [ ] `swift build && swift test` passes
 
 ### T-072: Add Terax terminal click-to-jump support
