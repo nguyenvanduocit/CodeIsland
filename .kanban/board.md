@@ -1,7 +1,19 @@
 # Kanban Board
-<!-- Updated: 2026-08-09 -->
+<!-- Updated: 2026-08-11 -->
 
 ## Backlog
+
+### T-082: Zed terminal click-to-jump support
+> Claude Code sessions running in Zed's integrated terminal do nothing when clicked. `TerminalActivator.swift` has no Zed handler — the generic window-title fallback fails because Zed titles show file/project names rather than folder names. Proposed approach: Zed JSON-RPC extension API + `~/Library/Application Support/Zed/` state file for CWD matching. No upstream code yet.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #307 (open, Aug 10, 2026) — no upstream implementation
+#### Criteria
+- [ ] Investigate Zed's JSON-RPC extension API (`zed::Workspace::activate_panel`) and state file format in `~/Library/Application Support/Zed/` to determine feasibility
+- [ ] Wait for upstream implementation in wxtsky/CodeIsland (PR to be filed); cherry-pick when available
+- [ ] If implementing independently: add `activateZed(cwd:)` to `TerminalActivator.swift` that matches workspace by CWD from Zed's state file, then uses JSON-RPC or `TERM_PROGRAM`-based matching to raise the correct workspace window
+- [ ] Add `dev.zed.Zed` to `knownTerminals` map and `isZedTabActive(cwd:)` to `TerminalVisibilityDetector`
+- [ ] `swift build && swift test` passes
 
 ### T-078: Panel window intercepts mouse events during Claude Code computer_use
 > When Claude Code's `computer_use` tool issues pixel-coordinate clicks, any coordinate landing on the collapsed island panel is rejected with "not in the allowed applications." The panel window captures mouse events in its frame, making those screen coordinates a dead zone for AI agents.

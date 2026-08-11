@@ -1135,6 +1135,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-081) remain as previously documented.
 
+**Scouted (August 11, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 19 days
+- **Issue #307** (open, Aug 10): "Feature request: support click-to-jump for Zed (dev.zed.Zed) integrated terminal" — user reports clicking a Claude Code session card hosted in Zed's terminal does nothing; `TerminalActivator.swift` has no Zed handler so falls back to generic window-title match, which fails because Zed titles show file/project name not folder. Proposed approach: Zed JSON-RPC extension API + `~/Library/Application Support/Zed/` state file for CWD matching. No upstream implementation yet → **T-082** (new, low priority, watch)
+- PR #305 (open, Aug 6): "fix(panel): clamp panel window height to screen" — still open, T-081 unchanged
+- PR #295 (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — still open, T-039 criteria already updated; unchanged
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching (T-049); unchanged
+- vibeislandapp/vibe-island: `22c6f31` (Jul 16) remains the latest code commit — upstream quiet for 26 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **One new watch item (T-082 — Zed terminal click-to-jump, no upstream code yet).** All other open tasks (T-016 through T-081) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
