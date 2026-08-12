@@ -1145,6 +1145,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **One new watch item (T-082 — Zed terminal click-to-jump, no upstream code yet).** All other open tasks (T-016 through T-081) remain as previously documented.
 
+**Scouted (August 12, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 20 days
+- PR #305 (open, Aug 6): "fix(panel): clamp panel window height to screen" — still open, T-081 unchanged
+- PR #295 (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — still open, T-039 criteria already updated; unchanged
+- PR #285 (open, Jul 24): "fix: harden closed-subagent tombstones and kimi hooks status" — still open, still watching (T-049); unchanged
+- Issue #307 (open, Aug 10): Zed click-to-jump — T-082, no upstream implementation; unchanged
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest code commit — upstream quiet for 27 days; issues #213 (hide pixel art when idle — low-priority cosmetic; partially overlaps T-041), #211 (settings click bug — vibe-island specific, skip), #214 (usage provider shortcut — irrelevant until T-073 implemented) opened Aug 11, none actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-082) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
