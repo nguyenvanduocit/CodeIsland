@@ -1,7 +1,21 @@
 # Kanban Board
-<!-- Updated: 2026-08-11 -->
+<!-- Updated: 2026-08-13 -->
 
 ## Backlog
+
+### T-083: Fix answer routing — approval/question answers target queue head, not card's session
+> In multi-session concurrent use, clicking Approve/Deny/Answer always resolves `permissionQueue.removeFirst()` or `questionQueue.removeFirst()` — the queue head — not the specific session shown on the card. If the queue is reordered or a session's entry is drained between render and click, the answer silently goes to the wrong tool call.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland issue #308 (Aug 12, 2026) + PR #310 (open, Aug 12, 2026) — not yet merged; confirmed same bug in our `RequestQueueService.swift:38-85,106-149`
+#### Criteria
+- [ ] Add `pendingPermission(forSession:) -> PermissionRequest?` and `pendingQuestion(forSession:) -> QuestionRequest?` accessors to `RequestQueueService` that look up by session ID rather than position
+- [ ] Update `approve(always:)`, `deny()`, `answer(_:)`, `skip()` to accept an `expectedSessionId: String?` parameter; resolve the specific session's queued request rather than calling `removeFirst()` unconditionally; if the session ID is no longer queued, drop the action (stale-card guard)
+- [ ] Update `ApprovalBarView` and `QuestionBarView` callers to pass their `sessionId` to the answer methods
+- [ ] Update `showNextPending()` (or the `applyShowNextPending()` caller in AppState) to collapse card surfaces whose sessions have no remaining actionable requests — prevents empty expanded cards from persisting after a drain
+- [ ] Skip the `Smart Suppress` / dismissed-session portions of upstream PR #310 (we don't have those features yet)
+- [ ] Add test cases: cross-session routing (session A drained, B at queue head, user answers A's visible card → B must not be answered), stale-card drop, session-scoped lookup returns correct request
+- [ ] `swift build && swift test` passes
 
 ### T-082: Zed terminal click-to-jump support
 > Claude Code sessions running in Zed's integrated terminal do nothing when clicked. `TerminalActivator.swift` has no Zed handler — the generic window-title fallback fails because Zed titles show file/project names rather than folder names. Proposed approach: Zed JSON-RPC extension API + `~/Library/Application Support/Zed/` state file for CWD matching. No upstream code yet.
@@ -249,7 +263,8 @@
 - [ ] `AppState` / `RequestQueueService` tracks dismissed sessions and skips them when selecting next queued request
 - [ ] Dismissed session re-enters queue when a new permission event arrives for that session
 - [ ] Multi-session: dismissing advances to next pending session
-- [ ] Unit tests cover dismiss-skip, re-display, and multi-session scenarios (ref: upstream `AppStatePermissionFlowTests.swift`)
+- [ ] ⚠️ **MUST fix the card-display gate at the same time** (T-083 root cause, upstream issue #309 / PR #311): `enqueuePermission()` currently gates card display and sound on `permissionQueue.count == 1`; once dismiss keeps items in the queue while hiding them, `count` never returns to 1 and all subsequent requests arrive silently. Replace the `count == 1` gate with a visibility-based check (`nextVisiblePermissionIndex()`) before appending; decouple the sound gate from the card gate.
+- [ ] Unit tests cover dismiss-skip, re-display, multi-session scenarios, and the gate regression (ref: upstream `AppStatePermissionFlowTests.swift`, `AppStatePermissionGateTests.swift` from PR #311)
 - [ ] `swift build && swift test` passes
 
 ### T-033: Reduce Energy Impact — screen-poll 1s → 5s + universal mascot frame-loop gate

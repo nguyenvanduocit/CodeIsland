@@ -1155,6 +1155,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-082) remain as previously documented.
 
+**Scouted (August 13, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 21 days
+- **Issue #308 + PR #310** (open, Aug 12): "fix(panel): route answers to the card's session, not the queue head" — multi-session race condition where approval/question answers always call `removeFirst()` instead of resolving the specific session shown on the card; if the queue is reordered or a session's entry is drained between render and click, the answer silently goes to the wrong tool call. Confirmed same pattern in our `RequestQueueService.swift:38-85,106-149`. PR #310 adds `expectedSessionId` parameter to all answer methods and `pendingPermission/Question(forSession:)` accessors. Not yet merged → **T-083 (new, high priority, S)**
+- **Issue #309 + PR #311** (open, Aug 12): "fix(panel): don't let a dismissed approval silence later requests" — `enqueuePermission()` gates card display and sound on `permissionQueue.count == 1`; dismissed requests stay queued (to keep CLI blocked) without showing UI; count never returns to 1 so all subsequent requests arrive silently. Does NOT currently manifest in our fork (we have no Dismiss button yet, T-031), but WILL affect us when T-031 is implemented. PR #311 decouples display gate from queue count. → **T-031 criteria updated** with mandatory gate fix; no new task
+- **Issue #312** (open, Aug 12): "Sound behaviour is untestable: SoundManager.shared has no seam" — `SoundManager.shared.handleEvent()` is called directly with no injection point; changes to card/sound logic silently alter which events play. Same pattern in our codebase (e.g. `RequestQueueService.swift:34`). Low priority improvement. → not tracked separately; noted for future test hardening if we add sound-path tests
+- PR #305 (open, Aug 6): "fix(panel): clamp panel window height" — still open, T-081 unchanged
+- PR #295 (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — still open, T-039 criteria already updated; unchanged
+- PR #285 (open, Jul 24): "harden closed-subagent tombstones" — still open, T-049 unchanged
+- vibeislandapp/vibe-island: issue #216 (Aug 12): `vibe-island-bridge --task refresh-usage` spawns `security dump-keychain` — vibe-island specific; our `codeisland-bridge` does no keychain access; skip
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **One new task added (T-083). T-031 criteria updated with mandatory gate-fix prerequisite.**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
