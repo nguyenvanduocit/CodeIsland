@@ -1167,6 +1167,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **One new task added (T-083). T-031 criteria updated with mandatory gate-fix prerequisite.**
 
+**Scouted (August 14, 2026) — post-v1.0.31 activity:**
+- No new commits or releases since v1.0.31 (Jul 23); upstream HEAD remains `9e3a1eb` — upstream quiet for 22 days
+- PR #305 (open, Aug 6): "fix(panel): clamp panel window height to screen" — still open, T-081 unchanged
+- PR #310 (open, Aug 12): "fix(panel): route answers to card's session, not queue head" — still open, T-083 unchanged
+- PR #311 (open, Aug 12): "fix(panel): don't let dismissed approval silence later requests" — still open, T-031 gate unchanged
+- PR #295 (open, Aug 3): "fix(activator): guard Terminal.app tab enumeration" — still open, T-039 criteria already updated; unchanged
+- PR #285 (open, Jul 24): "harden closed-subagent tombstones" — still open, T-049 unchanged
+- **vibeislandapp/vibe-island issue #218** (open, Aug 14): "Ghostty jump focuses app but does not switch tmux sessions" — clicking a session card in Ghostty with tmux focuses Ghostty but the tmux `switch-client` to the target session/window/pane is not executed; local non-SSH sessions; tmux 3.7b + Ghostty 1.3.1; root cause is missing explicit `tmux switch-client -c <client> -t <session>:<window>.<pane>` in the activation path. This is the cross-session tmux scenario covered by T-055 (multiplexer support adds `switch-client -t` prefix). Our planned T-055 implementation should resolve this. No separate task needed → note added to T-055 criteria as an explicit cross-session test scenario
+- vibeislandapp/vibe-island issue #216 (open, Aug 12): `vibe-island-bridge --task refresh-usage` spawns `security dump-keychain` — vibe-island specific; already documented in Aug 13 scout; no change
+- vibeislandapp/vibe-island: `22c6f31` (Jul 16) remains the latest code commit — upstream quiet for 29 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** T-055 criteria updated with Ghostty+tmux cross-session test scenario. All other open tasks (T-016 through T-083) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
