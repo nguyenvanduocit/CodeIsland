@@ -1,7 +1,22 @@
 # Kanban Board
-<!-- Updated: 2026-08-13 -->
+<!-- Updated: 2026-08-15 -->
 
 ## Backlog
+
+### T-084: Trackpad gesture support for notch panel
+> Add configurable trackpad swipe gestures: swipe up to open, down to close, left/right to cycle filter modes. Includes hover-open toggle + delay slider, haptic feedback on hover, and invert-swipe setting. Pure `NotchGestureInterpreter` accumulates physical trackpad deltas and emits actions at threshold; `NotchGesturePolicy` guards valid actions per surface state.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland PR #314 (open, Aug 14, 2026) — not yet merged; watch for merge
+#### Criteria
+- [ ] Gate: wait for PR #314 to merge into upstream/main before implementing
+- [ ] Port `NotchGesture.swift` (new, ~424 lines): `NotchGestureInterpreter`, `NotchGesturePolicy`, `NotchScrollSample`, `NotchGestureAction`, `NotchHoverPhase` state machine, `NotchGestureHitbox`, `NotchGestureRegionMetrics`
+- [ ] Wire scroll event handling into `PanelWindowController.swift` — override `scrollWheel(_:)` on the panel window to feed `NotchScrollSample` values to the interpreter and dispatch resulting `NotchGestureAction` to `appState`
+- [ ] `Settings.swift`: add `openOnHover` Bool (default true), `hoverOpenDelay` Double (default 0.5, clamped 0.1–1.5), `invertHorizontalSwipeDirection` Bool (default false), `hapticOnHover` Bool (default false), `hapticIntensity` Int (1=light/2=medium/3=strong)
+- [ ] Adapt `navigatePrevious`/`navigateNext` actions to our session list (cycle selected session rather than upstream's filter-mode cycling, or implement filter-mode cycling if we have an equivalent)
+- [ ] Settings → Behavior/Gestures page: open-on-hover toggle, delay slider, invert-swipe toggle, haptic toggle + intensity picker
+- [ ] Port gesture unit tests: `NotchGestureInterpreterTests`, `NotchGesturePolicyTests`, `NotchGestureSettingsTests`
+- [ ] `swift build && swift test` passes
 
 ### T-083: Fix answer routing — approval/question answers target queue head, not card's session
 > In multi-session concurrent use, clicking Approve/Deny/Answer always resolves `permissionQueue.removeFirst()` or `questionQueue.removeFirst()` — the queue head — not the specific session shown on the card. If the queue is reordered or a session's entry is drained between render and click, the answer silently goes to the wrong tool call.
