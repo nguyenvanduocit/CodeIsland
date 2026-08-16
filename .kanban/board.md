@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-08-15 -->
+<!-- Updated: 2026-08-16 -->
 
 ## Backlog
 
@@ -22,7 +22,7 @@
 > In multi-session concurrent use, clicking Approve/Deny/Answer always resolves `permissionQueue.removeFirst()` or `questionQueue.removeFirst()` — the queue head — not the specific session shown on the card. If the queue is reordered or a session's entry is drained between render and click, the answer silently goes to the wrong tool call.
 - **priority**: high
 - **effort**: S
-- **source**: wxtsky/CodeIsland issue #308 (Aug 12, 2026) + PR #310 (open, Aug 12, 2026) — not yet merged; confirmed same bug in our `RequestQueueService.swift:38-85,106-149`
+- **source**: wxtsky/CodeIsland issue #308 (Aug 12, 2026) + PR #310 MERGED as `5b4d9f7` (v1.0.32, Aug 15, 2026) — confirmed same bug in our `RequestQueueService.swift:38-85,106-149`
 #### Criteria
 - [ ] Add `pendingPermission(forSession:) -> PermissionRequest?` and `pendingQuestion(forSession:) -> QuestionRequest?` accessors to `RequestQueueService` that look up by session ID rather than position
 - [ ] Update `approve(always:)`, `deny()`, `answer(_:)`, `skip()` to accept an `expectedSessionId: String?` parameter; resolve the specific session's queued request rather than calling `removeFirst()` unconditionally; if the session ID is no longer queued, drop the action (stale-card guard)
@@ -33,15 +33,17 @@
 - [ ] `swift build && swift test` passes
 
 ### T-082: Zed terminal click-to-jump support
-> Claude Code sessions running in Zed's integrated terminal do nothing when clicked. `TerminalActivator.swift` has no Zed handler — the generic window-title fallback fails because Zed titles show file/project names rather than folder names. Proposed approach: Zed JSON-RPC extension API + `~/Library/Application Support/Zed/` state file for CWD matching. No upstream code yet.
+> Claude Code sessions running in Zed's integrated terminal do nothing when clicked. Zed replaces the PTY environment, so `__CFBundleIdentifier` is never set; `isIDETerminal` returns false; the generic `bringToFront("zed")` fallback looks for an app literally named "zed" and silently does nothing. Upstream fix: map `TERM_PROGRAM=zed` → `dev.zed.Zed` via `termProgramToIDEBundleId` dict, then route to existing `activateIDEWindow(bundleId:cwd:)`.
 - **priority**: low
-- **effort**: S
-- **source**: wxtsky/CodeIsland issue #307 (open, Aug 10, 2026) — no upstream implementation
+- **effort**: XS
+- **source**: wxtsky/CodeIsland issue #307 (Aug 10, 2026) + commit `30441c1` (v1.0.32, Aug 15, 2026) — **gate cleared, upstream fix available**
 #### Criteria
-- [ ] Investigate Zed's JSON-RPC extension API (`zed::Workspace::activate_panel`) and state file format in `~/Library/Application Support/Zed/` to determine feasibility
-- [ ] Wait for upstream implementation in wxtsky/CodeIsland (PR to be filed); cherry-pick when available
-- [ ] If implementing independently: add `activateZed(cwd:)` to `TerminalActivator.swift` that matches workspace by CWD from Zed's state file, then uses JSON-RPC or `TERM_PROGRAM`-based matching to raise the correct workspace window
-- [ ] Add `dev.zed.Zed` to `knownTerminals` map and `isZedTabActive(cwd:)` to `TerminalVisibilityDetector`
+- [ ] In `TerminalActivator.swift`: add `static let termProgramToIDEBundleId: [String: String] = ["zed": "dev.zed.Zed"]`
+- [ ] Add routing branch before generic IDE-detection: `if let ideBundleId = termProgramToIDEBundleId[lower] { activateIDEWindow(bundleId: ideBundleId, cwd: session.cwd); return }` where `lower` is `session.termProgram?.lowercased()`
+- [ ] Ensure `TERM_PROGRAM` env var is captured in bridge `main.swift` (check if already forwarded via existing `termProgram` field)
+- [ ] **Skip**: all Orca-related additions from the same commit (`activateOrca`, `orcaTerminalHandle`, `orcaWorktreeId`, bridge captures for `ORCA_TERMINAL_HANDLE`/`ORCA_WORKTREE_ID`) — Orca is non-Claude CLI
+- [ ] **Skip**: Hermes daemon-source timeout additions from the same commit (`daemonBackedSources`, `daemonTurnSettleTimeout`) — Hermes non-Claude CLI
+- [ ] Port the Zed-specific test assertions from `OrcaAndZedActivationTests.swift`
 - [ ] `swift build && swift test` passes
 
 ### T-078: Panel window intercepts mouse events during Claude Code computer_use
@@ -74,10 +76,9 @@
 > `panelSize(for:)` computes height as `maxSessions * 90 + 60` with no upper bound. On Retina displays the oversized backing store can trigger macOS WindowServer GPU-memory optimisation that blanks the panel until a mouse event forces recomposition. Fix: clamp to `screen.visibleFrame.height`.
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland PR #305 (open, Aug 6, 2026) + issue #304 — confirmed same bug in our `PanelWindowController.swift:119–124`
+- **source**: wxtsky/CodeIsland PR #305 MERGED as `00caa11` (v1.0.32, Aug 15, 2026) + issue #304 — confirmed same bug in our `PanelWindowController.swift:119–124`
 #### Criteria
 - [ ] In `PanelWindowController.swift` `panelSize(for screen:)`: rename `maxH` to `desiredH`, then add `let maxH = min(desiredH, screen.visibleFrame.height)` — the session list already scrolls internally so clamping the window never hides content
-- [ ] Gate on PR #305 merge or implement independently (the fix is a confirmed one-liner regardless of merge status)
 - [ ] Verify: on a HiDPI Retina display, the panel remains continuously visible with no blank/invisible episodes; `isVisible` and `alphaValue` stay consistent on macOS 26
 - [ ] `swift build && swift test` passes
 
@@ -278,20 +279,23 @@
 - [ ] `AppState` / `RequestQueueService` tracks dismissed sessions and skips them when selecting next queued request
 - [ ] Dismissed session re-enters queue when a new permission event arrives for that session
 - [ ] Multi-session: dismissing advances to next pending session
-- [ ] ⚠️ **MUST fix the card-display gate at the same time** (T-083 root cause, upstream issue #309 / PR #311): `enqueuePermission()` currently gates card display and sound on `permissionQueue.count == 1`; once dismiss keeps items in the queue while hiding them, `count` never returns to 1 and all subsequent requests arrive silently. Replace the `count == 1` gate with a visibility-based check (`nextVisiblePermissionIndex()`) before appending; decouple the sound gate from the card gate.
-- [ ] Unit tests cover dismiss-skip, re-display, multi-session scenarios, and the gate regression (ref: upstream `AppStatePermissionFlowTests.swift`, `AppStatePermissionGateTests.swift` from PR #311)
+- [ ] ⚠️ **MUST fix the card-display gate at the same time** (T-083 root cause, upstream issue #309 / PR #311 MERGED as `f20e25a` v1.0.32): `enqueuePermission()` currently gates card display and sound on `permissionQueue.count == 1`; once dismiss keeps items in the queue while hiding them, `count` never returns to 1 and all subsequent requests arrive silently. Replace the `count == 1` gate with a visibility-based check (`nextVisiblePermissionIndex()`) before appending; decouple the sound gate from the card gate.
+- [ ] Unit tests cover dismiss-skip, re-display, multi-session scenarios, and the gate regression (ref: upstream `AppStatePermissionFlowTests.swift`, `AppStatePermissionGateTests.swift` from `f20e25a` v1.0.32)
 - [ ] `swift build && swift test` passes
 
-### T-033: Reduce Energy Impact — screen-poll 1s → 5s + universal mascot frame-loop gate
-> `CGWindowListCopyWindowInfo` runs every 1 second; measurably shows in Energy Impact (fix: 5s). Separately, ALL mascot views drive raw `TimelineView(.periodic)` loops at 16–33fps around the clock — even when panel is hidden — and replay all missed ticks in a burst after wake, causing >100% CPU spikes (user-confirmed issue #225, M1 macOS 26.5.1). Fix: `MascotAnimationGate` for Clawd (`25acb1a`, v1.0.28), then universal `MascotTimeline` wrapper for all 18 mascots (`0971ad3`, Jul 5, 2026). Also: 8fps cap for idle scenes (`d5fe917`).
+### T-033: Reduce Energy Impact — comprehensive idle CPU fix (10% → 1%)
+> `CGWindowListCopyWindowInfo` runs every 1 second (fix: 5s). Mascot `TimelineView` keeps SwiftUI's display link active even when nothing is happening — the panel's full layout pass runs every display-link cycle, costing ~7.6% CPU alone. v1.0.28 added `MascotAnimationGate` with sleep/wake gating; v1.0.29 added universal `MascotTimeline` wrapper; v1.0.32 (`14b75be`) adds `isIdleSettled` flag that gates animation entirely when island is collapsed + all sessions idle, plus coalesces `needsLayout`/`needsUpdateConstraints` dispatches in `PanelWindowController`, plus lazy `runningBundleIds()` in `cleanupIdleSessions()`. Confirmed fix: 10.2% → 1.2% CPU at idle (measured by upstream, Aug 2026).
 - **priority**: high
 - **effort**: S
-- **source**: wxtsky/CodeIsland commit `136737a` (v1.0.21, Apr 16, 2026) — screen-poll fix; commit `25acb1a` (v1.0.28, Jun 15, 2026) — mascot animation gate (Clawd only); commit `0971ad3` (Jul 5, 2026) — universal `MascotTimeline` wrapper for all mascots; commit `d5fe917` (Jul 5, 2026) — 8fps idle scene cap
+- **source**: wxtsky/CodeIsland commit `136737a` (v1.0.21) — screen-poll fix; `25acb1a` (v1.0.28) — `MascotAnimationGate` sleep/wake; `0971ad3` + `d5fe917` (Jul 5, 2026) — universal `MascotTimeline` + 8fps idle cap; **`14b75be` (v1.0.32, Aug 15, 2026) — definitive fix: `isIdleSettled` + layout coalescing + lazy runningBundleIds**
 #### Criteria
 - [ ] Change `Task.sleep(for: .seconds(1))` → `.seconds(5)` at `PanelWindowController.swift:426` in `configureAutoScreenPolling()`
-- [ ] Create `MascotTimeline` SwiftUI `View` wrapper: observes `NSWorkspace.willSleepNotification` / `didWakeNotification` + panel visibility; stops driving `TimelineView` when hidden/asleep; bumps an `animationEpoch` integer on wake/show so `TimelineView` re-anchors to now (avoids burst tick catch-up); enforces a 20 fps interval floor suitable for menu-bar animations; handles speed scaling via `@Environment(\.mascotAnimationsActive)` and `@Environment(\.mascotAnimationEpoch)`
-- [ ] Replace all individual `TimelineView(.periodic)` calls in mascot view files (`SpriteSheetView.swift`, `SpriteMascotView.swift`, `BuddyView.swift`, `PixelCharacterView.swift`, and any others) with `MascotTimeline`
-- [ ] Cap idle-state mascot scenes to 8fps per `d5fe917` — when mascot task is `.idle` and no active session, reduce `MascotTimeline` interval to `1.0 / 8.0` s
+- [ ] Port `MascotAnimationGate.swift` `isIdleSettled` flag from `14b75be`: add `@Published private(set) var isIdleSettled: Bool = false`; update `shouldAnimate(isVisible:isAwake:isIdleSettled:)` to return false when settled; add `setIdleSettled(_ settled: Bool)` that bumps `epoch` on exit from settled state (so `TimelineView` re-anchors to now, not to the missed ticks)
+- [ ] `AppState.swift`: call `gate.setIdleSettled(true)` when island is collapsed + all sessions idle; call `setIdleSettled(false)` on any session activity, hover, or expansion; port lazy `runningBundleIds()` closure in `cleanupIdleSessions()` (replaces unconditional XPC call every 3s)
+- [ ] `PanelWindowController.swift`: coalesce `needsUpdateConstraints` and `needsLayout` dispatches into single deferred apply per run-loop turn using `pendingConstraintsValue`/`pendingLayoutValue` vars; replace 500ms `withObservationTracking` polling loop with event-driven re-arm from `onChange`
+- [ ] Create `MascotTimeline` SwiftUI `View` wrapper for mascot views: observes sleep/wake + panel visibility; stops driving `TimelineView` when hidden/asleep/idle-settled; bumps `animationEpoch` on re-enable; enforces 20fps interval floor; handles speed scaling via `@Environment(\.mascotAnimationsActive)` + `@Environment(\.mascotAnimationEpoch)`
+- [ ] Replace all individual `TimelineView(.periodic)` calls in mascot view files with `MascotTimeline`; cap idle scenes to 8fps
+- [ ] Port `MascotAnimationGateTests.swift` from `14b75be` (38-line test suite covering settled/unsettled transitions)
 - [ ] `swift build && swift test` passes
 
 ### T-032: Fix fenced code block rendering in chat view
@@ -611,7 +615,7 @@
 - [ ] Explicitly activate + unhide Terminal.app in Swift before AppleScript runs so hidden windows come to front
 - [ ] Coordinate with T-020 (broader terminal activation overhaul) — both touch `TerminalActivator.swift`; port T-039 first as it is narrower
 - [ ] Verify with multiple Terminal.app windows open simultaneously: clicking a session card focuses the correct window, not an arbitrary one (regression scenario from upstream issue #179, May 15 2026)
-- [ ] Wrap each window's `tabs of w` access in its own `try` in all three AppleScript matching strategies — Terminal.app can expose invisible utility windows with no tabs; accessing their `tabs` property raises error -10000 and aborts the entire `tell` block, preventing all subsequent windows from being searched (upstream PR #295, open Aug 3, 2026 — gate: include when PR merges)
+- [ ] Wrap each window's `tabs of w` access in its own `try` in all three AppleScript matching strategies — Terminal.app can expose invisible utility windows with no tabs; accessing their `tabs` property raises error -10000 and aborts the entire `tell` block, preventing all subsequent windows from being searched (upstream PR #295 MERGED as `7694150` v1.0.32, Aug 15, 2026)
 - [ ] `swift build && swift test` passes
 
 ### T-040: Port tool_use_id deduplication cache to fix burst PermissionRequest rejection
@@ -938,6 +942,18 @@
 - [ ] Add `claudeConfigDir` String key to `Settings.swift`; add a "Claude config directory" text field to Settings (General or Behavior page) with placeholder `~/.claude`; clearing it resets to auto-detect
 - [ ] Port `ClaudeConfigPathsTests.swift` (16+ test cases from upstream) including `~/.config/claude` priority ordering
 - [ ] Verify: set preference to a temp dir with projects; confirm sessions appear; verify empty field defaults to `~/.claude`
+- [ ] `swift build && swift test` passes
+
+### T-080: Opt-in: keep panel collapsed when permission arrives while another app is focused
+> `PermissionRequest` auto-expands the notch panel even when the user is working in a different app. Smart Suppress only applies when the agent's own terminal is frontmost — all other contexts still get the panel thrown in their face. Upstream fix: `autoExpandOnPermission` Bool setting (default `true`). When off, the island stays collapsed; the event sound plays and the session-list badge fires so the request is still discoverable, but focus is never stolen.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `94fa443` (v1.0.32, Aug 15, 2026) — fixes upstream issue #292
+#### Criteria
+- [ ] `Sources/CodeIsland/Settings.swift`: add `autoExpandOnPermission` key (Bool, default `true`) and `SettingsDefaults.autoExpandOnPermission = true`
+- [ ] `Sources/CodeIsland/AppState.swift`: in the PermissionRequest auto-expand path, add `Self.autoExpandOnPermission()` guard before `shouldAutoOpenPendingSurface(for:)` — ~3 lines
+- [ ] `Sources/CodeIsland/SettingsView/BehaviorSettingsView.swift` (or equivalent Behavior settings page): add `BehaviorToggleRow` for the new toggle with label "Auto-Expand on Approval" and description "Expand the panel when an approval is requested. Turn off to keep the island collapsed — the sound still plays and the card is one click away."
+- [ ] Verify: with toggle off, an incoming PermissionRequest does not expand the collapsed island; session badge increments; clicking the island manually reveals the card
 - [ ] `swift build && swift test` passes
 
 ## Doing

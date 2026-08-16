@@ -1192,6 +1192,23 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **One new task (T-084 — trackpad gestures, watch for PR #314 merge).** All other open tasks (T-016 through T-083) remain as previously documented.
 
+**Scouted (August 16, 2026) — v1.0.32 activity:**
+- v1.0.32 released 2026-08-15 — large batch of 19 commits; examined via `git fetch upstream --tags` (GitHub API scoped to our fork only)
+- **`14b75be`**: "perf(idle): gate animation when island is collapsed and all sessions idle (#299)" — new `isIdleSettled` Bool in `MascotAnimationGate`; stops all `TimelineView` loops when island is hidden/collapsed AND all sessions are idle; layout-dispatch coalescing via `pendingConstraintsValue`/`pendingLayoutValue` in `NotchHostingView` prevents per-frame main-queue floods; lazy `runningBundleIds()` skips XPC call when no native-app sessions present; reduces sustained idle CPU 10% → ~1%. New `MascotAnimationGateTests.swift`. **Upstream fix for T-033** — supersedes prior criteria (poll-interval reduction alone was insufficient) → **T-033 source updated to `14b75be` (v1.0.32); criteria overhauled** (see kanban)
+- **`30441c1`**: "fix(activator): route TERM_PROGRAM=zed to Zed IDE window and skip Orca/Hermes from ancestry" — adds `termProgramToIDEBundleId: [String: String] = ["zed": "dev.zed.Zed"]`; when `TERM_PROGRAM` matches, calls `activateIDEWindow(bundleId:cwd:)` directly instead of ancestry walk; prevents Orca/Hermes CLIs from being mis-identified as terminals in `inferSource()`. Upstream fix for **T-082** (Zed) and partially T-064 (ancestry inference). **T-082 gate cleared** → promote to implement; T-064 already fixed for Cursor/Trae in v1.0.28 (`77e8c58`), Orca exclusion is additive
+- **`94fa443`**: "feat(behavior): opt-in auto-expand panel on permission request (#292)" — new `autoExpandOnPermission: Bool` setting (default `true`); guard added before PermissionRequest auto-expand in `AppState.swift`; sound + badge still fire when toggle is off; also bundles monochrome `StatusItemImage` for menu bar icon. Upstream implementation of **T-080** → **T-080 source + criteria updated** (gate: none; implement now)
+- **`00caa11`**: "fix(panel): clamp panel window height to screen (#304)" — `min(desiredH, screen.visibleFrame.height)` in `panelSize(for:)`. **PR #305 MERGED** → **T-081 gate cleared; source updated**
+- **`5b4d9f7`**: "fix(panel): route answers to the card's session, not the queue head (#308)" — `expectedSessionId` parameter added to all answer methods; `pendingPermission/Question(forSession:)` accessors; prevents wrong-session answer race. **PR #310 MERGED** → **T-083 gate cleared; source updated**
+- **`f20e25a`**: "fix(panel): don't let a dismissed approval silence later requests (#309/#311)" — decouples display gate from `permissionQueue.count == 1`; prerequisite for T-031 (Dismiss button). **PR #311 MERGED** → **T-031 gate criterion updated**
+- **`7694150`**: "fix(activator): guard Terminal.app tab enumeration against tab-less windows" — wraps each window's `tabs of w` in its own `try` to prevent -10000 abort. **PR #295 MERGED** → **T-039 gate criterion updated**
+- `0971ad3`, `d5fe917` (perf: universal MascotTimeline wrapper, 8fps idle cap) — merged into `14b75be` scope; covered by T-033 criteria update
+- `ee23ccf` (Smart Suppress always-surface AskUserQuestion) — only relevant when T-041 is implemented; noted in T-041 criteria
+- SSH remote commits (`66365ad`, `27837c0`), Codex commits (`dcc63be`, `d8ce338`, `55b7bc5`), iOS companion (`8a8ae68`, `d716c2b`), non-Claude CLIs (`b9105d1`, `8287a78`, `48f2cdc`, `ed6f1bb`) — skip
+- PR #314 (trackpad gestures, T-084): still open, watching; no change
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest code commit — upstream quiet for 30 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410); all tracking via kanban board only
+- **Key finding**: v1.0.32 delivered a major idle CPU fix (`14b75be`) reducing sustained energy impact 10% → ~1%. Six task gates cleared (T-081, T-082, T-083, T-039, T-031 criterion, T-080 criteria). Kanban updated with 8 changes; no GitHub issues created (issues disabled).
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
