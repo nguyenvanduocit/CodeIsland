@@ -1209,6 +1209,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410); all tracking via kanban board only
 - **Key finding**: v1.0.32 delivered a major idle CPU fix (`14b75be`) reducing sustained energy impact 10% → ~1%. Six task gates cleared (T-081, T-082, T-083, T-039, T-031 criterion, T-080 criteria). Kanban updated with 8 changes; no GitHub issues created (issues disabled).
 
+**Scouted (August 17, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); latest upstream commit remains `6eea9af` — upstream quiet for 2 days
+- **PR #315** (open, Aug 15): "feat: add DeepSeek Harness (DSH) support" — DeepSeek Harness is a non-Claude CLI; skip
+- PR #314 (open, Aug 14): "feat(notch): trackpad gestures, Space-swipe collapse, and motion/appearance controls" — T-084, still watching; no change
+- No new issues on wxtsky/CodeIsland since Aug 15 (most recent closed batch was part of v1.0.32 release on Aug 15)
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest code commit — upstream quiet for 31 days; nothing actionable
+- vibe-island issues #218 (Ghostty+tmux cross-session, Aug 14) and #219 (Cursor launch problem, Aug 14) already documented in Aug 14 scout; #218 reinforces T-055; #219 Cursor-specific, skip
+- ⚠️ GitHub Issues are **enabled** in `nguyenvanduocit/CodeIsland` but tracker shows 0 open issues — all tracking via kanban board only
+- **No new actionable items.** All open tasks (T-016 through T-084) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
