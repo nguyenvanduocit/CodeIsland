@@ -1219,6 +1219,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **enabled** in `nguyenvanduocit/CodeIsland` but tracker shows 0 open issues — all tracking via kanban board only
 - **No new actionable items.** All open tasks (T-016 through T-084) remain as previously documented.
 
+**Scouted (August 18, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); latest upstream commit remains `6eea9af` — upstream quiet for 3 days
+- **Issue #316** (open, Aug 17): "Codex MCP bootstrap fails when CodeIsland creates mismatched MCP server names" — Codex-specific (`mcp_servers` section in Codex TOML config); not applicable to our Claude Code-only fork; skip
+- PR #314 (open, Aug 14): "feat(notch): trackpad gestures, Space-swipe collapse, and motion/appearance controls" — T-084, still watching; no change
+- PR #315 (open, Aug 15): "feat: add DeepSeek Harness (DSH) support" — non-Claude CLI; skip
+- **PR #248 merged** (Aug 17): "fix(mascot): map cursor-cli and qoder-cli to correct mascots" — cursor-cli/qoder-cli are non-Claude CLIs; skip
+- vibeislandapp/vibe-island: `22c6f31` (Jul 17) remains the latest code commit — upstream quiet for 32 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
+- **No new actionable items.** All open tasks (T-016 through T-084) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
