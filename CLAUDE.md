@@ -1229,6 +1229,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
 - **No new actionable items.** All open tasks (T-016 through T-084) remain as previously documented.
 
+**Scouted (August 19, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); upstream HEAD confirmed still at `6eea9af` via git ls-remote — upstream quiet for 4 days
+- No new PRs (highest ref is still #315 from Aug 18, confirmed via git ls-remote)
+- PR #314 (open, Aug 14): "feat(notch): trackpad gestures, Space-swipe collapse, and motion/appearance controls" — T-084, still watching; no change
+- PR #315 (open, Aug 15): DeepSeek Harness — non-Claude CLI; skip (unchanged)
+- Issue #316 (open, Aug 17): Codex MCP bootstrap — Codex-specific; skip (unchanged)
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) — "docs: add security policy with dedicated contact" — docs only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-084) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
