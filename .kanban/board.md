@@ -1,7 +1,18 @@
 # Kanban Board
-<!-- Updated: 2026-08-16 -->
+<!-- Updated: 2026-08-20 -->
 
 ## Backlog
+
+### T-085: Add SoundManager injectable test seam
+> `SoundManager` has no test coverage (99 lines, zero assertions). Upstream adds `var playSink: ((String) -> Void)?` + private `emit(_:)` wrapper so tests can record what sounds fire without playing audio. New `SoundBehaviourTests.swift` pins two regressions: burst of 3 approvals plays exactly one chime; dismissed request doesn't swallow the next session's chime (T-031 regression).
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `5209423` (v1.0.32, Aug 15, 2026) — missed from Aug 16 scout; SSH remote portions of the same commit are skipped
+#### Criteria
+- [ ] Add `var playSink: ((String) -> Void)?` to `SoundManager`
+- [ ] Add `private func emit(_ soundName: String)` — delegates to `playSink` when set, otherwise calls existing `play(_:)`; replace all internal `play(...)` call sites with `emit(...)`; leave `preview`/`previewCustom` calling `play(...)` directly (those are UI button sounds, not event-triggered sounds)
+- [ ] Port `SoundBehaviourTests.swift` — skip any assertions referencing `TaskRoundComplete` (Cline-specific event not in our model)
+- [ ] `swift build && swift test` passes
 
 ### T-084: Trackpad gesture support for notch panel
 > Add configurable trackpad swipe gestures: swipe up to open, down to close, left/right to cycle filter modes. Includes hover-open toggle + delay slider, haptic feedback on hover, and invert-swipe setting. Pure `NotchGestureInterpreter` accumulates physical trackpad deltas and emits actions at threshold; `NotchGesturePolicy` guards valid actions per surface state.

@@ -1239,6 +1239,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-084) remain as previously documented.
 
+**Scouted (August 20, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); upstream HEAD remains `6eea9af` — upstream quiet for 5 days
+- **⚠️ Missed from Aug 16 scout**: `5209423` (Aug 15, v1.0.32 batch): "fix(remote): surface remote Codex approvals; give sound behaviour a test seam" — SSH remote Codex part: skip; Sound part: `SoundManager.swift` gains `var playSink: ((String) -> Void)?` injectable sink + `emit(_:)` wrapper; new `SoundBehaviourTests.swift` (174 lines) tests burst-suppression (3 queued approvals → 1 chime) and dismiss-no-swallow regression (#309); our `SoundManager.swift` has no test seam or coverage → **T-085** (new, low priority, XS; skip `TaskRoundComplete` Cline-specific assertions)
+- PR #314 (open, Aug 14): "feat(notch): trackpad gestures, Space-swipe collapse, and motion/appearance controls" — T-084, still watching; no change
+- PR #315 (open, Aug 15): DeepSeek Harness — non-Claude CLI; skip
+- Issue #316 (open, Aug 17): Codex MCP bootstrap — Codex-specific; skip
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) — "docs: add security policy with dedicated contact" — docs only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: issues are disabled (API returns 410) — all tracking via kanban board only
+- **One new task added (T-085 — SoundManager injectable test seam).** All other open tasks (T-016 through T-084) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
