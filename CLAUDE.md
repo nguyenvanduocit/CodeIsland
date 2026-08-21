@@ -1249,6 +1249,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: issues are disabled (API returns 410) — all tracking via kanban board only
 - **One new task added (T-085 — SoundManager injectable test seam).** All other open tasks (T-016 through T-084) remain as previously documented.
 
+**Scouted (August 21, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); upstream HEAD remains `6eea9af` — upstream quiet for 6 days
+- **PR #319** (open, Aug 19): "docs(readme): point star history chart at star-history.dera.page" — README docs only, 2 files, 12 insertions; skip
+- **Issue #320** (open, Aug 20): "Feature Request: Enable Interactive Agent Control from Code Island Buddy" — ESP32/BLE hardware companion Buddy feature request; out of scope; skip
+- **Issue #318** (open, Aug 19): "关于resume后显示多个会话和蓝牙buddy的问题" — duplicate sessions after `/resume` in **Grok** (non-Claude CLI) + Buddy BLE documentation request; Grok-specific, not applicable to our Claude Code-only fork; skip
+- **Issue #317** (open, Aug 18): "feature: 希望能支持 deepseek harness 的通知" — DeepSeek Harness notification support request; non-Claude CLI; skip
+- PR #314 (open, Aug 14): "feat(notch): trackpad gestures, Space-swipe collapse, and motion/appearance controls" — T-084, still watching; unchanged
+- PR #315 (open, Aug 15): DeepSeek Harness — non-Claude CLI; skip (unchanged)
+- **vibeislandapp/vibe-island issue #220** (open, Aug 19): "Hook binary silently quarantined by CrowdStrike Falcon EDR" — vibe-island bridge flagged as covert C2 because it connects to ngrok tunnels; our `codeisland-bridge` only connects to a local Unix socket (`/tmp/codeisland-<uid>.sock`) with no ngrok/outbound network, so the triggering heuristic does not apply; skip
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest commit — docs/security-policy only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-085) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
