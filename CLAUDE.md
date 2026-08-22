@@ -1249,6 +1249,13 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: issues are disabled (API returns 410) — all tracking via kanban board only
 - **One new task added (T-085 — SoundManager injectable test seam).** All other open tasks (T-016 through T-084) remain as previously documented.
 
+**Scouted (August 22, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); upstream HEAD remains `6eea9af` — upstream quiet for 7 days
+- No new PRs (highest ref still #319 from Aug 19, docs-only, already documented)
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest commit — docs/security-policy only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-085) remain as previously documented.
+
 **Scouted (August 21, 2026) — post-v1.0.32 activity:**
 - No new commits or releases since v1.0.32 (Aug 15); upstream HEAD remains `6eea9af` — upstream quiet for 6 days
 - **PR #319** (open, Aug 19): "docs(readme): point star history chart at star-history.dera.page" — README docs only, 2 files, 12 insertions; skip
