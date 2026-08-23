@@ -1249,6 +1249,14 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: issues are disabled (API returns 410) — all tracking via kanban board only
 - **One new task added (T-085 — SoundManager injectable test seam).** All other open tasks (T-016 through T-084) remain as previously documented.
 
+**Scouted (August 23, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); upstream HEAD remains `6eea9af` — upstream quiet for 8 days
+- No new PRs since #319 (Aug 19, docs-only); PR #314 (trackpad gestures, T-084) still open, not yet merged
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest commit — docs/security-policy only, nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
+- ⚠️ **Correction to Aug 17–22 scouts**: PR #285 ("fix: harden closed-subagent tombstones and kimi hooks status") was **MERGED** in v1.0.32 (Aug 15) as commit `feb520ea`, but scouts from Aug 17 through Aug 22 incorrectly reported it as "still open, watching." The merge was missed during the Aug 16 scout which noted T-049 criteria but did not mark the PR as merged. **T-049 criteria already updated** from the Aug 16 scout (256-item cap + O(1) lookup pattern); no new action needed.
+- **No new actionable items.** All open tasks (T-016 through T-085) remain as previously documented.
+
 **Scouted (August 22, 2026) — post-v1.0.32 activity:**
 - No new commits or releases since v1.0.32 (Aug 15); upstream HEAD remains `6eea9af` — upstream quiet for 7 days
 - No new PRs (highest ref still #319 from Aug 19, docs-only, already documented)
