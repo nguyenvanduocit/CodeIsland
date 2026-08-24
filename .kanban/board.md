@@ -1,7 +1,21 @@
 # Kanban Board
-<!-- Updated: 2026-08-20 -->
+<!-- Updated: 2026-08-24 -->
 
 ## Backlog
+
+### T-086: Herdr terminal multiplexer pane-jump support
+> Pane-precise click-to-jump for Claude Code sessions running inside the Herdr terminal multiplexer (similar to Zellij/WezTerm support in T-055). Preserves pane identity across restarts; falls back gracefully when Herdr routing unavailable.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #323 (open, Aug 23, 2026) — gate: wait for PR #323 to merge into upstream/main before implementing
+#### Criteria
+- [ ] Gate: wait for PR #323 to merge
+- [ ] Identify Herdr pane identity env vars (likely `HERDR_PANE_ID` or similar) and capture in `CodeIslandBridge/main.swift` alongside existing `ZELLIJ_PANE_ID`/`WEZTERM_PANE` captures
+- [ ] Port `activateHerdr()` to `TerminalActivator.swift` using the same pattern as `activateZellijFamily()` / `activateWeztermFamily()`
+- [ ] Add `isHerdrPaneActive()` to `TerminalVisibilityDetector.swift` for smart suppression
+- [ ] Persist Herdr pane identity in `SessionPersistence.PersistedSession` alongside existing multiplexer fields
+- [ ] Skip: nested multiplexers, remote Herdr sessions, exact outer-terminal tab selection (out of scope in upstream's implementation)
+- [ ] `swift build && swift test` passes
 
 ### T-085: Add SoundManager injectable test seam
 > `SoundManager` has no test coverage (99 lines, zero assertions). Upstream adds `var playSink: ((String) -> Void)?` + private `emit(_:)` wrapper so tests can record what sounds fire without playing audio. New `SoundBehaviourTests.swift` pins two regressions: burst of 3 approvals plays exactly one chime; dismissed request doesn't swallow the next session's chime (T-031 regression).

@@ -1277,6 +1277,16 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-085) remain as previously documented.
 
+**Scouted (August 24, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); latest upstream commit remains `6eea9af` — upstream quiet for 9 days
+- **PR #323** (open, Aug 23): "feat: add Herdr pane focus support" — Herdr is a terminal multiplexer (similar to tmux/Zellij); PR adds pane-precise jumping: preserves pane, socket, executable identity across restarts; focuses exact live agent pane before raising hosting terminal; falls back to existing activation when Herdr routing unavailable/stale. Previously tracked in issue #239 (wxtsky, Jun 22) as "niche multiplexer, no implementation, skip"; now has concrete implementation → **T-086** (new, low priority, S; gate: wait for PR #323 to merge)
+- **PR #322** (open, Aug 22): "fix: localize reply-complete placeholder via L10n instead of hardcoded Chinese" — L10n fix; we don't ship L10n; skip
+- **Issue #321** (open, Aug 22): "Feature Request: T3 Code Harness Support" — non-Claude CLI; skip
+- **vibeislandapp/vibe-island issue #222** (open, Aug 21, updated Aug 23): "Usage bar shows another provider's quota when Claude Code uses a setup token" — vibe-island's usage feature reads Keychain and silently falls back when setup token is used via env var; our planned T-073 approach reads JSONL transcripts directly (no API/Keychain), so the credential fallback issue does not apply; T-073 criteria already captures multi-account scope concerns; no new task
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest code commit — upstream quiet for 5 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **One new task added (T-086 — Herdr multiplexer watch).** All other open tasks (T-016 through T-085) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
