@@ -1287,6 +1287,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **One new task added (T-086 — Herdr multiplexer watch).** All other open tasks (T-016 through T-085) remain as previously documented.
 
+**Scouted (August 26, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); latest upstream commit remains `6eea9af` — upstream quiet for 11 days
+- **PR #325** (open, Aug 25): "feat(question-card): click the session row to focus the asking terminal" — extends click-to-jump from approval cards (T-036) to question cards; extracts shared `startNotchCardJump(kind:session:sessionId:appState:autoCollapseAfterJump:shakeOffset:)` helper from `ApprovalBar.handleCardClick()`; wires `QuestionBar` with `session`/`sessionId`/`appState`; session-identity row (CLI icon + project folder) becomes tappable with hover highlight + ↗ glyph; remote sessions hide affordance; Auto-Collapse after jump folds panel but question stays queued; new tests: `NotchCardKind.matches`, `testCollapsingAQuestionCardAfterAJumpKeepsItAnswerable`; files: `QuestionBar.swift`, `NotchPanelView.swift`, shared jump helper. Not yet merged → **T-088** (new, medium priority, S; gate: wait for PR #325 to merge; depends on T-036)
+- **PR #326** (open, Aug 25): "feat(badge): show the multiplexer a session runs in next to the terminal name" — new `multiplexerLabel: String?` computed property on `SessionSnapshot`; reads `termApp`, `tmuxEnv`/`tmuxPane`, `zellijPaneId`/`zellijSessionName`; returns `"tmux"` or `"zellij"` (innermost when nested), nil for plain terminals; cmux excluded (already the terminal name); Screen not covered (`STY` never captured); `TerminalBadge` chip rendered after terminal name in session list; tests: `SessionMultiplexerLabelTests`. Not yet merged → **T-087** (new, low priority, XS; gate: wait for PR #326 to merge; depends on T-055 for env vars)
+- PR #323 (open, Aug 23): "feat: add Herdr pane focus support" — T-086, still watching; no change
+- PR #315 (open, Aug 15): DeepSeek Harness — non-Claude CLI; skip (unchanged)
+- Issue #316 (open, Aug 17): Codex MCP bootstrap — Codex-specific; skip (unchanged)
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest code commit — upstream quiet for 38 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Two new tasks added (T-087 — multiplexer badge chip, T-088 — question card click-to-jump).** All other open tasks (T-016 through T-086) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

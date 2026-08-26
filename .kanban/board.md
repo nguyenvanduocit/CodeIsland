@@ -1,7 +1,39 @@
 # Kanban Board
-<!-- Updated: 2026-08-24 -->
+<!-- Updated: 2026-08-26 -->
 
 ## Backlog
+
+### T-088: Click question card to jump to asking terminal
+> Extend the click-to-jump affordance from approval cards (T-036) to question cards. Session-identity row in `QuestionBar` becomes a tappable jump target with hover highlight and ↗ glyph; panel folds on jump (Auto-Collapse on) but question stays queued and answerable (distinct from Skip/deny).
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #325 (open, Aug 25, 2026) — gate: wait for PR #325 to merge into upstream/main before implementing
+#### Criteria
+- [ ] Gate: wait for PR #325 to merge
+- [ ] Implement T-036 first (shared jump helper is extracted there; T-088 reuses it)
+- [ ] Wire `QuestionBar.swift` with `session`, `sessionId`, and `appState` parameters (matching the `ApprovalBar` update in T-036)
+- [ ] Make session-identity row (CLI icon + project folder name) in `QuestionBar` tappable: hover highlight + ↗ glyph
+- [ ] On tap: call shared `startNotchCardJump(kind:session:sessionId:appState:autoCollapseAfterJump:shakeOffset:)` helper with `.question` kind
+- [ ] Remote sessions: hide jump affordance (remote jump not supported)
+- [ ] Auto-Collapse After Jump on: fold panel after jump but leave question in queue (do NOT drain/skip the question)
+- [ ] Add `NotchCardKind.question` case (alongside `.permission`) to the shared enum
+- [ ] Port tests: `testCollapsingAQuestionCardAfterAJumpKeepsItAnswerable` (confirm question survives collapse after jump)
+- [ ] `swift build && swift test` passes
+
+### T-087: Show multiplexer badge chip on session cards
+> Display a small "tmux" or "zellij" chip after the terminal name on session cards when a Claude Code session runs inside a terminal multiplexer. Computed from env vars already captured by the bridge; helps users distinguish multiplexed sessions at a glance.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland PR #326 (open, Aug 25, 2026) — gate: wait for PR #326 to merge; depends on T-055 (multiplexer env vars captured in bridge)
+#### Criteria
+- [ ] Gate: wait for PR #326 to merge
+- [ ] Implement T-055 first (env vars `ZELLIJ_PANE_ID`, `ZELLIJ_SESSION_NAME`, `WEZTERM_PANE`, `TMUX`/`TMUX_PANE` stored in `SessionSnapshot`)
+- [ ] Add `multiplexerLabel: String?` computed property to `SessionSnapshot` — reads stored env vars; returns `"tmux"` or `"zellij"` (innermost when nested), `nil` for plain terminals
+- [ ] cmux excluded from label (cmux is already shown as the terminal name — avoids double-render)
+- [ ] Screen multiplexer excluded (`STY` env var not captured by bridge; document this gap)
+- [ ] Render `TerminalBadge` chip in `SessionListView.swift` or `NotchPanelView.swift` after terminal name, using the same chip style as existing session badges
+- [ ] Port test: `SessionMultiplexerLabelTests` — nil for plain terminal, "tmux" when `TMUX` set, "zellij" when `ZELLIJ_PANE_ID` set, "zellij" (innermost) when both set
+- [ ] `swift build && swift test` passes
 
 ### T-086: Herdr terminal multiplexer pane-jump support
 > Pane-precise click-to-jump for Claude Code sessions running inside the Herdr terminal multiplexer (similar to Zellij/WezTerm support in T-055). Preserves pane identity across restarts; falls back gracefully when Herdr routing unavailable.
