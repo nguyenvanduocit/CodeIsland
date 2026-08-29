@@ -1298,6 +1298,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Two new tasks added (T-087 — multiplexer badge chip, T-088 — question card click-to-jump).** All other open tasks (T-016 through T-086) remain as previously documented.
 
+**Scouted (August 29, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); latest upstream commit remains `6eea9af` — upstream quiet for 14 days
+- PR #326 (open, Aug 25): "feat(badge): show the multiplexer a session runs in next to the terminal" — T-087, still watching; no change
+- PR #325 (open, Aug 25): "feat(question-card): click the session row to focus the asking terminal" — T-088, still watching; no change
+- PR #323 (open, Aug 23): "feat: add Herdr pane focus support" — T-086, still watching; no change
+- PR #314 (open, Aug 14): trackpad gestures — T-084, still watching; no change
+- **Issue #328** (open, Aug 28): "点击「Always Allow」授权 codex_app 内置工具后，写入的配置会导致 Codex 的 config.toml 整体失效" — Codex-specific; not applicable to our Claude Code-only fork; skip
+- **Issue #327** (open, Aug 27): "Qoder 出了新版本 不兼容了" — Qoder new version incompatibility; non-Claude CLI; skip
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest code commit — upstream quiet for 41 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-088) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
