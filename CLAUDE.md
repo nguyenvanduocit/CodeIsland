@@ -1310,6 +1310,19 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-088) remain as previously documented.
 
+**Scouted (September 1, 2026) — post-v1.0.32 activity:**
+- No new commits or releases since v1.0.32 (Aug 15); latest upstream commit remains `6eea9af` — upstream quiet for 17 days
+- **PR #329** (open, Aug 29): "fix(codex): skip MCP approvals for servers with no declared transport (#328)" — adds `configDeclaresMCPServerTransport()` guard before persisting Always-Allow rules for Codex MCP tools lacking `command`/`url` fields; prevents `config.toml` corruption; **Codex-specific**, not applicable to our Claude Code-only fork; skip
+- **Issue #330** (open, Aug 31): "Code Island iOS App会话完成提醒问题" — iOS companion app Dynamic Island failing to update session count in real time; hardware/iOS companion; skip
+- PR #326 (open, Aug 25): "feat(badge): show the multiplexer..." — T-087, still watching; no change
+- PR #325 (open, Aug 25): "feat(question-card): click the session row..." — T-088, still watching; no change
+- PR #323 (open, Aug 23): "feat: add Herdr pane focus support" — T-086, still watching; no change
+- PR #314 (open, Aug 14): trackpad gestures — T-084, still watching; no change
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest code commit — upstream quiet for 43 days
+- vibeislandapp/vibe-island issues (Aug 21–26, missed in Aug 29 scout): #222 (usage bar multi-account, Aug 21, already documented in Aug 24 scout); #223 (Aug 24, feature: suppress sub-agent completion sounds — low priority UX, no upstream implementation; watch if T-049 sub-agent display is implemented); #224 (Cursor usage status stuck — Cursor-specific, skip); #225 (Codex TUI approval cards — Codex-specific, skip); #226 (Aug 26, usage tracking with SSH remote multi-account duplication — SSH remote feature not applicable to our fork; T-073 approach reads JSONL directly, not affected)
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-088) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
