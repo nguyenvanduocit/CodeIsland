@@ -1323,6 +1323,25 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-088) remain as previously documented.
 
+**Scouted (September 2, 2026) — v1.0.33 activity:**
+- v1.0.33 released 2026-09-01 — batch of 15 commits
+- **PR #325 MERGED** (`24f5671`, v1.0.33): "feat(question-card): click the session row to focus the asking terminal" — was watching; now merged → **T-088 gate cleared, moved to Todo**. Shared `startNotchCardJump(kind:session:sessionId:appState:autoCollapseAfterJump:shakeOffset:)` helper extracted from `ApprovalBar`; `NotchCardKind.matches` closes the #308-class hole (async jump landing after panel swapped cards); `testCollapsingAQuestionCardAfterAJumpKeepsItAnswerable` pins property that question survives collapse after jump. 314-line diff across `NotchPanelView.swift` + `QuestionBar.swift`.
+- **PR #326 MERGED** (`c349241`, v1.0.33): "feat(badge): show the multiplexer a session runs in next to the terminal" — was watching; now merged → **T-087 gate cleared, moved to Todo**. `multiplexerLabel: String?` computed property on `SessionSnapshot`; innermost-wins rule (zellij > tmux > herdr); cmux excluded; `SessionMultiplexerLabelTests` pins all cases.
+- **PR #323 MERGED** (`00582ff`, v1.0.33): "feat: add Herdr pane focus support" — was watching; now merged → **T-086 gate cleared, moved to Todo**. `HERDR_PANE_ID`/`HERDR_SOCKET_PATH`/`HERDR_BIN_PATH` captured in bridge; new `HerdrController.swift` (92 lines); `activateHerdrIfAvailable()` in `TerminalActivator.activate()`; focus failure falls back to `activate(allowHerdr: false)`.
+- **`c7d72fb`** (v1.0.33, follow-up): "fix(herdr): report Herdr as a multiplexer chip, not as the terminal" — PR #323 and #326 conflicted: #323 made `terminalName` return "Herdr" (replacing host terminal), while #326's rule says multiplexer chips *augment* the terminal name; fix restores Herdr to `multiplexerLabel` and `terminalName` to the host terminal (e.g., Ghostty); adds `hasHerdrRoute` predicate used by both badge and `shouldRoute` to prevent half-route misdirection → **T-086 criteria updated in kanban**
+- `0a0ab9e` fix(companion): iPhone approvals routing (#320) — iOS companion, skip
+- `f34fefe` fix(companion): compact Dynamic Island session end (#330) — iOS companion, skip
+- `b72a647` docs: Codex hook-review step (#324) — Codex-specific, skip
+- `3e2b467` fix(qoder): renamed Qoder IDE bundle (#327) — Qoder-specific, skip
+- `7c7e988` docs: Buddy hardware guide (#318) — docs/hardware, skip
+- `2ae7500` fix(codex): MCP approvals under declared server key (#316/#329) — Codex-specific, skip
+- `e139638` feat: DeepSeek Harness (DSH) support (#315) — non-Claude CLI, skip
+- `7ac515b` fix: localize reply-complete placeholder via L10n (#322) — our fork has no hardcoded Chinese `[回复完成]` string (grep confirmed); `replyCompletePlaceholder` parameter on `reduceEvent()` is still applicable if we ever need localized reply text → note for future
+- PR #314 (trackpad gestures, T-084): still open, unchanged
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest code commit — upstream quiet for 44 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **Three tasks promoted**: T-086, T-087, T-088 moved from Backlog to Todo (gates cleared). No new tasks.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
