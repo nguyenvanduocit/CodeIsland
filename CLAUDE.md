@@ -1342,6 +1342,13 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **Three tasks promoted**: T-086, T-087, T-088 moved from Backlog to Todo (gates cleared). No new tasks.
 
+**Scouted (September 3, 2026) — post-v1.0.33 activity:**
+- No new commits or releases since v1.0.33 (Sep 1); latest upstream commit remains `63013bf` — upstream quiet for 2 days
+- PR #314 (open, Aug 14): "feat(notch): trackpad gestures, Space-swipe collapse, and motion/appearance controls" — still open, T-084 unchanged
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) — "fix: enable diagnostic report uploads" — GitHub issue template + README docs only (ZIP upload field fix for bug report form); no app or release changes; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-088) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
