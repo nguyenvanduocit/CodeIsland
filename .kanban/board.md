@@ -1,7 +1,23 @@
 # Kanban Board
-<!-- Updated: 2026-09-02 -->
+<!-- Updated: 2026-09-04 -->
 
 ## Backlog
+
+### T-089: Show Claude rate-limit quota windows in the island (5h / weekly / weekly-per-model)
+> Claude Code has three hard rate-limit windows (5h, weekly all-models, weekly per-model) that stop long sessions without warning. PR #338 adds a live quota display: footer with progress bars + reset countdowns in expanded view; optional chip (ring + %) next to the mascot in collapsed state; auto-mode selects the "pressing" window automatically.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland PR #338 (open, Sep 3, 2026) — not yet merged; watch for merge
+#### Criteria
+- [ ] Gate: wait for PR #338 to merge into upstream/main before implementing
+- [ ] Port `ClaudeQuotaMonitor.swift` (new): reads Claude Code OAuth token from Keychain via `security find-generic-password` subprocess, fallback to `~/.claude/.credentials.json`; fetches `/api/oauth/usage` with `oauth-2025-04-20` beta header; parses 5h, weekly, weekly-per-model windows; token is read-only (never refreshed)
+- [ ] Refresh logic: event-driven off `Stop` hook with 15s coalescing; 60s throttle with trailing fetch; 10-min idle tick when chip is enabled; exponential backoff 60s→15min on errors; stop on 401/403
+- [ ] `NotchPanelView.swift` expanded: add quota footer line with per-window progress bar, percentage, and reset countdown; color by severity
+- [ ] `NotchPanelView.swift` collapsed: optional chip next to mascot showing pressing window label, ring visualization, and percentage; auto-mode cycles: off / auto / 5h / weekly / weekly-per-model
+- [ ] Auto-mode selection: window is "pressing" when used share > elapsed share OR ≥80%; 5h takes priority while pressing, otherwise tighter weekly window
+- [ ] `Settings.swift`: add `quotaChipMode` (off/auto/5h/weekly/weeklyModel, default auto) key
+- [ ] Port test suites: `ClaudeQuotaTests` (parsing, legacy fallback, pace calc, auto-mode rules), `ClaudeQuotaSchedulerTests` (debounce/throttle/backoff), `ClaudeQuotaMonitorTests` (use private UserDefaults suite to prevent Keychain access during tests)
+- [ ] `swift build && swift test` passes
 
 ### T-085: Add SoundManager injectable test seam
 > `SoundManager` has no test coverage (99 lines, zero assertions). Upstream adds `var playSink: ((String) -> Void)?` + private `emit(_:)` wrapper so tests can record what sounds fire without playing audio. New `SoundBehaviourTests.swift` pins two regressions: burst of 3 approvals plays exactly one chime; dismissed request doesn't swallow the next session's chime (T-031 regression).

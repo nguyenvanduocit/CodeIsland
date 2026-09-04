@@ -1349,6 +1349,17 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-088) remain as previously documented.
 
+**Scouted (September 4, 2026) — post-v1.0.33 activity:**
+- No new commits or releases since v1.0.33 (Sep 1); latest upstream commit remains `63013bf` — upstream quiet for 3 days
+- **PR #338** (open, Sep 3): "feat(quota): show Claude plan limits (5h / weekly / weekly per model) in the island" — new live quota display: reads Claude Code OAuth token from Keychain/`~/.claude/.credentials.json`, fetches `/api/oauth/usage` (beta header `oauth-2025-04-20`); expanded footer with progress bars + reset countdowns per window; collapsed chip showing pressing window ring + %; auto-mode selects pressing window automatically; event-driven refresh with 15s coalescing + exponential backoff; 4 new test suites (960 tests total). Highly relevant for Claude Code users. Not yet merged → **T-089** (new, medium priority, M; gate: wait for PR #338 to merge)
+- **PR #337** (open, Sep 3): "Add configurable island open/close speed" — 0.5×–2.0× animation speed slider split from PR #314; defaults to 1.0× (0.42s open / 0.38s close); VoiceOver accessible; 26 tests. Low-priority UX improvement. Not yet merged → watch for merge alongside T-084 (PR #314), no separate task for now
+- **Issue #336/#335** (open/closed, Sep 3): AiWork GUI/CLI support — non-Claude CLI; skip
+- **Issue #334** (open, Sep 2): Trae work cn support — non-Claude CLI; skip
+- **Issue #333** (open, Sep 2): "Multi-session cross-talk" — user reports responses from two Claude API chat sessions getting mixed up; appears to be a Claude Desktop/API-level issue, not a CodeIsland state bug; no upstream fix proposed; skip
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) — "fix: enable diagnostic report uploads" — docs/form only; already documented in Sep 3 scout; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **One new task added (T-089 — Claude quota limit windows display).** PR #337 noted, watching alongside T-084. All other open tasks (T-016 through T-088) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
