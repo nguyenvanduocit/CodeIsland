@@ -1360,6 +1360,28 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **One new task added (T-089 — Claude quota limit windows display).** PR #337 noted, watching alongside T-084. All other open tasks (T-016 through T-088) remain as previously documented.
 
+**Scouted (October 1, 2026) — v1.0.34 + v1.0.35 activity:**
+- v1.0.34 released 2026-09-23; v1.0.35 released 2026-09-24
+- **PR #338 MERGED** (`b4bc98a`, v1.0.34): "feat(quota): show Claude plan limits in the island" — was watching; now merged → **T-089 gate cleared; promote to Todo**. Reads OAuth token from `~/.claude/.credentials.json` or Keychain; fetches `/api/oauth/usage` (beta header); 5h/weekly/weekly-per-model windows; progress bars + reset countdowns; collapsed chip; 15s coalesced refresh + exponential backoff; 960 tests
+- **PR #337 MERGED** (`13aa201`, v1.0.34): "feat(animation): configurable open/close speed 0.5×–2.0×" — was watching alongside T-084; now merged → **T-094** (new, low priority, S): `animationSpeed` key in Settings (default 1.0); `NotchAnimation.swift` reads multiplier; 26 tests
+- **`95fb6f0`** (v1.0.34): "fix(question): remove unconditional .onAppear focus assignment" — removes `isFocused = true` from `QuestionBarView.onAppear`; previously stole keyboard focus from every app on first panel open; condition now only focuses when explicitly requested → **T-091** (new, high priority, XS)
+- **`19188e2`** (v1.0.34): "fix(question): key answer state by (sessionId, questionIndex) not question text" — `@State` bindings indexed by question text broke when two questions shared the same text; fix uses stable `(sessionId, Int)` tuple key → **T-096** (new, high priority, XS)
+- **`1cecfc5`** (v1.0.34): "fix(drain): scope permission/question drains to agent_id, not session_id alone" — background subagents share `session_id` with parent but have unique `agent_id`; draining by session_id only incorrectly dismissed sibling agents' pending requests → **T-093** (new, high priority, S)
+- `2d0a3c4` (v1.0.34): fix(codex): Codex Desktop bundle handling — Codex-specific; skip
+- `e5f7b09` (v1.0.34): fix(ssh): SSH remote reconnect timeout — SSH remote; skip
+- **`167eaff` + `380fb20`** (v1.0.35): "fix(activator): replace NSAppleScript with osascript subprocess" — `NSAppleScript` is main-thread-only per Apple docs; all `TerminalActivator` calls were running off main thread (dispatch queues in `activate()`), causing intermittent hangs and test failures; fix replaces all `NSAppleScript(source:)` calls with `/usr/bin/osascript` via `ProcessRunner` (bounded 10s timeout, stderr captured for debugging); thread-safe + testable → **T-090** (new, high priority, S)
+- **`1cadc9e`** (v1.0.35): "fix(reducer): skip slash commands in UserPromptSubmit" — `/model`, `/clear`, `/compact`, `/effort` emit `<command-name>` rows in transcripts with `isMeta: false`; `UserPromptSubmit` reducer was treating them as real user prompts, inflating session prompt counts and showing stale prompt text in the UI; fix adds `isMeta` guard → **T-092** (new, high priority, XS)
+- **`d2a15bb` + `9da78f5` + `dd0fc48` + `07a92b4`** (v1.0.35): "fix(markdown): four rendering bugs" — (1) fenced code blocks with language tag: language merged into first line; (2) inline code in headers stripped; (3) blockquotes lose `>` marker; (4) bullet list items lose leading `•`; same bugs confirmed in our `ChatMessageTextFormatter.swift` → **T-095** (new, medium priority, S); note: T-032 (earlier fenced code fix `cf9fb81`) covers only part of these
+- **`aa82246` + `e48b444` + `c0c6e34`** (v1.0.35): "fix(display): compact bar title length cap, tooltip cleanup, completion card sizing" — (1) compact bar center text `ToolNameDisplay.compact()` applies 24-char cap (T-069 referenced earlier but covers only the `ToolNameDisplay` helper, not the 3 additional display fixes here); (2) tooltip text trimming removes trailing whitespace/newlines that caused blank-line artifacts; (3) completion card min-height guard prevents single-line cards from collapsing to 0 → **T-097** (new, low priority, XS)
+- **`50aa3fd`** (v1.0.35): "fix(model): track model changes from PostToolUse events" — model field was only updated on `PreToolUse`; long multi-step tasks that switch models mid-session (e.g. sonnet → haiku for subagents) showed stale model in session card; fix adds model update path in `PostToolUse` reducer branch → **T-098** (new, medium priority, XS)
+- `8f2d8d0` (v1.0.35): "fix(persistence): restore sessions from disk on cold start" — `SessionPersistence.swift` fix; not immediately applicable (T-016 not yet implemented in our fork); add to T-016 criteria when implementing session persistence
+- `3b7a2e0` (v1.0.35): fix(codex): Codex plan mode question routing — Codex-specific; skip
+- `f91c4de` (v1.0.35): fix(ssh): SSH remote session identity — SSH remote; skip
+- PR #314 (open, Aug 14): trackpad gestures (T-084) — still open, still watching
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest code commit — upstream quiet for 43 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Nine new tasks added (T-090 through T-098). T-089 gate cleared.** T-016 persistence criteria updated.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

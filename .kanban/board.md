@@ -1,15 +1,119 @@
 # Kanban Board
-<!-- Updated: 2026-09-04 -->
+<!-- Updated: 2026-10-01 -->
 
 ## Backlog
 
+### T-098: Fix model tracking — keep reported model, follow /model switches including 1M context
+> `SessionSnapshot.model` is overwritten by each `PreToolUse` event's `metadata.model`, causing the displayed model to flicker between tool calls. Separately, `/model` slash-command switches (including new `claude-opus-4-5-20251101:1m` 1M-context variants) are not tracked because the compact bar does not update on model-change events.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `50aa3fd` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] In `reduceEvent()` / `PreToolUse` branch: only update `session.model` when the incoming value differs and is not nil; do not overwrite a model set by a `UserPromptSubmit` or `Stop` event with an empty string from a tool-use metadata field
+- [ ] Track model from `/model` command events in the `UserPromptSubmit` handler when the prompt text matches `^/model\s+(.+)$`
+- [ ] Recognise `1m` context suffix in model identifiers (e.g. `claude-opus-4-5-20251101:1m`) — do not strip it from display name
+- [ ] `swift build && swift test` passes
+
+### T-097: Fix island display issues — compact bar title cap, tooltip cleanup, completion card sizing
+> Three small display bugs in `NotchPanelView.swift` identified in v1.0.35: (1) the compact bar's project-name title can overflow on short project names; (2) session card tooltips accumulate stale tool-name suffix after the tool completes; (3) completion cards with very long "reply" text overflow the fixed card height.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commits `aa82246` + `e48b444` + `c0c6e34` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] `aa82246`: compact bar title — cap project name to `ToolNameDisplay.compactMaxCharacters` (T-069 introduces this helper; port T-069 first)
+- [ ] `e48b444`: tooltip cleanup — clear `toolDescription` from `SessionSnapshot` when `PostToolUse` fires (not just on `Stop`); prevents stale "tool: X" suffix in session card tooltip after tool completes
+- [ ] `c0c6e34`: completion card reply — wrap reply text with `lineLimit(3)` and `.truncationMode(.tail)` in `CompletionQueueView` to prevent card height explosion on long AI replies
+- [ ] `swift build && swift test` passes
+
+### T-096: Fix question answer state keying — @State answer not tied to request ID
+> `QuestionBarView` holds answer text and multi-select state in `@State` properties with no binding to the request's identity. Rapidly switching between sessions A and B before submitting causes SwiftUI to reuse the view without resetting `@State`, so the answer text typed for A is submitted to B's question.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `19188e2` (v1.0.34, Sep 23, 2026) — fixes multi-session answer contamination
+#### Criteria
+- [ ] In `QuestionBarView`: add a `.id(request.id)` modifier (using `QuestionRequest.id` or the underlying `AskUserQuestion` event's `toolUseId`) so SwiftUI destroys and recreates the view (resetting `@State`) whenever the displayed request changes
+- [ ] Verify: in a 2-session setup with simultaneous questions, typing answer for session A then quickly clicking session B's question card does NOT pre-fill B's answer text field with A's answer
+- [ ] `swift build && swift test` passes
+
+### T-095: Fix four markdown rendering bugs in ChatMessageTextFormatter
+> v1.0.35 lands four targeted fixes: (1) bold/italic inside backtick spans rendered as raw syntax, (2) double blank lines collapsed to single, (3) numbered list items re-numbered from 1 even when source starts at 3, (4) nested blockquotes emit extra leading `>`. All four confirm bugs in our `ChatMessageTextFormatter.swift`.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `d2a15bb` + `9da78f5` + `dd0fc48` + `07a92b4` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] `d2a15bb`: inline code spans — when rendering a backtick-delimited span, strip the `*` / `_` characters from the interior and render as literal code (bold/italic has no meaning inside code)
+- [ ] `9da78f5`: double blank lines — preserve two consecutive `\n\n` pairs as a visual paragraph break (currently collapsed to one `\n` in the attributed string pipeline)
+- [ ] `dd0fc48`: list item numbering — detect when the first item in an ordered list has a number > 1 and start the counter from that number rather than always from 1
+- [ ] `07a92b4`: nested blockquotes — a `>>` nested quote should produce exactly one extra indent level (two `AttributedString` segments), not insert a literal `>` prefix before the inner content
+- [ ] Add a test per fix in `ChatMessageTextFormatterTests.swift`
+- [ ] `swift build && swift test` passes
+
+### T-094: Add configurable panel animation speed (0.5× – 2.0×)
+> The notch panel open/close animation speed is hardcoded. Upstream adds a 0.5× – 2.0× slider in Settings → Appearance, defaulting to 1.0× (0.42 s open / 0.38 s close). Useful for users who find the default animation too slow (accessibility) or too fast.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `13aa201` (v1.0.34, Sep 23, 2026) — extracted from PR #337 (merged alongside T-089 / PR #338)
+#### Criteria
+- [ ] `Settings.swift`: add `animationSpeedMultiplier` Double key (default 1.0, range 0.5–2.0)
+- [ ] `NotchAnimation.swift` (or wherever open/close animation durations are defined): multiply base durations (0.42 s / 0.38 s) by `animationSpeedMultiplier` from settings
+- [ ] Settings → Appearance page: add "Animation Speed" slider (0.5× – 2.0× range, 0.1 step)
+- [ ] Setting persisted via UserDefaults and applied at runtime without restart; preview animation plays on slider interaction
+- [ ] `swift build && swift test` passes
+
+### T-093: Fix permission/question drain scoped to session_id only — misses agent_id
+> Background subagents (Task tool) share the parent's `session_id` but each has a unique `agent_id`. `drainPermissions(forTrackingKey:)` / `drainQuestions(forTrackingKey:)` drain ALL agents sharing a session_id. Sibling background agents' pending cards disappear silently when any event arrives for the session.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `1cecfc5` (v1.0.34, Sep 23, 2026)
+#### Criteria
+- [ ] Confirm `agentId` field is present in `EventMetadata` / `HookEvent` (check `Sources/CodeIslandCore/Models.swift`); add it if absent and update bridge `main.swift` to forward `CLAUDE_AGENT_ID` env var
+- [ ] `RequestQueueService.swift`: add `agentId: String?` parameter to `drainPermissions(forTrackingKey:agentId:)` and `drainQuestions(forTrackingKey:agentId:)`; when non-nil, only drain items whose stored `agentId` matches
+- [ ] Update `AppState.swift` call sites (lines 274–275, 459–460) to pass `agentId` from the triggering event
+- [ ] Verify: two concurrent background subagents each with a pending PermissionRequest; `PostToolUse` for agent A drains only A's request; agent B's card remains visible
+- [ ] `swift build && swift test` passes
+
+### T-092: Fix slash commands (/model, /clear, /compact) wrongly treated as new user prompts
+> Claude Code slash commands like `/model`, `/clear`, `/compact`, `/effort` write `<command-name>` rows to the transcript with `isMeta: false`. Our `UserPromptSubmit` handler treats them as real user prompts, clearing recap state unnecessarily and flipping session status incorrectly.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `1cadc9e` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] In `reduceEvent()` / `UserPromptSubmit` branch (`Sources/CodeIslandCore/SessionSnapshot.swift`): detect `<command-name>` message type OR a prompt string starting with `/` followed by a known command name (`model`, `clear`, `compact`, `effort`); when detected, skip recap-clearing and session status resets (treat as a no-op for state purposes)
+- [ ] `AppState.swift` prompt-display path: also skip these from the "last user prompt" display in the compact bar
+- [ ] Add tests: `UserPromptSubmit` with `/model claude-opus-4-5` does NOT reset `lastRecapAt`; `/clear` does NOT flip session to working; a genuine `"hello world"` prompt still resets state normally
+- [ ] `swift build && swift test` passes
+
+### T-091: Fix QuestionBarView stealing keyboard focus unconditionally on .onAppear
+> `QuestionBarView.onAppear { isFocused = true }` steals keyboard focus from the user's active editor or terminal every time a question card auto-expands. The island should only take focus when the user explicitly clicks into it.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `95fb6f0` (v1.0.34, Sep 23, 2026)
+#### Criteria
+- [ ] `Sources/CodeIsland/QuestionBarView.swift` (line 126): replace unconditional `isFocused = true` in `.onAppear` with a conditional: only set focus when `AppState.panelHasKeyboardFocus == true` (i.e., the user already clicked into the island)
+- [ ] `Sources/CodeIsland/AppState.swift`: add `@Published var panelHasKeyboardFocus: Bool = false`; set to `true` in the panel window's `windowDidBecomeKey` delegate; set to `false` in `windowDidResignKey`
+- [ ] Verify: auto-expanding question card (e.g. from Claude Code firing `AskUserQuestion` while user is in VS Code) does NOT steal focus from VS Code; typing continues in VS Code; user must click the island to interact with the question
+- [ ] `swift build && swift test` passes
+
+### T-090: Replace NSAppleScript with osascript subprocess (thread-safety fix)
+> `TerminalActivator.swift:229` uses `NSAppleScript` which is documented as main-thread-only. Running it off the main thread (as all terminal activation calls do) causes hangs, test failures, and occasional crashes under high concurrency.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `167eaff` + `380fb20` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Add `Sources/CodeIsland/AppleScriptRunner.swift` — `struct AppleScriptRunner` wrapping `/usr/bin/osascript` via `Process` with configurable timeout (default 5 s); runs on any thread safely; `TimeoutError` thrown on deadline exceeded
+- [ ] Replace all `NSAppleScript(source:)` call sites in `TerminalActivator.swift` with `AppleScriptRunner.run(_:timeout:)`
+- [ ] Add `ProcessRunner.runWithTimeout(_:timeout:)` helper if not already present (used by `AppleScriptRunner` internally)
+- [ ] All terminal activation calls (Ghostty, iTerm2, Terminal.app, Warp, etc.) remain functionally equivalent — same AppleScript payloads, same fallback behaviour on error
+- [ ] Port `AppleScriptRunnerTests.swift` — success path, timeout path, error path
+- [ ] `swift build && swift test` passes
+
 ### T-089: Show Claude rate-limit quota windows in the island (5h / weekly / weekly-per-model)
-> Claude Code has three hard rate-limit windows (5h, weekly all-models, weekly per-model) that stop long sessions without warning. PR #338 adds a live quota display: footer with progress bars + reset countdowns in expanded view; optional chip (ring + %) next to the mascot in collapsed state; auto-mode selects the "pressing" window automatically.
+> Claude Code has three hard rate-limit windows (5h, weekly all-models, weekly per-model) that stop long sessions without warning. Upstream adds a live quota display: footer with progress bars + reset countdowns in expanded view; optional chip (ring + %) next to the mascot in collapsed state; auto-mode selects the "pressing" window automatically.
 - **priority**: medium
 - **effort**: M
-- **source**: wxtsky/CodeIsland PR #338 (open, Sep 3, 2026) — not yet merged; watch for merge
+- **source**: wxtsky/CodeIsland PR #338 MERGED as `b4bc98a` (v1.0.34, Sep 23, 2026)
 #### Criteria
-- [ ] Gate: wait for PR #338 to merge into upstream/main before implementing
+- [ ] ~~Gate: wait for PR #338 to merge~~ **Gate cleared — PR #338 merged as `b4bc98a` in v1.0.34**
 - [ ] Port `ClaudeQuotaMonitor.swift` (new): reads Claude Code OAuth token from Keychain via `security find-generic-password` subprocess, fallback to `~/.claude/.credentials.json`; fetches `/api/oauth/usage` with `oauth-2025-04-20` beta header; parses 5h, weekly, weekly-per-model windows; token is read-only (never refreshed)
 - [ ] Refresh logic: event-driven off `Stop` hook with 15s coalescing; 60s throttle with trailing fetch; 10-min idle tick when chip is enabled; exponential backoff 60s→15min on errors; stop on 401/403
 - [ ] `NotchPanelView.swift` expanded: add quota footer line with per-window progress bar, percentage, and reset countdown; color by severity
