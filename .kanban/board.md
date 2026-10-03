@@ -1,7 +1,119 @@
 # Kanban Board
-<!-- Updated: 2026-10-01 -->
+<!-- Updated: 2026-10-03 -->
 
 ## Backlog
+
+### T-107: Dismiss a question card without answering it
+> Question cards have no way to dismiss them short of answering — Skip is itself an answer (sends a refusal to Claude). A Dismiss button closes the card like approval cards: the request stays queued, the agent keeps waiting, and the user can answer in the terminal or reopen from the badge. Not the same as T-057 (stuck panel after terminal answer) — this is a deliberate user-initiated dismiss.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland PR #352 (open, Sep 26, 2026) — not yet merged
+#### Criteria
+- [ ] Gate on T-031 (Dismiss for approval cards): reuse the same `dismissed` state pattern from `f20e25a`
+- [ ] `AppState.swift`: add `dismissedQuestionIds: Set<String>` (per request id, not per session); `dismissQuestion(requestId:)` method
+- [ ] `QuestionBar.swift`: add "Dismiss" button next to "Skip"; fires `dismissQuestion`; dismissed cards not shown by `showNextPending` or skip-shortcut; reminder system stops for dismissed items
+- [ ] `AppState.swift`: reopening (e.g. via badge click) calls `undismissQuestion(requestId:)` — takes the dismiss back
+- [ ] `AppState+CardShortcuts.swift`: keyboard shortcut for dismiss (same key as approval dismiss)
+- [ ] Add tests: dismiss removes card from queue view but keeps request alive; dismiss+reopen restores card; Skip still sends a refusal
+- [ ] `swift build && swift test` passes
+
+### T-106: Panel card flow fixes — completion fold, card stability, shortcut targeting
+> Four `AppState.swift` fixes from v1.0.35 that address card-flow races in our `CompletionQueueService` / `RequestQueueService`. We likely have the same bugs.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `d424ae6` + `3183e86` + `68f9da7` + `836d729` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] `d424ae6`: let a completion card fold while a hidden permission/question request is waiting — currently the two queues block each other; fix: `showNextOrCollapse()` only blocks if a request card is VISIBLE, not merely queued
+- [ ] `3183e86`: when the request queue re-evaluates (e.g. a new session arrives), keep whichever card the user currently has open rather than replacing it with the queue head — add a `currentlyShownRequestId` guard
+- [ ] `68f9da7`: keyboard shortcuts (Allow/Deny/Skip) act only on the card currently on screen; if the panel has a hidden waiting card, open it first instead of silently acting on an invisible one
+- [ ] `836d729`: when checking whether to auto-expand on question arrival, evaluate Smart Suppress at the point the card would open, not at the point it joins the queue — avoids a suppressed card expanding when another app yields focus
+- [ ] Add regression tests mirroring the 3 new `PanelCardFlowTests` + `CardShortcutTests` suites from upstream
+- [ ] `swift build && swift test` passes
+
+### T-105: Sound behavior improvements — auto-mute, skip boot jingle, error sound only on turn fail
+> Three sound improvements from v1.0.35: (1) auto-mute all event sounds when nobody is at the screen (screen lock / display sleep); (2) skip the startup jingle when the app is launched at login (NSApp.isRunningAtLoginItem); (3) ring the error jingle only when a whole turn fails, not on individual tool errors.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `b9905bd` + `5fbd2dc` + `ac4e0f2` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] `b9905bd`: new `SceneMuteState.swift` — `isAtScreen` Bool driven by `NSWorkspace` screen-lock and display-sleep notifications; `SoundManager.shouldPlaySound` gates on this; new `AwayMuteSoundTests`
+- [ ] `5fbd2dc`: in `AppDelegate.applicationDidFinishLaunching`: detect login-item launch (`NSApp.launchIsForBackground` or `ProcessInfo` arg); skip `SoundManager.playBoot()` in that case
+- [ ] `ac4e0f2`: new `EventSoundRouting.swift` — `shouldPlayErrorSound(for event:)` returns true only for `Stop` events where `isInterrupt == false` and the session was actively working; suppress error sound on tool-level `PreToolUse`/`PostToolUse` errors; adapt `TurnFailureSoundTests`
+- [ ] `swift build && swift test` passes
+
+### T-104: Show agent task checklist (TaskCreate/TaskUpdate) on session cards
+> New `AgentTaskList.swift` (515 lines) tracks Claude Code's TaskCreate/TaskUpdate checklist live on session cards, showing ⬜/🔵/✅ per item with progress fraction. Backfilled from JSONL transcripts on attach. Persisted across restarts. Subagent events routed away from parent card. 1531-line addition in core + 522-assertion test suite.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `f70e170` + `eb97257` + `ee81191` + fix commits `f124c7b`, `725d4a7`, `e72dc59`, `dd1c646`, `4a855ce` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Create `Sources/CodeIslandCore/AgentTaskList.swift` and `Sources/CodeIslandCore/AgentTaskParsing.swift` — skip Codex `update_plan`, Gemini `write_todos`, OpenCode `todowrite` branches; keep only Claude Code `TaskCreate`/`TaskUpdate` and `TodoWrite`
+- [ ] `SessionSnapshot.swift`: add `agentTaskList: AgentTaskList?` (transient, excluded from `CodingKeys`)
+- [ ] Reducer `PreToolUse` branch: feed `TaskCreate` input into `agentTaskList`; `PostToolUse` branch: feed `TaskUpdate` statusChange (park late PostToolUse until TaskCreate result arrives by tool-call id)
+- [ ] `JSONLTailer.swift`: delta rows carry the same `TaskCreate`/`TaskUpdate` events
+- [ ] `NotchPanelView.swift` session card: show progress fraction badge (e.g. "3/7") and collapsed checklist rows beneath session title; toggle visibility in Settings → Appearance
+- [ ] `f124c7b`: retire a task plan the agent stopped updating (grace period before showing "no active plan"); show no "doing X" tool label while idle
+- [ ] Port `AgentTaskListTests.swift` coverage; add Swift Testing `@Test` cases for Claude Code-specific tool names
+- [ ] `swift build && swift test` passes
+
+### T-103: Show model name and reasoning effort on session cards
+> Session cards now show a model badge (e.g. "claude-opus-5-5") and a reasoning-effort indicator (e.g. ":thinking") read from hooks and JSONL transcripts. New `AppState+SessionMetadata.swift` (109 lines) handles the metadata-reading logic. Opt-in toggle in Settings → Appearance.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `37709d3` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Create `Sources/CodeIsland/AppState+SessionMetadata.swift` — reads `metadata.model` and `metadata.reasoningEffort` from hook events; falls back to JSONL transcript `completion_params` row on attach
+- [ ] `SessionSnapshot.swift`: add `reasoningEffort: String?` field alongside existing `model: String?`
+- [ ] `NotchPanelView.swift` session card: show model badge chip (`claude-sonnet-4-5` → displayed as `sonnet-4-5`, strip `claude-` prefix); show reasoning-effort indicator when non-nil (e.g. a 🧠 badge or `:thinking` text)
+- [ ] `Settings.swift`: add `showModelBadge: Bool` (default `true`) and `showReasoningEffort: Bool` (default `true`)
+- [ ] `AppStateModelLabelTests.swift`: adapt 141-assertion test suite; cover prefix-stripping, effort parsing, and Settings toggle
+- [ ] `swift build && swift test` passes
+
+### T-102: Follow-up reminders for waiting approvals, questions and unseen completions
+> New `FollowUpReminderScheduler.swift` (248 lines) sends follow-up macOS notifications when: (1) a permission or question card has been visible > N minutes; (2) a completion card went unseen (user away). Uses `UNUserNotificationCenter`. Settings: enable/disable, first-reminder delay (default 2 min), repeat interval (default 5 min). Notification tap re-opens the card.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commit `ee9c531` + fix commits `e8d4bac`, `9597cf5`, `97f5c66`, `31d4509`, `9e3c9c9` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Create `Sources/CodeIslandCore/FollowUpReminderScheduler.swift` — pure logic (no UNUserNotificationCenter calls), schedule/cancel interface; injectable clock for tests
+- [ ] `AppState.swift`: wire scheduler to card show/dismiss/answer events; schedule a reminder when a card becomes visible; cancel when answered, dismissed, or panel opened; postpone when user is in front of screen (isFrontmostApp)
+- [ ] `AppDelegate.swift` / notification delegate: request `UNUserNotificationCenter` authorization; handle tap → bring island to front + open waiting card
+- [ ] `e8d4bac`: follow up a failed turn with the error sound, not the "done" sound — route through `EventSoundRouting`
+- [ ] `9597cf5`: only a pointer over the island itself counts as "reading" a card (not merely having the island visible)
+- [ ] `97f5c66`: let a reminder configured for "off-Mac" still reach the phone via push (T-101) when the user is away
+- [ ] `31d4509`: postpone (not silence) a reminder the user is in front of — reschedule after `repeatInterval`
+- [ ] `9e3c9c9`: key a waiting item's reminders to its request id, not session id — sibling requests get independent reminder schedules
+- [ ] Port `FollowUpReminderSchedulerTests.swift` (196 assertions) + `FollowUpReminderTests.swift` (394 assertions)
+- [ ] `swift build && swift test` passes
+
+### T-101: Push notifications — send approvals, questions and completions to phone/chat
+> New push notification system (`PushChannel.swift` 668 lines, `PushNotification.swift` 443 lines, `PushPolicy.swift` 240 lines, `PushTransport.swift` 141 lines). Supports Bark (iOS), ntfy, Telegram, and a generic webhook. Sends approval requests, question prompts, turn completions, and errors to configured channels. Settings page with per-channel test-send and delivery status. Phone answer routing for AskUserQuestion.
+- **priority**: medium
+- **effort**: L
+- **source**: wxtsky/CodeIsland commits `0d8580d` + `171b0dc` + `4a6e4b6` + `3014e6c` + fix commits (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Create `Sources/CodeIslandCore/PushChannel.swift`, `PushNotification.swift`, `PushPolicy.swift`, `PushTransport.swift`
+- [ ] Skip Claude Desktop Cowork push (`3014e6c`) until T-070 (Claude Desktop) is implemented
+- [ ] `PushPolicy.swift`: "send while away" policy (screen locked or displays asleep); "always send" for approvals/questions (user can't answer otherwise); throttle completions (max 1 per 30 s per session)
+- [ ] `PushTransport.swift`: fire-and-forget HTTPS POST; 5 s timeout; no redirect cross-host; redact credential shapes from failure log
+- [ ] Settings → Notifications page: per-channel enable/test-send; device key / topic URL fields; delivery status last-send timestamp
+- [ ] `AppState.swift`: hook push send into approval/question queue (after card is shown); hook into completion queue (after session stops)
+- [ ] Port `PushChannelPayloadTests.swift` (321 assertions) + `PushPolicyTests.swift` (346 assertions) + `PushSigningAndResponseTests.swift` (213 assertions)
+- [ ] `swift build && swift test` passes
+
+### T-100: Render assistant replies as block Markdown in completion cards
+> New `MarkdownBlockParser.swift` (680 lines) parses assistant replies into block-level elements (headers, paragraphs, fenced code blocks, blockquotes, tables, bullet/numbered lists). Replaces inline-only `AttributedString(markdown:)` in completion card view. Enables syntax highlighting in code blocks. New `MarkdownPreviewText.swift` (131 lines) for truncated preview in collapsed bar.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `f9a58ba` + `addfd2c` + `f70957e` (v1.0.35, Sep 24, 2026); note T-095 covers 4 specific bug fixes in the inline path — T-100 is the full block-level rewrite
+#### Criteria
+- [ ] Create `Sources/CodeIslandCore/MarkdownBlockParser.swift` — pure value-type parser; `MarkdownBlock` enum (heading/paragraph/codeBlock/blockquote/table/list); no UIKit/AppKit imports
+- [ ] Create `Sources/CodeIslandCore/MarkdownPreviewText.swift` — extract plain-text preview from first N blocks for compact bar display
+- [ ] `ChatMessageTextFormatter.swift`: route assistant reply bodies through `MarkdownBlockParser`; keep existing inline rendering as fallback for short single-paragraph replies
+- [ ] `NotchPanelView.swift` completion card (`f70957e`): render full reply using block parser; scrollable `LazyVStack` of block views; cap at 20 blocks with "… N more" footer
+- [ ] `CompletionQueueService.swift`: pass reply text through `MarkdownPreviewText` for compact bar center display
+- [ ] Port `MarkdownBlockParserTests.swift` (479 assertions) + `MarkdownPreviewTextTests.swift` (107 assertions)
+- [ ] `swift build && swift test` passes
 
 ### T-098: Fix model tracking — keep reported model, follow /model switches including 1M context
 > `SessionSnapshot.model` is overwritten by each `PreToolUse` event's `metadata.model`, causing the displayed model to flicker between tool calls. Separately, `/model` slash-command switches (including new `claude-opus-4-5-20251101:1m` 1M-context variants) are not tracked because the compact bar does not update on model-change events.
