@@ -1382,6 +1382,28 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Nine new tasks added (T-090 through T-098). T-089 gate cleared.** T-016 persistence criteria updated.
 
+**Scouted (October 3, 2026) — post-v1.0.35 catch-up (missed features from v1.0.35 batch):**
+- No new commits or releases since v1.0.35 (Sep 24); latest upstream commit remains `380fb20` — upstream quiet for 9 days
+- **⚠️ Oct 1 scout significantly under-captured v1.0.35 feature batch**: The Oct 1 scout documented only 9 tasks (T-090–T-098) from the v1.0.34 + v1.0.35 batch. A thorough re-examination of `git log v1.0.34..v1.0.35 --oneline` (60+ commits) revealed major new features not previously documented:
+- **`f70e170` + `eb97257` + `ee81191` + fix commits `f124c7b`, `725d4a7`, `e72dc59`, `dd1c646`, `4a855ce`** (v1.0.35): "feat(sessions): live agent task checklist from TaskCreate/TaskUpdate" — new `AgentTaskList.swift` (515 lines) + `AgentTaskParsing.swift`; tracks Claude Code's TaskCreate/TaskUpdate checklist live on session cards; ⬜/🔵/✅ per item with progress fraction; backfilled from JSONL transcripts on attach; persisted across restarts; 1531-line addition + 522-assertion test suite → **T-104** (new, medium priority, M)
+- **`37709d3`** (v1.0.35): "feat(sessions): show model name and reasoning effort on session cards" — new `AppState+SessionMetadata.swift` (109 lines); reads `metadata.model` + `metadata.reasoningEffort` from hooks and JSONL `completion_params` row; model badge chip (strips `claude-` prefix); reasoning-effort indicator; 141-assertion test suite; opt-in toggle in Settings → Appearance → **T-103** (new, medium priority, S)
+- **`ee9c531` + fix commits `e8d4bac`, `9597cf5`, `97f5c66`, `31d4509`, `9e3c9c9`** (v1.0.35): "feat(notifications): follow-up reminders for waiting approvals/questions/completions" — new `FollowUpReminderScheduler.swift` (248 lines); macOS notifications after N min; Settings: first-reminder delay + repeat interval; notification tap re-opens card; 196 + 394 assertion test suites → **T-102** (new, medium priority, M)
+- **`0d8580d` + `171b0dc` + `4a6e4b6` + `3014e6c` + fix commits`** (v1.0.35): "feat(push): push notifications to phone/chat (Bark, ntfy, Telegram, webhook)" — new `PushChannel.swift` (668 lines) + `PushNotification.swift` (443) + `PushPolicy.swift` (240) + `PushTransport.swift` (141); sends approvals, questions, completions to phone while user is away; Settings page with per-channel test-send and delivery status; `3014e6c` (Claude Desktop Cowork push) skip until T-070 implemented → **T-101** (new, medium priority, L)
+- **`6e2f5c0` + related commits`** (v1.0.35): "feat(completion): render assistant reply as block Markdown in completion cards" — new `AssistantReplyMarkdown.swift`; fenced code, headers, lists, blockquotes, inline code all rendered in completion card body; toggle in Appearance settings → **T-100** (new, medium priority, M)
+- **`d424ae6` + `3183e86` + `68f9da7` + `836d729`** (v1.0.35): "fix(cardflow): four panel card flow races" — completion fold while hidden request waiting; card stability on queue re-eval; keyboard shortcuts only act on visible card; Smart Suppress evaluated at card-open time not queue time → **T-106** (new, high priority, S)
+- **`b9905bd` + `5fbd2dc` + `ac4e0f2`** (v1.0.35): "fix(sound): auto-mute while away, skip boot jingle at login, error sound only on turn fail" — new `SceneMuteState.swift`; login-item launch detection; `EventSoundRouting.swift` scopes error sound to whole-turn failures → **T-105** (new, medium priority, S)
+- **PR #352** (open, Sep 26): "feat(question-card): dismiss a question card without answering" — adds "Dismiss" button to QuestionBar (not the same as PR #311's approval dismiss); dismissed state per request-id; badge click reopens; not yet merged → **T-107** (new, high priority, S; gate: wait for PR #352 to merge)
+- **PR #353** (open, Sep 29): "feat(desktop): precise Claude Code Desktop session targeting" — bridge captures `CLAUDE_CODE_HOST_SESSION_ID` env var as `_claude_desktop_session`; click opens `claude://code/continue?session=<id>` deep link; adds to T-070 criteria → T-070 criteria updated
+- `4af9433` (v1.0.35): on-idle session recap chip in session card — low priority cosmetic; not tracked
+- `dce7a1f` (v1.0.35): auto-expand panel when user switches between question cards — low priority UX
+- `4f33e2c` (v1.0.35): toggle to show/hide project name on compact bar — lower priority
+- `4b60e99` (v1.0.35): separate hover/text/volume sliders in Settings — lower priority
+- SSH remote / Codex / non-Claude CLI commits (numerous) — skip
+- PR #314 (open, Aug 14): trackpad gestures (T-084) — still open, still watching
+- vibeislandapp/vibe-island: `ce9b816` (Aug 19) remains the latest code commit — upstream quiet for 45 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Eight new tasks added (T-100 through T-107). T-070 criteria updated with PR #353 desktop session targeting.**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
