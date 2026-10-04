@@ -1,7 +1,53 @@
 # Kanban Board
-<!-- Updated: 2026-10-01 -->
+<!-- Updated: 2026-10-04 -->
 
 ## Backlog
+
+### T-105: Track agent task checklist from hooks and transcripts
+> Parse Claude Code agent's TaskCreate/TaskUpdate hooks and JSONL transcript lines into an AgentTaskList; display task progress (done/total count + expandable checklist) on session cards. Complex new feature not yet in our fork.
+- **priority**: low
+- **effort**: L
+- **source**: wxtsky/CodeIsland commits `f70e170`, `eb97257`, `ee9c531` (v1.0.35, Sep 24, 2026) + fixes `f124c7b`, `725d4a7`, `e72dc59`, `dd1c646`, `4a855ce`
+#### Criteria
+- [ ] Read all six commits (`f70e170` through `4a855ce`) before starting — the bug-fix batch is required alongside the feature
+- [ ] Add `AgentTaskItem` (id, title, status) and `AgentTaskList` (items, subagentId) to `CodeIslandCore/Models.swift`; mark `Sendable` + `Codable`
+- [ ] Add `AgentTaskHookParser` — parses `TaskCreate` / `TaskUpdate` hook payloads (`tool_input`) into `AgentTaskList` mutations; handles `retire-stale` logic from `f124c7b`
+- [ ] Backfill on session attach: scan recent JSONL lines for `TaskCreate` / `TaskUpdate` entries and replay them; guard: don't wipe a checklist that the backfill can't fully rebuild (`dd1c646`)
+- [ ] Clear checklist on `/clear` slash command (`e72dc59`)
+- [ ] Route `TaskUpdate` from a subagent to its parent's shared task list (`725d4a7`)
+- [ ] `SessionSnapshot`: add `taskList: AgentTaskList?` (transient, excluded from `Codable`); update `reduceEvent()` and add `.updateTaskList(AgentTaskList)` side-effect
+- [ ] Render task-progress row in session card: compact view shows "✓ N/M"; expanded shows individual task titles with ✓/✗/… status
+- [ ] Port `AgentTaskListTests` for task merging, retire-stale, subagent routing, post-/clear reset
+- [ ] `swift build && swift test` passes
+
+### T-104: Auto-mute event sounds when user is absent from screen
+> New presence-detection gate in SoundManager: uses macOS idle time (CGEventSourceSecondsSinceLastEventType) to mute event sounds after a configurable idle threshold; sounds resume immediately on next user event.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `b9905bd` (v1.0.35, Sep 24, 2026); screen-lock/display-sleep distinction from `d1fdaaa` + `b4d953f` (same batch) must be ported alongside
+#### Criteria
+- [ ] Implement T-085 first (SoundManager test seam needed to verify muting logic)
+- [ ] Add `ScreenPresenceDetector.swift`: `CGEventSourceSecondsSinceLastEventType(.combinedSessionState)` polling; publishes `isAbsent: Bool` on a 30s timer; distinct from display sleep (monitor off) vs screen lock (session minimal)
+- [ ] Port `d1fdaaa`: gate lock-notification sounds on `CGSSessionScreenIsLocked()` path; skip when display is asleep but user is not truly away
+- [ ] Port `b4d953f`: keep event sounds on while only the display sleeps (not a screen lock / user-away event)
+- [ ] `SoundManager.swift`: gate `handleEvent()` on `!presenceDetector.isAbsent`; boot chime and Settings preview sounds are unaffected
+- [ ] `Settings.swift`: add `autoMuteWhenAway` Bool (default false), `autoMuteIdleThresholdMinutes` Int (default 5)
+- [ ] Settings → Sound page: toggle + idle threshold slider
+- [ ] `swift build && swift test` passes
+
+### T-100: Show session recaps and model/effort tags from transcripts
+> Read session recap summaries, model names, and reasoning effort levels from JSONL transcripts. Tag session cards with model badge and effort level (e.g. "auto", "max"); show session recap text on idle session cards.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `37709d3`, `7dd0b46`, `4af9433` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Implement T-073 (ClaudeUsageScanner + JSONLTailer) first — transcript-scanning infrastructure is shared
+- [ ] `SessionSnapshot`: add `sessionRecap: String?`, `reasoningEffort: String?` fields (transient, excluded from `Codable`); add `updateRecap` side-effect
+- [ ] Read `summary` / `leafSummary` from JSONL assistant message entries via `JSONLTailer`; read `reasoningEffort` from `usage.reasoningEffort` / `X-Reasoning-Effort` header field in messages
+- [ ] Session card: show effort badge (e.g. "auto", "max", "turbo", "default") next to model name when `reasoningEffort` is non-nil
+- [ ] Idle session card: show `sessionRecap` text in place of blank idle state when available; truncate to 2 lines with ellipsis
+- [ ] Off-main dispatch: transcript reads must happen off `@MainActor` (same pattern as T-073)
+- [ ] `swift build && swift test` passes
 
 ### T-098: Fix model tracking — keep reported model, follow /model switches including 1M context
 > `SessionSnapshot.model` is overwritten by each `PreToolUse` event's `metadata.model`, causing the displayed model to flicker between tool calls. Separately, `/model` slash-command switches (including new `claude-opus-4-5-20251101:1m` 1M-context variants) are not tracked because the compact bar does not update on model-change events.
@@ -121,6 +167,7 @@
 - [ ] Auto-mode selection: window is "pressing" when used share > elapsed share OR ≥80%; 5h takes priority while pressing, otherwise tighter weekly window
 - [ ] `Settings.swift`: add `quotaChipMode` (off/auto/5h/weekly/weeklyModel, default auto) key
 - [ ] Port test suites: `ClaudeQuotaTests` (parsing, legacy fallback, pace calc, auto-mode rules), `ClaudeQuotaSchedulerTests` (debounce/throttle/backoff), `ClaudeQuotaMonitorTests` (use private UserDefaults suite to prevent Keychain access during tests)
+- [ ] Port `c2d64e2` (post-v1.0.35): pass the credential-reader block as a `@Sendable` closure — required for Swift 6 strict concurrency; without this, `ClaudeQuotaMonitor.init` is rejected under strict concurrency mode
 - [ ] `swift build && swift test` passes
 
 ### T-085: Add SoundManager injectable test seam
@@ -132,6 +179,7 @@
 - [ ] Add `var playSink: ((String) -> Void)?` to `SoundManager`
 - [ ] Add `private func emit(_ soundName: String)` — delegates to `playSink` when set, otherwise calls existing `play(_:)`; replace all internal `play(...)` call sites with `emit(...)`; leave `preview`/`previewCustom` calling `play(...)` directly (those are UI button sounds, not event-triggered sounds)
 - [ ] Port `SoundBehaviourTests.swift` — skip any assertions referencing `TaskRoundComplete` (Cline-specific event not in our model)
+- [ ] Also port `5fbd2dc` (v1.0.35): guard `playBootSound()` with `NSWorkspace.shared.isSessionMinimal` check — skips the boot jingle when the app was launched as a login item at the user's last logout
 - [ ] `swift build && swift test` passes
 
 ### T-084: Trackpad gesture support for notch panel
@@ -202,6 +250,58 @@
 - [ ] `swift build && swift test` passes
 
 ## Todo
+
+### T-099: Block Markdown rendering in assistant replies on completion card
+> Parse the last assistant message as block-level Markdown and render it in full on the completion card. Supersedes the old inlineMarkdown helper. Adds a Settings toggle for the reply-line cap. Significant UX improvement for multi-paragraph agent responses.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `f9a58ba`, `addfd2c`, `f70957e`, `892d9ab` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Implement T-095 (four markdown rendering bug fixes) first — the block parser depends on the same code path
+- [ ] Port `f9a58ba feat(markdown): parse assistant replies into block-level Markdown`: add `BlockMarkdownParser.swift` (or extend `ChatMessageTextFormatter.swift`) — parse headings, fenced code, blockquote, bullet list, inline code, bold/italic, table into a typed IR; replace the inline `AttributedString(markdown:inlineOnlyPreservingWhitespace:)` path for completion card text
+- [ ] Port `f70957e feat(island): render the finished reply in full on the completion card`: update `CompletionQueueService` / completion card view to call the block renderer and show the full reply (not truncated to 1 line)
+- [ ] Port `addfd2c feat(island): render assistant replies as block Markdown`: wire block renderer into the collapsed-card preview; honor the `replyLineCap` setting (existing `maxReplyLines` key)
+- [ ] Port `2e11fc6 feat(settings): explain what the reply-line cap does to Markdown`: update the Settings description for the reply-line-cap toggle to mention Markdown
+- [ ] Confirm `892d9ab refactor(island): drop the unused private inlineMarkdown helper` — grep our fork to verify `inlineMarkdown` is unused before deleting
+- [ ] Verify: code blocks with language tags render correctly; inline code in headings preserved; bullet lists show `•`; blockquotes show `>` marker
+- [ ] `swift build && swift test` passes
+
+### T-103: Ring error jingle only when a whole agent turn fails
+> Currently the error sound fires on per-tool errors (every failed Bash/Read call). Upstream fix changes the trigger to fire only when a Stop event marks the entire turn as a failure. One-line behavior fix with a test.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `ac4e0f2` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] Implement T-085 first (SoundManager test seam is needed to verify the fix with a test)
+- [ ] In `AppState.executeEffect()` or the reducer's sound side-effect logic: fire `.playSound(.error)` only when a `Stop` event carries `isError == true` (turn-level failure); suppress for individual `PostToolUse` with `isError == true`
+- [ ] Add a test via the T-085 `playSink`: one failed Bash during a long run → no chime; run that ends in a tool error at Stop time → exactly one chime
+- [ ] `swift build && swift test` passes
+
+### T-102: Settings — hover delay, text size options, volume floor
+> Three new Settings controls: hover-delay slider (0–2 s, replaces the hard-coded 0.5 s constant); text-size picker (small/medium/large) for session card text; volume floor (0%–40%) as a minimum multiplier in SoundManager.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `4b60e99` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] `Settings.swift`: add `hoverDelaySeconds` Double (default 0.5), `textSizeOption` enum (small/medium/large, default medium), `volumeFloor` Double (default 0.1, range 0.0–0.4)
+- [ ] Replace the hard-coded `0.5` hover-delay constant in `NotchPanelView.swift` / `AppState.swift` with `Settings.hoverDelaySeconds()`
+- [ ] Apply `textSizeOption` to session card title/body text in `SessionListView.swift` or `NotchPanelView.swift`
+- [ ] Apply `volumeFloor` in `SoundManager.play(_:)` as `max(volumeFloor, systemVolume) * gain`
+- [ ] Settings → Appearance (or Behavior) page: add the three controls with appropriate ranges and labels
+- [ ] Note: if T-084 (trackpad gestures) is implemented first, its hover-delay control may overlap; reconcile the two settings
+- [ ] `swift build && swift test` passes
+
+### T-101: "Show project name" toggle on session cards
+> Add a Settings toggle that leads each session card with the project folder name (URL.lastPathComponent of the session cwd) instead of the full cwd path. One-file change in session card rendering with a graceful fallback.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `4f33e2c` (v1.0.35, Sep 24, 2026)
+#### Criteria
+- [ ] `Settings.swift`: add `showProjectName` Bool (default false)
+- [ ] Session card rendering (`SessionListView.swift` or `NotchPanelView.swift`): when `showProjectName` is true, compute `URL(fileURLWithPath: session.cwd).lastPathComponent` as the title; fall back to bare cwd when `lastPathComponent` is empty (e.g. cwd is `/`)
+- [ ] Settings → Appearance page: add toggle "Show project name" with description "Lead each session card with the project folder name instead of the full path."
+- [ ] Verify: toggling off restores full cwd display; sessions with no cwd show an appropriate fallback
+- [ ] `swift build && swift test` passes
 
 ### T-088: Click question card to jump to asking terminal
 > Extend the click-to-jump affordance from approval cards (T-036) to question cards. Session-identity row in `QuestionBar` becomes a tappable jump target with hover highlight and ↗ glyph; panel folds on jump (Auto-Collapse on) but question stays queued and answerable (distinct from Skip/deny).
@@ -310,6 +410,9 @@
 - [ ] `Sources/CodeIsland/Settings.swift`: `showUsageFooter` Bool key (default true)
 - [ ] `Sources/CodeIsland/SettingsView.swift`: Appearance toggle
 - [ ] **Port `1f45e93` fix in `JSONLTailer.swift`**: advance read offset by `appended.count` (bytes read from disk) NOT `combined.count - trailingFragment.count`; the original formula drifts offset past EOF after each partial-line episode, causing every subsequent small append to be misdetected as truncation and triggering a full-file rescan — pins CPU to ~100% on overnight-grown transcripts; also port the three regression tests from `JSONLTailerTests.swift`
+- [ ] **Port `3d6e195` fix**: when file-replacement is detected (new file size < saved offset, but content is not a pure truncation), treat the pre-overlap portion as already-seen history; prevents all of a post-`/compact` transcript's lines from firing as new messages
+- [ ] **Port `9dd566d` fix**: start live tail at the end-of-backfill offset, not at byte 0; prevents all backfilled lines from re-emitting as new events on the first real append
+- [ ] **Port `980650c` fix**: search two levels deep for subagent JSONL paths (e.g. `subagents/workflows/wf_<run>/agent-<id>.jsonl`); use `agent_transcript_path` from hook metadata when present; dispatch transcript scanning off the main actor
 - [ ] Port `ClaudeUsageScannerTests.swift` (~87 assertions) — window dedup, incremental reads, truncation, sparkline bucketing
 - [ ] **Account scope**: display and cache must be scoped to the currently active Claude account; switching accounts (log-out + log-in) must clear stale usage numbers — do not persist across account changes (vibe-island issue #210, Aug 7, 2026)
 - [ ] **Watcher teardown**: on `AppState.deinit` (or app termination), cancel FSEvents stream and ensure all file descriptors are closed; watcher must not outlive AppState and must not leave zombie children or leaked pipe descriptors (vibe-island issue #208, Aug 6, 2026)

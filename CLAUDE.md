@@ -1382,6 +1382,38 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Nine new tasks added (T-090 through T-098). T-089 gate cleared.** T-016 persistence criteria updated.
 
+**Scouted (October 4, 2026) — post-v1.0.35 activity:**
+- No new commits or releases since v1.0.35 (Sep 24); latest upstream commit remains `b444ae2` — upstream quiet for 10 days
+- ⚠️ **Missed from October 1 scout — v1.0.35 batch items not previously documented:**
+  - `3d6e195` (Sep 24): "fix(tailer): treat a replaced transcript's history as history, not news" — when Claude Code rotates/compacts a transcript file, the new file starts at byte 0 but the old content re-appears as new messages; fix detects the file-replacement pattern and skips overlap as history; applicable when implementing T-073 → **T-073 criteria updated**
+  - `9dd566d` (Sep 24): "fix(tailer): start the live tail where the attach backfill stopped" — initial attach reads full file for backfill, then starts live tail at byte 0 instead of at end of backfill; causes all backfilled messages to re-emit as "new" on the first real append; fix records backfill end offset → **T-073 criteria updated**
+  - `980650c` (Sep 24): "fix(session): find subagent models in nested and far-back transcripts, off the main thread" — Claude workflow agents write to `subagents/workflows/wf_<run>/agent-<id>.jsonl` (two levels down); model-scan only looked one level deep, silently skipping ~22% of subagent files; dispatches scanning off main actor to prevent latency spikes; applicable when implementing T-073 → **T-073 criteria updated**
+  - `f124c7b`, `725d4a7`, `e72dc59`, `dd1c646`, `4a855ce` (Sep 24): task checklist fixes (`AgentTaskList` / `AgentTaskHookParser`) — we have never synced the AgentTaskList feature; NOT applicable; skip
+  - `3183e86`, `d424ae6` (Sep 24): panel card queue fixes — both reference "auto-expand on question" + Smart Suppress (T-041) not yet implemented; skip until T-041; add to T-041 criteria when implementing
+  - `d1fdaaa`, `b4d953f` (Sep 24): sound fixes (screen lock / display sleep distinction) — part of "mute when away" feature never synced; NOT applicable; skip
+  - `e8d4bac`, `9597cf5`, `97f5c66`, `31d4509`, `9e3c9c9` (Sep 24): push/reminder fixes — phone push companion; NOT applicable; skip
+  - `68f9da7` (Sep 24): shortcuts fix — global shortcuts unsynced from v1.0.7; NOT applicable; skip
+  - `836d729` (Sep 24): "fix(panel): auto-expand on question" — Smart Suppress prerequisite; skip until T-041
+  - Test isolation commits (`e01faba`, `3e7ed72`, `43c52e8`, `9cb2409`, `877f1ad`, `a54731b`, `7e19b07`, `2634e7a`): test improvements not relevant to our fork; skip
+- PR #314 (open, Aug 14): trackpad gestures (T-084) — still open; unchanged
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — docs only, upstream quiet
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **T-073 criteria updated** with three new requirements (tailer file-replacement detection, backfill-offset start, subagent workflow path depth).
+- ⚠️ **Additionally missed from October 1 scout — full v1.0.35 feature batch (reviewed Oct 4):**
+  - `f9a58ba` + `addfd2c` + `f70957e` + `892d9ab` (Sep 24): parse + render assistant replies as block Markdown on the completion card; Settings toggle for reply-line cap; supersedes the unused `inlineMarkdown` helper; directly applicable → **T-099** (new, medium, M)
+  - `37709d3` + `7dd0b46` + `4af9433` (Sep 24): tag session cards with model + reasoning effort; show session recap on idle cards; read from JSONL transcripts; depends on T-073 infrastructure → **T-100** (new, medium, M; depends T-073)
+  - `4f33e2c` (Sep 24): "Show project name" Settings toggle — session cards lead with project folder name; XS one-file change → **T-101** (new, low, XS)
+  - `4b60e99` (Sep 24): Settings: hover-delay slider (0–2s, default 0.5s), text-size picker (small/medium/large), volume-floor slider (0%–40%) → **T-102** (new, low, S)
+  - `5fbd2dc` (Sep 24): skip boot jingle when launched at login (`NSWorkspace.shared.isSessionMinimal` guard); XS fix → **T-085 criteria updated**
+  - `ac4e0f2` (Sep 24): ring error jingle only when a whole turn fails, not on per-tool errors → **T-103** (new, low, XS)
+  - `b9905bd` (Sep 24): auto-mute event sounds while nobody is at the screen (`ScreenPresenceDetector` + idle-time heuristic); new complex feature → **T-104** (new, low, S; backlog)
+  - `f70e170` + `eb97257` + `ee9c531` (Sep 24): track agent task checklist from hooks + transcripts (`AgentTaskList`, `AgentTaskHookParser`); show progress on session cards; complex new feature → **T-105** (new, low, L; backlog)
+  - `c2d64e2` (Oct 2, post-v1.0.35): pass credential reader as `@Sendable` closure — required fix alongside T-089 → **T-089 criteria updated**
+  - `feat(push)`, `feat(cowork)`, `feat(reminders)`: mobile push notifications, Claude Desktop Cowork sessions, follow-up reminders — explicitly unsynced features; skip
+  - Panel queue fixes (`3183e86`, `d424ae6`), shortcuts (`68f9da7`), sound screen-lock fixes (`d1fdaaa`, `b4d953f`) — depend on features not yet synced (Smart Suppress / global shortcuts); skip until respective parent tasks
+- vibeislandapp/vibe-island: `fc691d0` (Aug 19) remains the latest code commit — upstream quiet for 46 days; nothing actionable
+- **New tasks: T-099 (medium/M), T-100 (medium/M, backlog), T-101 (low/XS), T-102 (low/S), T-103 (low/XS), T-104 (low/S, backlog), T-105 (low/L, backlog). T-085 and T-089 criteria updated.**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
