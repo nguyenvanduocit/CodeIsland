@@ -1382,6 +1382,24 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Nine new tasks added (T-090 through T-098). T-089 gate cleared.** T-016 persistence criteria updated.
 
+**Scouted (October 4, 2026) — post-v1.0.35 activity:**
+- No new commits or releases since v1.0.35 (Sep 24); latest upstream commit remains `b444ae2` — upstream quiet for 10 days
+- ⚠️ **Missed from October 1 scout — v1.0.35 batch items not previously documented:**
+  - `3d6e195` (Sep 24): "fix(tailer): treat a replaced transcript's history as history, not news" — when Claude Code rotates/compacts a transcript file, the new file starts at byte 0 but the old content re-appears as new messages; fix detects the file-replacement pattern and skips overlap as history; applicable when implementing T-073 → **T-073 criteria updated**
+  - `9dd566d` (Sep 24): "fix(tailer): start the live tail where the attach backfill stopped" — initial attach reads full file for backfill, then starts live tail at byte 0 instead of at end of backfill; causes all backfilled messages to re-emit as "new" on the first real append; fix records backfill end offset → **T-073 criteria updated**
+  - `980650c` (Sep 24): "fix(session): find subagent models in nested and far-back transcripts, off the main thread" — Claude workflow agents write to `subagents/workflows/wf_<run>/agent-<id>.jsonl` (two levels down); model-scan only looked one level deep, silently skipping ~22% of subagent files; dispatches scanning off main actor to prevent latency spikes; applicable when implementing T-073 → **T-073 criteria updated**
+  - `f124c7b`, `725d4a7`, `e72dc59`, `dd1c646`, `4a855ce` (Sep 24): task checklist fixes (`AgentTaskList` / `AgentTaskHookParser`) — we have never synced the AgentTaskList feature; NOT applicable; skip
+  - `3183e86`, `d424ae6` (Sep 24): panel card queue fixes — both reference "auto-expand on question" + Smart Suppress (T-041) not yet implemented; skip until T-041; add to T-041 criteria when implementing
+  - `d1fdaaa`, `b4d953f` (Sep 24): sound fixes (screen lock / display sleep distinction) — part of "mute when away" feature never synced; NOT applicable; skip
+  - `e8d4bac`, `9597cf5`, `97f5c66`, `31d4509`, `9e3c9c9` (Sep 24): push/reminder fixes — phone push companion; NOT applicable; skip
+  - `68f9da7` (Sep 24): shortcuts fix — global shortcuts unsynced from v1.0.7; NOT applicable; skip
+  - `836d729` (Sep 24): "fix(panel): auto-expand on question" — Smart Suppress prerequisite; skip until T-041
+  - Test isolation commits (`e01faba`, `3e7ed72`, `43c52e8`, `9cb2409`, `877f1ad`, `a54731b`, `7e19b07`, `2634e7a`): test improvements not relevant to our fork; skip
+- PR #314 (open, Aug 14): trackpad gestures (T-084) — still open; unchanged
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — docs only, upstream quiet
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **T-073 criteria updated** with three new requirements (tailer file-replacement detection, backfill-offset start, subagent workflow path depth). No new tasks.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
