@@ -1398,7 +1398,21 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - PR #314 (open, Aug 14): trackpad gestures (T-084) — still open; unchanged
 - vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — docs only, upstream quiet
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
-- **T-073 criteria updated** with three new requirements (tailer file-replacement detection, backfill-offset start, subagent workflow path depth). No new tasks.
+- **T-073 criteria updated** with three new requirements (tailer file-replacement detection, backfill-offset start, subagent workflow path depth).
+- ⚠️ **Additionally missed from October 1 scout — full v1.0.35 feature batch (reviewed Oct 4):**
+  - `f9a58ba` + `addfd2c` + `f70957e` + `892d9ab` (Sep 24): parse + render assistant replies as block Markdown on the completion card; Settings toggle for reply-line cap; supersedes the unused `inlineMarkdown` helper; directly applicable → **T-099** (new, medium, M)
+  - `37709d3` + `7dd0b46` + `4af9433` (Sep 24): tag session cards with model + reasoning effort; show session recap on idle cards; read from JSONL transcripts; depends on T-073 infrastructure → **T-100** (new, medium, M; depends T-073)
+  - `4f33e2c` (Sep 24): "Show project name" Settings toggle — session cards lead with project folder name; XS one-file change → **T-101** (new, low, XS)
+  - `4b60e99` (Sep 24): Settings: hover-delay slider (0–2s, default 0.5s), text-size picker (small/medium/large), volume-floor slider (0%–40%) → **T-102** (new, low, S)
+  - `5fbd2dc` (Sep 24): skip boot jingle when launched at login (`NSWorkspace.shared.isSessionMinimal` guard); XS fix → **T-085 criteria updated**
+  - `ac4e0f2` (Sep 24): ring error jingle only when a whole turn fails, not on per-tool errors → **T-103** (new, low, XS)
+  - `b9905bd` (Sep 24): auto-mute event sounds while nobody is at the screen (`ScreenPresenceDetector` + idle-time heuristic); new complex feature → **T-104** (new, low, S; backlog)
+  - `f70e170` + `eb97257` + `ee9c531` (Sep 24): track agent task checklist from hooks + transcripts (`AgentTaskList`, `AgentTaskHookParser`); show progress on session cards; complex new feature → **T-105** (new, low, L; backlog)
+  - `c2d64e2` (Oct 2, post-v1.0.35): pass credential reader as `@Sendable` closure — required fix alongside T-089 → **T-089 criteria updated**
+  - `feat(push)`, `feat(cowork)`, `feat(reminders)`: mobile push notifications, Claude Desktop Cowork sessions, follow-up reminders — explicitly unsynced features; skip
+  - Panel queue fixes (`3183e86`, `d424ae6`), shortcuts (`68f9da7`), sound screen-lock fixes (`d1fdaaa`, `b4d953f`) — depend on features not yet synced (Smart Suppress / global shortcuts); skip until respective parent tasks
+- vibeislandapp/vibe-island: `fc691d0` (Aug 19) remains the latest code commit — upstream quiet for 46 days; nothing actionable
+- **New tasks: T-099 (medium/M), T-100 (medium/M, backlog), T-101 (low/XS), T-102 (low/S), T-103 (low/XS), T-104 (low/S, backlog), T-105 (low/L, backlog). T-085 and T-089 criteria updated.**
 
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
