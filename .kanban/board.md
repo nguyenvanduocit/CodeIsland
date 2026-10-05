@@ -1,7 +1,149 @@
 # Kanban Board
-<!-- Updated: 2026-10-01 -->
+<!-- Updated: 2026-10-05 -->
 
 ## Backlog
+
+### T-108: Separate "auto-expand on question" toggle
+> Add dedicated `autoExpandOnQuestion` setting separate from `autoExpandOnPermission`, with a bell badge click target in collapsed bar when off.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `dce7a1f` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Settings.swift`: add `autoExpandOnQuestion` Bool key (default `true`)
+- [ ] `AppState.swift`: gate question auto-expand on `autoExpandOnQuestion` (separate from the `autoExpandOnPermission` guard added in T-080)
+- [ ] When `autoExpandOnQuestion` is off, render a bouncing bell badge chip in the compact bar instead of auto-expanding; clicking it opens the question card
+- [ ] `SettingsView/BehaviorSettingsView.swift`: add "Auto-Expand on Question" toggle
+- [ ] `swift build && swift test` passes
+
+### T-107: Settings — adjustable hover delay, larger text sizes, quieter volume floor
+> Add hover-delay slider (0.1–1.5 s), text size picker (Small/Medium/Large), and volume floor slider (0–50%) to settings pages.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `4b60e99` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Settings.swift`: add `hoverDelaySeconds` Double (default 0.5, range 0.1–1.5), `interfaceTextSize` enum Small/Medium/Large (default Medium), `volumeFloor` Double (default 0, range 0–0.5)
+- [ ] Apply `hoverDelaySeconds` to the prehover timer in `NotchPanelView` (T-061 three-stage hover)
+- [ ] Apply `interfaceTextSize` to session card and compact bar font scaling
+- [ ] Apply `volumeFloor` in `SoundManager` as minimum playback volume
+- [ ] `SettingsView/AppearanceSettingsView.swift`: hover delay slider + text size picker; `SoundSettingsView`: volume floor slider
+- [ ] `swift build && swift test` passes
+
+### T-106: "Show project name" toggle on session cards
+> Add a Behavior/Appearance toggle that prefixes session card titles with the project folder name.
+- **priority**: low
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `4f33e2c` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Settings.swift`: add `showProjectNameOnCards` Bool key (default `false`)
+- [ ] `SessionListView` (or session card component): when enabled, prepend `session.projectName` (basename of cwd) to the card's primary label
+- [ ] `SettingsView/AppearanceSettingsView.swift` or `BehaviorSettingsView.swift`: add "Show Project Name" toggle
+- [ ] `swift build && swift test` passes
+
+### T-105: Extra Claude Code config directory roots
+> Support multiple `$CLAUDE_CONFIG_DIR` roots so sessions from work/personal accounts both get hooks installed and usage tracked.
+- **priority**: low
+- **effort**: M
+- **source**: wxtsky/CodeIsland commit `af8b420` + 6 fixes (post-v1.0.35, Oct 2026); extends T-079
+#### Criteria
+- [ ] `Sources/CodeIslandCore/`: add `ExtraConfigDirs.swift` — stores additional Claude Code root paths as JSON under `extra_config_dirs_v1` key; compare by `realpath` identity to avoid duplicates with primary
+- [ ] `ConfigInstaller.swift`: on Reinstall/toggle, install hooks into all enabled extra roots; on Uninstall/toggle, remove hooks from those roots (preserve user-only entries)
+- [ ] `SessionDiscoveryService.swift`: scan extra roots for `sessions.json` alongside the primary root
+- [ ] `Settings/SettingsView`: UI to add/remove extra roots (file picker or text field)
+- [ ] Skip Codex/Grok-specific multi-root parts; scope to Claude Code only
+- [ ] Fixes `e64818f` (realpath compare), `eb56e6e` (write through symlinks), `a35f9b1` (never install through primary-owned file), `a9bc8fb` (refuse home dir) must be ported alongside the feature
+- [ ] `swift build && swift test` passes
+
+### T-104: Auto-mute event sounds when nobody is at the screen
+> Mute all event sounds when screen is locked, screensaver running, or displays asleep; add "Mute when away" toggle (default on); skip boot jingle at login.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `b9905bd` + `5fbd2dc` + `ac4e0f2` + `b4d953f` + `d1fdaaa` + `SceneMuteState.swift` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/SceneMuteState.swift` (new, 55 lines): pure struct tracking three independent gates — `screenLocked`, `screenSaverActive`, `displaysSleeping`; `isMuted` = any gate true; an unlock clears all so a missed "end" notification cannot mute indefinitely
+- [ ] `Sources/CodeIsland/SceneMuteMonitor.swift` (new, 67 lines): observes `com.apple.screenIsLocked/Unlocked`, `com.apple.screensaver.didstart/didstop`, `NSWorkspace.screensDidSleep/Wake`; updates `SceneMuteState` in `AppState`
+- [ ] `SoundManager.swift`: gate all event sounds on `!appState.sceneMuteState.isMuted && settings.muteWhenAway`; preview sounds bypass the gate (stay audible)
+- [ ] `Settings.swift`: add `muteWhenAway` Bool key (default `true`)
+- [ ] `SoundSettingsView.swift`: add "Mute when away" toggle
+- [ ] `AppDelegate.swift`: skip boot jingle when `ProcessInfo.processInfo.environment["XPC_SERVICE_NAME"]` indicates login-item launch (`5fbd2dc`)
+- [ ] Error jingle: fire only when a whole session turn fails (not on every tool error) — `ac4e0f2`
+- [ ] Port `d1fdaaa`: capture screen-lock state from the login session's DistributedNotificationCenter so the gate fires even while displays are asleep
+- [ ] 93-line `AwayMuteSoundTests` + `SceneMuteStateTests` (61 lines)
+- [ ] `swift build && swift test` passes
+
+### T-103: Follow-up reminders for unanswered approvals, questions, and unseen completions
+> Re-announce waiting items after a configurable interval (1/2/3/5 min) via sound + visual badge; stop when item resolves or user is in front.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `ee9c531` + `9e3c9c9` + `31d4509` + `97f5c66` + `9597cf5` + `e8d4bac` + `4807f18` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/FollowUpReminderScheduler.swift` (new, ~248 lines): pure timer model; takes `ReminderPolicy` (Off/1/2/3/5 min); emits `SideEffect.scheduleReminder` / `.cancelReminder`; approvals + questions up to 3× at interval, completions once; keyed by request identity (not session)
+- [ ] `Sources/CodeIsland/FollowUpReminderController.swift` (new, ~393 lines): drives the scheduler; on each tick: plays same sound as original event; if island is collapsed and item is an approval with `autoExpandOnPermission` on → expand; otherwise display a bouncing bell badge in compact bar; pointer on the open card counts as "read" and stops reminder; Smart Suppress active terminal tab also stops it
+- [ ] `AppState.swift` + `AppDelegate.swift`: register `FollowUpReminderController`, wire `windowDidBecomeKey` + terminal visibility to cancel reminders
+- [ ] `Settings.swift`: add `followUpReminderInterval` enum (off/1/2/3/5 min, default off)
+- [ ] `SettingsView/BehaviorSettingsView.swift`: add "Follow-up reminders" picker
+- [ ] Fixes to port: `9e3c9c9` (key by request not session), `31d4509` (postpone when pointer in front), `97f5c66` (phone push when away — coordinate with T-102), `9597cf5` (pointer on open card stops reminder), `e8d4bac` (failed-turn reminder uses error sound), `4807f18` (promoted approval keeps reminder clock)
+- [ ] Note: T-102 (push notifications) interacts with this — `97f5c66` adds push fallback for remote reminders; implement independently but leave hook
+- [ ] `swift build && swift test` passes
+
+### T-102: Push notifications to phone/chat (Bark, ntfy, Slack, Telegram, etc.)
+> Send approvals, questions, finished turns, and session errors to phone or team chat channels when the user is away from their Mac.
+- **priority**: medium
+- **effort**: L
+- **source**: wxtsky/CodeIsland commits `0d8580d` + `171b0dc` + `4a6e4b6` + many fixes (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/PushChannel.swift` (new, ~668 lines): channel types — Bark (v2 API, level timeSensitive for blocking items), ntfy (Bearer token, priority), DingTalk (HMAC-SHA256 签名), Feishu/Lark (HMAC timestamp), WeCom robot (text), Slack incoming webhook (mrkdwn off), Telegram sendMessage (HTML); `user:password@` in URL → explicit Basic header
+- [ ] `Sources/CodeIslandCore/PushNotification.swift` (new, ~443 lines): `PushContent` / `PushMessageFormatter` — structured title/headline/body; credential redaction applied to every line; Markdown stripped from prose (not commands); approval content includes tool + command or project-relative path; question includes numbered options; finished turn includes reply summary
+- [ ] `Sources/CodeIslandCore/PushPolicy.swift` (new, ~240 lines): gating logic (Smart Suppress, volume, deduplication per-request not per-session); retry once after hiccup; approvals never dropped for volume; throttle per team chat
+- [ ] `Sources/CodeIslandCore/PushTransport.swift` (new, ~141 lines): fire-and-forget async send; redirect guard (same host, no https→http downgrade); 5 s timeout; failure logged without credentials
+- [ ] `Sources/CodeIsland/AppState.swift` / `PushService.swift`: send push on PermissionRequest, AskUserQuestion, Stop (success or error); send on follow-up reminder tick (T-103 hook point)
+- [ ] Settings section: per-channel enable/disable, token/URL/secret fields, test-send button, delivery status; mask keys in UI
+- [ ] Skip: Codex `isSecret` prompt guard (not applicable to Claude Code-only fork), DingTalk robot if complexity is high (can be deferred)
+- [ ] Security fixes to port: `4ce06c8` (refuse cross-host redirects), `61c17b7` (never POST ntfy JSON to topic URL), `bbca889` (vendor-specific text sizing), `f78b7a0` (strip IPs from failure log), `d7ef9e7` (mask in settings display), `b2bb850` (redact credential shapes)
+- [ ] 321-line `PushChannelPayloadTests` + 346-line `PushPolicyTests` + 213-line `PushSigningAndResponseTests`
+- [ ] `swift build && swift test` passes
+
+### T-101: Render assistant replies as block Markdown on completion card
+> Parse full assistant replies into headings, code blocks, lists, and blockquotes; display rich Markdown on the completion card with a configurable line cap.
+- **priority**: medium
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `f9a58ba` + `addfd2c` + `f70957e` + `2e11fc6` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/MarkdownBlockParser.swift` (new, ~680 lines): full block-level parser — fenced code blocks, ATX headings, bullet/ordered lists, blockquotes, horizontal rules, blank-line paragraph separation; inline emphasis/code within blocks; exposed as `MarkdownBlock` value type array
+- [ ] `Sources/CodeIslandCore/MarkdownPreviewText.swift` (new, ~131 lines): converts `[MarkdownBlock]` to `AttributedString` for display; respects `lineLimit` cap; `truncationMode(.tail)` on last block; tables condensed to plain text with `|` separators
+- [ ] `CompletionQueueView.swift` (or `NotchPanelView.swift` completion card section): render the full parsed reply using `MarkdownPreviewText`; add "Reply Lines" cap slider in Settings → Appearance (default 6 lines)
+- [ ] Note: markdown rendering fixes from T-095 (`d2a15bb`, `9da78f5`, `dd0fc48`, `07a92b4`) apply to the new parser too — port them together
+- [ ] 479-line `MarkdownBlockParserTests` + 107-line `MarkdownPreviewTextTests`
+- [ ] `swift build && swift test` passes
+
+### T-100: Session recaps + model/reasoning effort tags on session cards
+> Show Claude Code's idle session recap (away_summary) on session cards; tag each card with the model name and reasoning effort level read from transcripts.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `7dd0b46` + `4af9433` + `37709d3` + `980650c` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/SessionRecap.swift` (new, ~156 lines): parse `system`/`away_summary` rows from JSONL transcripts; `SessionRecap(text:timestamp:)` Sendable+Codable; `SessionSnapshot.recap: SessionRecap?` (exclude from reducer-hashing)
+- [ ] `Sources/CodeIslandCore/ModelLabel.swift` (new, ~200 lines): map raw model IDs to display labels (e.g. `claude-sonnet-4-5-20251022` → "sonnet 4.5"); format reasoning effort string; `ModelLabel.format(model:effort:)` pure function
+- [ ] `Sources/CodeIsland/AppState+SessionMetadata.swift` (new, ~109 lines): off-main-thread backfill for recap + model/effort on session attach; updates `SessionSnapshot` without going through the main reducer
+- [ ] `JSONLTailer.swift`: surface `away_summary` + `message.model` + `effort`/`perTurnEffort` rows; `980650c` fix (walk nested sub-transcripts for subagent models) must be included
+- [ ] `NotchPanelView.swift`: idle session card shows recap text as a subtitle (truncated to 2 lines); model chip "sonnet 4.5 · high" displayed below session title
+- [ ] Settings toggle: "Show session recap" and "Show model" in Appearance (default on)
+- [ ] Port tailer fixes `3d6e195` + `9dd566d` alongside this task (pre-requisites for correct tailer behavior)
+- [ ] 392-line `SessionRecapTests` + 132-line `ModelLabelTests` + 141-line `AppStateModelLabelTests`
+- [ ] `swift build && swift test` passes
+
+### T-099: Agent task checklist tracking on session cards
+> Track `TaskCreate`/`TaskUpdate` and `TodoWrite` events from hooks and transcripts; render a collapsible task checklist on session cards showing what the agent is currently doing.
+- **priority**: high
+- **effort**: L
+- **source**: wxtsky/CodeIsland commits `f70e170` + `eb97257` + `ee81191` + 6 fixes: `4a855ce`, `dd1c646`, `e72dc59`, `725d4a7`, `f124c7b` (post-v1.0.35, Oct 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/AgentTaskList.swift` (new, ~515 lines): `AgentTask` (id, title, status: pending/in_progress/done/cancelled); `AgentTaskList` with keyed-by-tool-call-id updates; handles async PostToolUse arriving before corresponding TaskCreate result; `SessionSnapshot.agentTaskList: AgentTaskList`
+- [ ] `Sources/CodeIslandCore/AgentTaskParsing.swift` (new, ~448 lines): parse `TaskCreate` tool input, `TaskUpdate` `statusChange`; support `TodoWrite` for older Claude code; skip Codex `update_plan`; extract from both hook `PreToolUse`/`PostToolUse` and JSONL tailer rows
+- [ ] `Sources/CodeIsland/AgentTaskProgressView.swift` (new, ~222 lines): collapsible checklist UI on session card; ✓/→/○ icons for done/in_progress/pending; truncate to N visible rows with "Show N more" expander; toggle in Settings → Behavior: "Show task checklist" (default on)
+- [ ] `JSONLTailer.swift`: route `TaskCreate`/`TaskUpdate`/`TodoWrite` rows through to the `SessionSnapshot` reducer; apply fix `3d6e195` (treat replaced history as history) and `9dd566d` (start live tail where backfill stopped) as prerequisites
+- [ ] Fixes to port: `4a855ce` (don't add task row for text that merely looks like TaskCreate), `dd1c646` (attach-time scan must not wipe existing list with an empty one), `e72dc59` (start with empty list after /clear), `725d4a7` (apply subagent's TaskUpdate to parent's shared list), `f124c7b` (retire plan when agent stopped updating; hide "doing X" label while idle)
+- [ ] 522-line `AgentTaskListTests`
+- [ ] `swift build && swift test` passes
 
 ### T-098: Fix model tracking — keep reported model, follow /model switches including 1M context
 > `SessionSnapshot.model` is overwritten by each `PreToolUse` event's `metadata.model`, causing the displayed model to flicker between tool calls. Separately, `/model` slash-command switches (including new `claude-opus-4-5-20251101:1m` 1M-context variants) are not tracked because the compact bar does not update on model-change events.
