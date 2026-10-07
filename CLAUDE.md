@@ -1403,6 +1403,12 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Ten new tasks added (T-099 through T-108). T-073 + T-099 criteria updated with tailer fixes. T-016 persistence criteria updated.**
 
+**Scouted (October 7, 2026) — post-v1.0.35 activity:**
+- No new commits or releases since v1.0.35 (Sep 24); upstream HEAD confirmed `b444ae2` — upstream quiet for 13 days
+- vibeislandapp/vibe-island: latest commit `fc691d0` (Sep 2, "fix: enable diagnostic report uploads") — docs/CI only, nothing actionable; no new commits since Sep 3 scout
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-108) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
