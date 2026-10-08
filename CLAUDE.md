@@ -1409,6 +1409,12 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
 - **No new actionable items.** All open tasks (T-016 through T-108) remain as previously documented.
 
+**Scouted (October 8, 2026) — post-v1.0.35 activity:**
+- No new commits or releases since v1.0.35 (Sep 24); upstream HEAD remains `b444ae2` — upstream quiet for 14 days
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — upstream quiet for 36 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
+- **No new actionable items.** All open tasks (T-016 through T-108) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
