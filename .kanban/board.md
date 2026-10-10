@@ -1275,6 +1275,69 @@
 - [ ] Verify: with toggle off, an incoming PermissionRequest does not expand the collapsed island; session badge increments; clicking the island manually reveals the card
 - [ ] `swift build && swift test` passes
 
+### T-109: Fix Homebrew Claude version detection — missing /opt/homebrew/bin/claude
+> `detectClaudeVersion()` misses Apple Silicon Homebrew path; PostToolUseFailure/StopFailure hooks silently not installed for Homebrew users.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `d511732` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `Sources/CodeIsland/ConfigInstaller.swift:248–250`: expand candidates from 2 to 4 paths: `~/.local/bin/claude`, `/opt/homebrew/bin/claude`, `/usr/local/bin/claude`, `~/.claude/local/claude`
+- [ ] Optionally extract as named `claudeBinaryCandidates(home:)` static helper for testability (upstream adds 4 test assertions)
+- [ ] Verify: on Apple Silicon with Homebrew Claude, `detectClaudeVersion()` returns a version string (not nil) and version-gated hooks are installed
+- [ ] `swift build && swift test` passes
+
+### T-110: Status-led session cards, needs-you-first ordering, Compact density
+> Session cards get word-badge status LEDs (NEEDS YOU / WORKING / DONE / ERROR), reordered to float approval-waiting sessions first, with optional Compact density mode.
+- **priority**: medium
+- **effort**: L
+- **source**: wxtsky/CodeIsland commits `b98c75d`, `292ef90`, `cafb145` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] Add `AgentStatus` cases or string-enum status badges: NEEDS YOU, WORKING, THINKING, DONE, IDLE, STOPPED, ERROR
+- [ ] `SessionListView.swift`: add coloured rail / LED on leading edge of each session card
+- [ ] Chat line glyphs: `›` for user prompt, `●` for assistant reply, `▸ Tool` chip for running tool
+- [ ] Inline approval row follows approval card hierarchy: Allow once (filled), Deny (outlined), Always (link naming the tool)
+- [ ] Sort sessions waiting on approval/question first; re-sort on pointer-leave to avoid mid-hover jumps
+- [ ] Compact density mode setting (Settings → Appearance): one line per session, auto-expands only sessions needing action
+- [ ] `swift build && swift test` passes
+
+### T-111: Remember a failed turn until the next prompt (ERROR status)
+> After StopFailure, the session card shows ERROR status until the next UserPromptSubmit clears it; depends on T-110 for visual display.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `29849d3` + AppState change in `b98c75d` batch (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/SessionSnapshot.swift`: add `var lastTurnFailed: Bool = false`
+- [ ] `Sources/CodeIsland/AppState.swift` `enqueueCompletion(_:turnFailed:)`: stamp `sessions[sessionId]?.lastTurnFailed = turnFailed` before the completion queue fires
+- [ ] Reducer `UserPromptSubmit` branch: clear `lastTurnFailed = false` on the snapshot for the session receiving the new prompt
+- [ ] `swift build && swift test` passes (add test: StopFailure sets lastTurnFailed; next UserPromptSubmit clears it)
+
+### T-112: Fix collapsed right wing overlapping the notch (status badges hidden)
+> When tool-status text fills the collapsed bar, the right-wing badges (pending question, completion dot) slide under the notch and become invisible.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `3d404f1` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `Sources/CodeIsland/NotchPanelView.swift`: add `@State private var rightWingWidth: CGFloat = 0` and wire it from right-wing geometry
+- [ ] Add `rightWingReserve` computed property that returns extra width needed to clear the notch (0 when it fits, positive delta otherwise)
+- [ ] Include `rightWingReserve` in `panelWidth` alongside `quotaReserve.extraWidth`
+- [ ] Only active on `hasNotch` screens; no change on non-notch displays
+- [ ] `swift build && swift test` passes
+
+### T-113: Card and panel UX improvements from v1.0.36
+> Batch of question/approval card fixes and session-list fixes: scrollable question options, full question text, session context on approval card, session list scrollable.
+- **priority**: low
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `82a8123`, `3fa7fcd`, `4532e4b`, `c84411d`, `87422b4`, `9ebc725`, `a89e0b8`, `294d04c` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `ApprovalBarView.swift`: show which session is asking ("Session: <project>") on the approval card header
+- [ ] `ApprovalBarView.swift`: redesign button hierarchy — Allow once as filled button, Deny as outlined, Always as a text link naming the tool
+- [ ] `QuestionBarView.swift`: give question card same hierarchy as approval card; show full question text (no 3-line truncation)
+- [ ] `QuestionBarView.swift`: scroll long option lists so buttons stay reachable
+- [ ] `SessionListView.swift`: scroll a short but tall session list instead of clipping it
+- [ ] `NotchPanelView.swift`/`SessionListView.swift`: order inline approval buttons consistently with the approval card
+- [ ] `NotchPanelView.swift`: keep at least ~12 chars of branch name visible next to a long project name (relates to T-074)
+- [ ] `swift build && swift test` passes
+
 ## Doing
 
 ### [T-011: Cherry-pick features tu reference projects](tasks/T-011-reference-sync-apr09.md)

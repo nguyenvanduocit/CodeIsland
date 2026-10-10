@@ -1415,6 +1415,20 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
 - **No new actionable items.** All open tasks (T-016 through T-108) remain as previously documented.
 
+**Scouted (October 10, 2026) — v1.0.36 activity:**
+- v1.0.36 released 2026-10-09 — large batch of 50 commits on Oct 9; git tag `f86c9b1`
+- **`d511732`** (Oct 9): "fix(claude): find Homebrew's claude when detecting the version" — `detectClaudeVersion()` only looked at `~/.local/bin/claude` and `/usr/local/bin/claude`; on Apple Silicon Homebrew puts `claude` in `/opt/homebrew/bin/`; GUI app PATH doesn't include it; result: version probe returns nil and PostToolUseFailure/StopFailure hooks are silently not installed for Homebrew users. Our `ConfigInstaller.swift:248–250` has the same bug. Upstream adds `/opt/homebrew/bin/claude` + `~/.claude/local/claude` → **T-109 (new, high, XS)**
+- **`b98c75d` + `292ef90` + `cafb145`** (Oct 9): "feat(list): status-led session cards, needs-you first, Compact density" — every session card gets a word-badge (NEEDS YOU / WORKING / THINKING / DONE / IDLE / STOPPED / ERROR) + colour rail; sessions waiting on approval float first; Compact density mode shows one line per session; inline approval row redesigned → **T-110 (new, medium, L)**
+- **`29849d3`** (Oct 9): "feat(session): remember a failed turn until the next prompt" — `lastTurnFailed` stamped on `SessionSnapshot` at `enqueueCompletion`; cleared on next `UserPromptSubmit`; ERROR status persists until user retries → **T-111 (new, medium, S)**
+- **`3d404f1`** (Oct 9): "fix(island): keep the collapsed right wing clear of the notch" — `rightWingWidth` measured via GeometryReader; `rightWingReserve` added to panel width when badges would slide under notch → **T-112 (new, medium, XS)**
+- **`82a8123`, `3fa7fcd`, `4532e4b`, `c84411d`, `87422b4`, `9ebc725`, `a89e0b8`, `294d04c`** (Oct 9): batch of card and panel UX fixes — approval card shows session context; question shows full text (no 3-line truncation); option list scrollable; session list scrollable; approval card hierarchy redesign; question card matches approval hierarchy; branch name truncation fix → **T-113 (new, low, M)**
+- **`5fc27a4`** (Oct 9): "fix(bridge): a natively installed Claude Code is Claude, not its host" — adds `/.local/share/claude/versions/` check in upstream's `CLIProcessResolver`; **not applicable to our fork** — our `ProcessScanner.swift:24` already handles this path (`let versionsDir = "~/.local/share/claude/versions/"`)
+- **`786e412` + `a667eec` + `235cec4`** (Oct 9): accessibility improvements — Reduce Motion respected in mascot/shimmer/badges; dim panel text lifted to WCAG AA contrast; icon and pixel-font controls given accessibility names; medium priority but moderate effort → not tracked separately yet; add to T-113 criteria if desired
+- L10n fixes (`d9b47f0`, `0a839cf`, `c69da76`), Qoder-specific (`17e5068`, `3227ab6`), Hermes/Cline/minimax/DSH installer (`0718ac0`, `c37d0a6`, `1c2b6bf`, `722896c`, `ab2a3e9`), OpenCode/SSH remote (`3c765f0`) — skip
+- vibeislandapp/vibe-island: no new commits since Sep 2 (`fc691d0`) — upstream quiet for 38 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Five new tasks added (T-109 through T-113).** All other open tasks (T-016 through T-108) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
