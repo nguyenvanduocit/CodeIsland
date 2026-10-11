@@ -1442,7 +1442,6 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
   - **`f80d555`**: "fix(question): line option labels up and lift their numbers to AA contrast" — option numbers share an 18pt column (previously width of each number's glyphs, shifting adjacent labels); numbers at 80% (5.7:1) not 60% (3.7:1) → **T-113 criteria updated** (add as additional fix to port)
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Two new tasks added (T-114, T-115). T-089, T-070, T-113, T-101 criteria updated.**
-
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
