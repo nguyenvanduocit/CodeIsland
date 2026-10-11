@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-10-05 -->
+<!-- Updated: 2026-10-11 -->
 
 ## Backlog
 
@@ -112,6 +112,7 @@
 - [ ] `Sources/CodeIslandCore/MarkdownPreviewText.swift` (new, ~131 lines): converts `[MarkdownBlock]` to `AttributedString` for display; respects `lineLimit` cap; `truncationMode(.tail)` on last block; tables condensed to plain text with `|` separators
 - [ ] `CompletionQueueView.swift` (or `NotchPanelView.swift` completion card section): render the full parsed reply using `MarkdownPreviewText`; add "Reply Lines" cap slider in Settings → Appearance (default 6 lines)
 - [ ] Note: markdown rendering fixes from T-095 (`d2a15bb`, `9da78f5`, `dd0fc48`, `07a92b4`) apply to the new parser too — port them together
+- [ ] Port `cea3877` ("fix(island): stop completion replies sizing against each other", v1.0.36): `MarkdownReplyView.swift` completion card was sizing each visible session as a completion card regardless of state, causing SwiftUI main-thread hang; fix adds `isCompleted` guard and computes reply cap from first completion only — must be ported as part of this task's `CompletionQueueView` implementation
 - [ ] 479-line `MarkdownBlockParserTests` + 107-line `MarkdownPreviewTextTests`
 - [ ] `swift build && swift test` passes
 
@@ -253,7 +254,7 @@
 > Claude Code has three hard rate-limit windows (5h, weekly all-models, weekly per-model) that stop long sessions without warning. Upstream adds a live quota display: footer with progress bars + reset countdowns in expanded view; optional chip (ring + %) next to the mascot in collapsed state; auto-mode selects the "pressing" window automatically.
 - **priority**: medium
 - **effort**: M
-- **source**: wxtsky/CodeIsland PR #338 MERGED as `b4bc98a` (v1.0.34, Sep 23, 2026)
+- **source**: wxtsky/CodeIsland PR #338 MERGED as `b4bc98a` (v1.0.34, Sep 23, 2026); **also** `10c98b1` (collapsed bar quota chip, v1.0.36) + `25686bf` (footer plan-limits-first redesign, v1.0.36) — must port alongside main commit
 #### Criteria
 - [ ] ~~Gate: wait for PR #338 to merge~~ **Gate cleared — PR #338 merged as `b4bc98a` in v1.0.34**
 - [ ] Port `ClaudeQuotaMonitor.swift` (new): reads Claude Code OAuth token from Keychain via `security find-generic-password` subprocess, fallback to `~/.claude/.credentials.json`; fetches `/api/oauth/usage` with `oauth-2025-04-20` beta header; parses 5h, weekly, weekly-per-model windows; token is read-only (never refreshed)
@@ -472,7 +473,7 @@
 > Anthropic's native macOS Claude Code Desktop app shares `~/.claude/settings.json` with the CLI and fires the same hooks (PreToolUse, PostToolUse, AskUserQuestion, PermissionRequest). Users running Claude Code from the desktop app get no visibility in CodeIsland today — sessions are unrecognized. Upstream fix: `4fbd0f9` (Jul 5, 2026).
 - **priority**: high
 - **effort**: S
-- **source**: wxtsky/CodeIsland commit `4fbd0f9` (Jul 5, 2026) — closes upstream issue #211
+- **source**: wxtsky/CodeIsland commit `4fbd0f9` (Jul 5, 2026) — closes upstream issue #211; **also** `03844f9` (v1.0.36, exact session jump via `CLAUDE_CODE_HOST_SESSION_ID` + `claude://code/continue?session=<id>`) — port alongside main commit
 #### Criteria
 - [ ] `Sources/CodeIslandCore/SessionSnapshot.swift`: add `"com.anthropic.claudefordesktop": "Claude"` to bundle ID → source name mapping; desktop sessions receive the "Claude" host tag and exemption from terminal-orphan cleanup (no terminal parent PID to check)
 - [ ] `Sources/CodeIsland/AppState.swift`: recognize Claude Code Desktop in native-app mode detection — check if session cwd paths contain `/claude.app/contents/` or similar app-container prefix; apply native-app lifecycle rules (no terminal process monitoring, no PID-based orphan cleanup)
@@ -1273,6 +1274,96 @@
 - [ ] `Sources/CodeIsland/AppState.swift`: in the PermissionRequest auto-expand path, add `Self.autoExpandOnPermission()` guard before `shouldAutoOpenPendingSurface(for:)` — ~3 lines
 - [ ] `Sources/CodeIsland/SettingsView/BehaviorSettingsView.swift` (or equivalent Behavior settings page): add `BehaviorToggleRow` for the new toggle with label "Auto-Expand on Approval" and description "Expand the panel when an approval is requested. Turn off to keep the island collapsed — the sound still plays and the card is one click away."
 - [ ] Verify: with toggle off, an incoming PermissionRequest does not expand the collapsed island; session badge increments; clicking the island manually reveals the card
+- [ ] `swift build && swift test` passes
+
+### T-109: Fix Homebrew Claude version detection — missing /opt/homebrew/bin/claude
+> `detectClaudeVersion()` misses Apple Silicon Homebrew path; PostToolUseFailure/StopFailure hooks silently not installed for Homebrew users.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `d511732` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `Sources/CodeIsland/ConfigInstaller.swift:248–250`: expand candidates from 2 to 4 paths: `~/.local/bin/claude`, `/opt/homebrew/bin/claude`, `/usr/local/bin/claude`, `~/.claude/local/claude`
+- [ ] Optionally extract as named `claudeBinaryCandidates(home:)` static helper for testability (upstream adds 4 test assertions)
+- [ ] Verify: on Apple Silicon with Homebrew Claude, `detectClaudeVersion()` returns a version string (not nil) and version-gated hooks are installed
+- [ ] `swift build && swift test` passes
+
+### T-110: Status-led session cards, needs-you-first ordering, Compact density
+> Session cards get word-badge status LEDs (NEEDS YOU / WORKING / DONE / ERROR), reordered to float approval-waiting sessions first, with optional Compact density mode.
+- **priority**: medium
+- **effort**: L
+- **source**: wxtsky/CodeIsland commits `b98c75d`, `292ef90`, `cafb145` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] Add `AgentStatus` cases or string-enum status badges: NEEDS YOU, WORKING, THINKING, DONE, IDLE, STOPPED, ERROR
+- [ ] `SessionListView.swift`: add coloured rail / LED on leading edge of each session card
+- [ ] Chat line glyphs: `›` for user prompt, `●` for assistant reply, `▸ Tool` chip for running tool
+- [ ] Inline approval row follows approval card hierarchy: Allow once (filled), Deny (outlined), Always (link naming the tool)
+- [ ] Sort sessions waiting on approval/question first; re-sort on pointer-leave to avoid mid-hover jumps
+- [ ] Compact density mode setting (Settings → Appearance): one line per session, auto-expands only sessions needing action
+- [ ] `swift build && swift test` passes
+
+### T-111: Remember a failed turn until the next prompt (ERROR status)
+> After StopFailure, the session card shows ERROR status until the next UserPromptSubmit clears it; depends on T-110 for visual display.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `29849d3` + AppState change in `b98c75d` batch (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `Sources/CodeIslandCore/SessionSnapshot.swift`: add `var lastTurnFailed: Bool = false`
+- [ ] `Sources/CodeIsland/AppState.swift` `enqueueCompletion(_:turnFailed:)`: stamp `sessions[sessionId]?.lastTurnFailed = turnFailed` before the completion queue fires
+- [ ] Reducer `UserPromptSubmit` branch: clear `lastTurnFailed = false` on the snapshot for the session receiving the new prompt
+- [ ] `swift build && swift test` passes (add test: StopFailure sets lastTurnFailed; next UserPromptSubmit clears it)
+
+### T-112: Fix collapsed right wing overlapping the notch (status badges hidden)
+> When tool-status text fills the collapsed bar, the right-wing badges (pending question, completion dot) slide under the notch and become invisible.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `3d404f1` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `Sources/CodeIsland/NotchPanelView.swift`: add `@State private var rightWingWidth: CGFloat = 0` and wire it from right-wing geometry
+- [ ] Add `rightWingReserve` computed property that returns extra width needed to clear the notch (0 when it fits, positive delta otherwise)
+- [ ] Include `rightWingReserve` in `panelWidth` alongside `quotaReserve.extraWidth`
+- [ ] Only active on `hasNotch` screens; no change on non-notch displays
+- [ ] `swift build && swift test` passes
+
+### T-113: Card and panel UX improvements from v1.0.36
+> Batch of question/approval card fixes and session-list fixes: scrollable question options, full question text, session context on approval card, session list scrollable.
+- **priority**: low
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `82a8123`, `3fa7fcd`, `4532e4b`, `c84411d`, `87422b4`, `9ebc725`, `a89e0b8`, `294d04c` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] `ApprovalBarView.swift`: show which session is asking ("Session: <project>") on the approval card header
+- [ ] `ApprovalBarView.swift`: redesign button hierarchy — Allow once as filled button, Deny as outlined, Always as a text link naming the tool
+- [ ] `QuestionBarView.swift`: give question card same hierarchy as approval card; show full question text (no 3-line truncation)
+- [ ] `QuestionBarView.swift`: scroll long option lists so buttons stay reachable
+- [ ] `SessionListView.swift`: scroll a short but tall session list instead of clipping it
+- [ ] `NotchPanelView.swift`/`SessionListView.swift`: order inline approval buttons consistently with the approval card
+- [ ] `NotchPanelView.swift`: keep at least ~12 chars of branch name visible next to a long project name (relates to T-074)
+- [ ] `QuestionBarView.swift`: fix option label alignment — shared 18pt column so option numbers don't shift adjacent labels (`f80d555`)
+- [ ] `swift build && swift test` passes
+
+### T-114: Question card Dismiss (Hide) button
+> Question cards get a Dismiss button that hides the card without answering: request stays queued (CLI remains blocked), card does not reopen, collapsed bar badge re-opens it.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `97349b5` (v1.0.36, Oct 9, 2026); depends on T-031's `f20e25a` display-gate decoupling (merged v1.0.32)
+#### Criteria
+- [ ] `AppState.swift`: add `closedQuestionIds: OrderedSet<String>` (256-item capped, same pattern as `closedSubagentIds`); `enqueueQuestion()` skips card when id is closed; `dismissQuestion(id:)` adds to set without dequeuing; `resolveQuestion()` removes id from set when real answer arrives
+- [ ] `QuestionBarView.swift`: add "Hide" button alongside answer buttons; tapping calls `appState.dismissQuestion(id:...)`
+- [ ] `NotchPanelView.swift` (collapsed bar): show bell badge chip for hidden-but-queued questions; tapping re-opens the card
+- [ ] Dismissing a question must NOT swallow the next queued question's card or sound (port follow-up fix from `97349b5`)
+- [ ] New `AppStateQuestionDismissTests.swift` (~200 lines): covering dismiss, reopen via badge, and later-question propagation
+- [ ] `swift build && swift test` passes
+
+### T-115: Header tabs spelled out + Quit confirmation button
+> Expanded header tabs read ALL · STATUS · AGENT; Quit button requires a second click within 3 s to actually quit; follow-up fix slides mute/settings buttons to animate with the pill.
+- **priority**: low
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `3ee7c7c` + `56f5bb1` (v1.0.36, Oct 9, 2026)
+#### Criteria
+- [ ] Header pixel tabs: change constants `"ALL"/"STA"/"CLI"` → `"ALL"/"STATUS"/"AGENT"`; fallback `"ALL"/"STA"/"AGT"` for panels narrower than notch width + 200pt; glyphs centred in their strip
+- [ ] Quit confirmation: first click arms a 3 s countdown (`@State var quitArmed: Bool`), button label becomes `"QUIT?"` pill; second click within 3 s quits; timing out, pointer moving off, or panel close reverts to normal; `DispatchWorkItem` cancellation handles reset
+- [ ] Follow-up (`56f5bb1`): the header row owns the confirmation state so mute/Settings buttons animate with the pill (no jump while it fades); idle bar's hovered power button shares the same logic
+- [ ] Extract `QuitConfirmationButton` view with injectable `quitAction: () -> Void` and `clock: () -> Date` for testability
+- [ ] VoiceOver accessibility label changes between normal and armed states
 - [ ] `swift build && swift test` passes
 
 ## Doing

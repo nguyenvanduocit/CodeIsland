@@ -1403,6 +1403,46 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Ten new tasks added (T-099 through T-108). T-073 + T-099 criteria updated with tailer fixes. T-016 persistence criteria updated.**
 
+**Scouted (October 7, 2026) — post-v1.0.35 activity:**
+- No new commits or releases since v1.0.35 (Sep 24); upstream HEAD confirmed `b444ae2` — upstream quiet for 13 days
+- vibeislandapp/vibe-island: latest commit `fc691d0` (Sep 2, "fix: enable diagnostic report uploads") — docs/CI only, nothing actionable; no new commits since Sep 3 scout
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-108) remain as previously documented.
+
+**Scouted (October 8, 2026) — post-v1.0.35 activity:**
+- No new commits or releases since v1.0.35 (Sep 24); upstream HEAD remains `b444ae2` — upstream quiet for 14 days
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — upstream quiet for 36 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (0 closed)
+- **No new actionable items.** All open tasks (T-016 through T-108) remain as previously documented.
+
+**Scouted (October 10, 2026) — v1.0.36 activity:**
+- v1.0.36 released 2026-10-09 — large batch of 50 commits on Oct 9; git tag `f86c9b1`
+- **`d511732`** (Oct 9): "fix(claude): find Homebrew's claude when detecting the version" — `detectClaudeVersion()` only looked at `~/.local/bin/claude` and `/usr/local/bin/claude`; on Apple Silicon Homebrew puts `claude` in `/opt/homebrew/bin/`; GUI app PATH doesn't include it; result: version probe returns nil and PostToolUseFailure/StopFailure hooks are silently not installed for Homebrew users. Our `ConfigInstaller.swift:248–250` has the same bug. Upstream adds `/opt/homebrew/bin/claude` + `~/.claude/local/claude` → **T-109 (new, high, XS)**
+- **`b98c75d` + `292ef90` + `cafb145`** (Oct 9): "feat(list): status-led session cards, needs-you first, Compact density" — every session card gets a word-badge (NEEDS YOU / WORKING / THINKING / DONE / IDLE / STOPPED / ERROR) + colour rail; sessions waiting on approval float first; Compact density mode shows one line per session; inline approval row redesigned → **T-110 (new, medium, L)**
+- **`29849d3`** (Oct 9): "feat(session): remember a failed turn until the next prompt" — `lastTurnFailed` stamped on `SessionSnapshot` at `enqueueCompletion`; cleared on next `UserPromptSubmit`; ERROR status persists until user retries → **T-111 (new, medium, S)**
+- **`3d404f1`** (Oct 9): "fix(island): keep the collapsed right wing clear of the notch" — `rightWingWidth` measured via GeometryReader; `rightWingReserve` added to panel width when badges would slide under notch → **T-112 (new, medium, XS)**
+- **`82a8123`, `3fa7fcd`, `4532e4b`, `c84411d`, `87422b4`, `9ebc725`, `a89e0b8`, `294d04c`** (Oct 9): batch of card and panel UX fixes — approval card shows session context; question shows full text (no 3-line truncation); option list scrollable; session list scrollable; approval card hierarchy redesign; question card matches approval hierarchy; branch name truncation fix → **T-113 (new, low, M)**
+- **`5fc27a4`** (Oct 9): "fix(bridge): a natively installed Claude Code is Claude, not its host" — adds `/.local/share/claude/versions/` check in upstream's `CLIProcessResolver`; **not applicable to our fork** — our `ProcessScanner.swift:24` already handles this path (`let versionsDir = "~/.local/share/claude/versions/"`)
+- **`786e412` + `a667eec` + `235cec4`** (Oct 9): accessibility improvements — Reduce Motion respected in mascot/shimmer/badges; dim panel text lifted to WCAG AA contrast; icon and pixel-font controls given accessibility names; medium priority but moderate effort → not tracked separately yet; add to T-113 criteria if desired
+- L10n fixes (`d9b47f0`, `0a839cf`, `c69da76`), Qoder-specific (`17e5068`, `3227ab6`), Hermes/Cline/minimax/DSH installer (`0718ac0`, `c37d0a6`, `1c2b6bf`, `722896c`, `ab2a3e9`), OpenCode/SSH remote (`3c765f0`) — skip
+- vibeislandapp/vibe-island: no new commits since Sep 2 (`fc691d0`) — upstream quiet for 38 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Five new tasks added (T-109 through T-113).** All other open tasks (T-016 through T-108) remain as previously documented.
+
+**Scouted (October 11, 2026) — post-v1.0.36 audit (missed commits from v1.0.36 batch):**
+- No new commits or releases since v1.0.36 (Oct 9–10); upstream HEAD remains `f86c9b1` — upstream quiet for 1 day
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — upstream quiet for 39 days; nothing actionable
+- **⚠️ Missed from October 10 scout** — five commits in the v1.0.36 batch that were not captured in the prior scout entry:
+  - **`97349b5`**: "feat(questions): dismiss a question card without answering it (#352)" — question cards get a "Hide" button (request stays queued, card hides, collapsed bar badge re-opens it; dismissing does not swallow next question's card/sound); 307-line diff, 200-line tests → **T-114 (new, medium priority, S)**
+  - **`3ee7c7c` + `56f5bb1`**: "feat(header): spell out the grouping tabs; Quit asks once" + header fix — tabs read `ALL · STATUS · AGENT`; Quit requires 2 clicks within 3 s to actually quit (animated QUIT? pill, testable via `QuitConfirmation` struct); follow-up slides mute/Settings buttons to animate with pill → **T-115 (new, low priority, S)**
+  - **`10c98b1`**: "feat(quota): show one plan-limit window on the collapsed island (#350)" — quota chip in collapsed bar left wing (label, ring, percent, pace mark) with Auto/5h/weekly/weekly-model picker; extends T-089 → **T-089 source + criteria updated** (port alongside main commit)
+  - **`25686bf`**: "feat(footer): plan limits first on one line, token totals in words" — footer redesign: limits-first line with warning color, pace marks, reset countdowns; token totals use words (`"Claude · last 5h: 422K in · 96K out"`); extends T-089 + T-073 → **T-089 criteria updated**
+  - **`03844f9`**: "feat(jump): open the exact Claude Desktop session a card belongs to (#353)" — bridge forwards `CLAUDE_CODE_HOST_SESSION_ID`; validated `local_<id>` stored on snapshot (persisted, inherited by subagents); card click opens `claude://code/continue?session=<id>`; new `ClaudeDesktopCodeSession.swift` (34 lines); extends T-070 → **T-070 source + criteria updated** (port alongside main commit)
+  - **`cea3877`**: "fix(island): stop completion replies sizing against each other (#359)" — critical SwiftUI main-thread hang in completion card layout when a session is gone: cards were rendering every session as a completion card; reply cap computed from panel chrome directly; layout-loop safety net; new file `MarkdownReplyView.swift` involved → **note added to T-101 criteria** (must port this fix alongside T-101's markdown block renderer)
+  - **`f80d555`**: "fix(question): line option labels up and lift their numbers to AA contrast" — option numbers share an 18pt column (previously width of each number's glyphs, shifting adjacent labels); numbers at 80% (5.7:1) not 60% (3.7:1) → **T-113 criteria updated** (add as additional fix to port)
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Two new tasks added (T-114, T-115). T-089, T-070, T-113, T-101 criteria updated.**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
