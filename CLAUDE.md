@@ -1442,6 +1442,18 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
   - **`f80d555`**: "fix(question): line option labels up and lift their numbers to AA contrast" — option numbers share an 18pt column (previously width of each number's glyphs, shifting adjacent labels); numbers at 80% (5.7:1) not 60% (3.7:1) → **T-113 criteria updated** (add as additional fix to port)
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Two new tasks added (T-114, T-115). T-089, T-070, T-113, T-101 criteria updated.**
+
+**Scouted (October 12, 2026) — v1.0.37 + v1.0.38 activity:**
+- v1.0.37 released 2026-10-11 (two commits): `5394c2e` "fix(codex): keep other app-server clients' threads out of Desktop discovery (#369)" and `cd39ddd` "fix(codex): key Desktop app-server hooks as Desktop without a bundle id (#371)" — both Codex Desktop app-server fixes; not applicable to our Claude Code-only fork; skip
+- v1.0.38 released 2026-10-11 (one commit): `9905070` "fix(codex): find the Codex binary newer ChatGPT builds bundle" — ChatGPT moved Codex binary location to `Contents/Resources/codex-cli/CodexCLI.app/...`; Codex-specific; skip
+- **⚠️ Missed from October 10–11 scouts** — two more commits from the v1.0.36 batch not captured in prior notes:
+  - **`ea4fbd7`**: "fix(bridge): a plugin's own _source is declared, not a proxied hook" — adds `CLIProcessResolver.bridgeSource()` which treats payload `_source` as declared (not inferred/proxied); only affects sessions where another CLI fires Claude's hook without `--source`; our fork does not have `CLIProcessResolver` or `pluginSessionMode` yet → **add to T-051 implementation criteria**: port `ea4fbd7` alongside main T-051 commits
+  - **`1113031`**: "fix(bridge): Claude Code firing its own hook is not a proxied one" — `bridgeSource()` now excludes `"claude"` from `viaPlugin` marking, preventing Claude Code sessions from being auto-allowed/hidden under Agent Sub-Sessions "hide" mode; requires `CLIProcessResolver` (from `ea4fbd7`) → **add to T-051 implementation criteria alongside `ea4fbd7`**
+- No open PRs with new relevant changes: PR #345, #352, #353, #359 confirmed as already-merged PRs whose GitHub branches still exist; their merged commits (`1cecfc5`, `97349b5`, `03844f9`, `cea3877`) were captured in prior scouts
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — upstream quiet for 40 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (confirmed)
+- **No new actionable items.** T-051 criteria updated with `ea4fbd7` + `1113031` prerequisite notes. All open tasks (T-016 through T-115) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
