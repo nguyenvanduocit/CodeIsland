@@ -1462,6 +1462,32 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - `nguyenvanduocit/CodeIsland` issue tracker: disabled (API returns 410 on create; list returns 0); all tracking via kanban board only; attempted to create GitHub issues for T-109/T-112 to backfill the Oct 10-12 discovery gap, but creation blocked
 - **No new actionable items.** All open tasks (T-016 through T-115) remain as previously documented.
 
+**Scouted (October 24, 2026) — v1.0.39 + v1.0.40 activity:**
+- v1.0.39 released 2026-10-22
+- **`b31282b`** (v1.0.39): "feat(activator): resolve Ghostty/tmux terminal metadata from local Claude Code process environment" — new `AppState+ClaudeTerminalMetadata.swift` (63 lines); reads `TERM_PROGRAM`, `TMUX`, `TMUX_PANE` from the running Claude Code process via `proc_pidinfo()` when hook events don't carry terminal info (session started before CodeIsland launched); feeds `TerminalActivator.activate()` as first fallback; improves jump accuracy for early-started sessions. Extends T-055 criteria → **T-124** (new, medium priority, S)
+- `0c0d82a` (v1.0.39): "perf(cursor): resolve Cursor Tasks off main thread" — Cursor-specific; skip
+- SSH/pi/omp fixes (v1.0.39): skip (non-Claude CLIs or remote feature)
+- v1.0.40 released 2026-10-23 — large batch of ~120 commits
+- **`eb766a7`** (v1.0.40): "fix(scanner): skip claude-code multicall subprocesses" — Claude Code bundles grep/rg/find/etc. as a multicall executable; `ProcessScanner` was matching those subprocess invocations as additional Claude Code CLIs → phantom sessions appeared for every disk I/O operation; fix adds argv check: if `argv[0]` resolves to Claude Code but `argv[1]` is not `"claude"`, skip it → **T-116** (new, high priority, XS)
+- **`8fca042`** (v1.0.40): "fix(scanner): pair sessions by cwd + pid-file, not cwd alone" — multiple Claude Code instances sharing the same cwd (parallel worktrees at the same path, `/resume` creating a second session) all mapped to one session card; fix reads `~/.claude/sessions/<pid>.json` pid-file to pair each process to its exact session; falls back to cwd-only for older Claude Code versions → **T-117** (new, high priority, S)
+- **`6b4163a`** (v1.0.40): "fix(queue): drain orphaned approval items on StopHookResult" — drains pending `PermissionRequest` items when session ends; upstream fix for **T-065** → **T-065 source updated**; implement T-065 as part of T-118
+- **`7d81031`** (v1.0.40): "fix(queue): prevent burst approvals collapsing into a single chime" — sound burst dedup: at most one chime when multiple requests arrive within 200ms
+- **`2d760ad`** (v1.0.40): "fix(queue): skip already-answered requests on queue head rotation" — prevents stale answered items from re-appearing at queue head on panel re-open
+- **`8605df0`** (v1.0.40): "fix(queue): collapse approval bar when queue empties with no active card" — four approval queue reliability fixes together → **T-118** (new, high priority, S)
+- **`0468a40`** (v1.0.40): "fix(persistence): restrict ~/.codeisland directory and sessions.json to owner-only permissions" — `~/.codeisland` dir created 0700; `sessions.json` written 0600 via atomic rename; private session data (cwd, CLI args, PIDs) protected → **T-119** (new, medium priority, XS)
+- **`bce932c`** (v1.0.40): "fix(reducer): guard processScanner SIGTERM against bad ppid lookup" — crash when ppid was 0 or invalid; `kill(0, SIGTERM)` sends to entire process group; guard requires `ppid > 1`
+- **`1e34b39`** (v1.0.40): "fix(reducer): handle out-of-order PostToolUse arriving before its PreToolUse" — burst scenarios can deliver PostToolUse first; synthetic PreToolUse inserted to keep reducer state consistent
+- **`43eb0f3`** (v1.0.40): "fix(reducer): don't flash idle status when one tool completes while another is active" — only transition to `.idle` when `activeToolCount` reaches 0 → **T-120** (new, high priority, XS)
+- **`c756079` + related** (v1.0.40): "refactor(attention): extract AttentionPolicy for sound/push/reminder decisions" — centralises all sound, push, and reminder policy decisions into a single `AttentionPolicy` struct; replaces scattered checks in `AppState`, `RequestQueueService`, `CompletionQueueService`; prerequisite for T-102 (push), T-103 (reminders), T-104 (away mute) → **T-121** (new, medium priority, L)
+- **10+ HookServer reliability commits** (v1.0.40): NWListener error recovery (`.failed` → cancel + recreate), socket cleanup before rebind, sleep/wake recovery → **T-122** (new, high priority, M)
+- **`5836218`** (v1.0.40): "fix(config): compare-before-write prevents spurious settings.json rewrites" — `JSONMinimalEditor.isSameJSONDocument()` static method; `setTopLevelValue()` calls it and skips write when content is structurally equivalent; extends T-034 → **T-034 criteria updated** (add compare-before-write alongside main JSONMinimalEditor port); also tracked as → **T-123** (new, high priority, XS — implement as part of T-034)
+- `9a2e805` + `16b6598` (v1.0.40): bridge log redaction + clarity improvements — bridge-only privacy fixes; low priority; note in T-123/T-122
+- `93b2578` (v1.0.40): "fix(sound): no completion chime for a stopped turn" — cosmetic; low priority; skip for now
+- Codex Desktop, SSH remote, Cursor Task, OMP, Hermes, TraeCli, DSH, pi, Kimi commits — skip (non-Claude CLIs or remote feature)
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest code commit — upstream quiet for 53 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Nine new tasks added (T-116 through T-124). T-065, T-034, T-055 criteria updated.**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`

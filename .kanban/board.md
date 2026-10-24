@@ -636,11 +636,13 @@
 > ConfigInstaller.swift uses JSONSerialization with .sortedKeys, which reorders all keys, escapes forward slashes, and strips trailing newlines on every install/repair cycle. Noisy for users who version-control their Claude settings.
 - **priority**: high
 - **effort**: S
-- **source**: wxtsky/CodeIsland issue #106, commit `adf41b6` (v1.0.22, Apr 23, 2026) — upstream fix available
+- **source**: wxtsky/CodeIsland issue #106, commit `adf41b6` (v1.0.22, Apr 23, 2026) + `5836218` (v1.0.40, Oct 23, 2026) — upstream fix available
 #### Criteria
 - [ ] Port `JSONMinimalEditor.swift` from upstream `adf41b6` — minimal-diff editor that splices key/value changes without rewriting the whole file
 - [ ] Update `ConfigInstaller.swift` to use `JSONMinimalEditor` instead of `JSONSerialization.data(..., [.prettyPrinted, .sortedKeys])`
 - [ ] Port `JSONMinimalEditorTests.swift` (14 tests covering comment preservation, idempotency, malformed input)
+- [ ] Add `isSameJSONDocument(existing:proposed:) -> Bool` static method from `5836218`; in `setTopLevelValue()`, call it before writing and skip the write when content is structurally equivalent (prevents spurious mtime updates)
+- [ ] Test: call `setTopLevelValue()` on an already-correct `settings.json`; confirm file mtime is unchanged
 - [ ] Manual check: install hooks on a real `~/.claude/settings.json` with comments and custom key order; confirm no reformat
 - [ ] `swift build && swift test` passes
 
@@ -1128,7 +1130,7 @@
 > Missed from May 2+8 scouts. Four Apr 30 + May 10 upstream commits add Zellij pane-level jump, Kaku (WezTerm fork) support, WezTerm ttyForPid fallback, tmux cross-session hardening, and persistence of multiplexer pane hints across restarts.
 - **priority**: high
 - **effort**: M
-- **source**: wxtsky/CodeIsland commits `4066315`, `7b47019`, `06df412` (Apr 30, 2026) + `d17709a` (May 10, 2026)
+- **source**: wxtsky/CodeIsland commits `4066315`, `7b47019`, `06df412` (Apr 30, 2026) + `d17709a` (May 10, 2026) + `b31282b` (v1.0.39, Oct 22, 2026 — see T-124)
 #### Criteria
 - [ ] **Bridge** (`CodeIslandBridge/main.swift`): capture `ZELLIJ_PANE_ID`, `ZELLIJ_SESSION_NAME`, `WEZTERM_PANE` from environment and forward in JSON payload
 - [ ] **EventMetadata / HookEvent**: add `zellijPaneId`, `zellijSessionName`, `weztermPaneId` fields parsed at boundary
@@ -1222,9 +1224,9 @@
 > When a Claude Code session exits while a PermissionRequest or AskUserQuestion is queued in the panel, the approval/question bar remains visible indefinitely with no session behind it. Distinct from T-057 (session still running but user answered via terminal).
 - **priority**: high
 - **effort**: XS
-- **source**: wxtsky/CodeIsland issue #224 (Jun 10–11, 2026) — no upstream fix yet
+- **source**: wxtsky/CodeIsland issue #224 (Jun 10–11, 2026); upstream fix in `6b4163a` (v1.0.40, Oct 23, 2026) — implement as part of T-118 (approval queue reliability cluster)
 #### Criteria
-- [ ] In `AppState.executeEffect(.removeSession(sessionId:))`, drain all pending `RequestQueueService` items whose `sessionId` matches the removed session
+- [ ] In `AppState.executeEffect(.removeSession(sessionId:))`, drain all pending `RequestQueueService` items whose `sessionId` matches the removed session (this is the `6b4163a` fix; implement as part of T-118)
 - [ ] If the drained item is the currently displayed approval/question bar item, call `showNextOrCollapse()` immediately so the bar advances or collapses
 - [ ] Verify: start session with a pending PermissionRequest → kill claude process → confirm approval bar disappears
 - [ ] `swift build && swift test` passes
@@ -1364,6 +1366,108 @@
 - [ ] Follow-up (`56f5bb1`): the header row owns the confirmation state so mute/Settings buttons animate with the pill (no jump while it fades); idle bar's hovered power button shares the same logic
 - [ ] Extract `QuitConfirmationButton` view with injectable `quitAction: () -> Void` and `clock: () -> Date` for testability
 - [ ] VoiceOver accessibility label changes between normal and armed states
+- [ ] `swift build && swift test` passes
+
+### T-116: Fix ProcessScanner matching Claude Code multicall subprocesses as phantom sessions
+> Claude Code bundles grep/rg/find/etc. as a multicall binary; argv[0] matches the Claude Code executable but argv[1] differs — ProcessScanner creates phantom sessions from every disk I/O operation.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `eb766a7` (v1.0.40, Oct 23, 2026)
+#### Criteria
+- [ ] In `ProcessScanner.swift`, after matching a process by executable path to Claude Code, read `argv[1]`: if the effective tool name is not `"claude"` (or invocation has no second argv), skip the process
+- [ ] Test: a process with argv `["/path/to/.local/share/claude/versions/x/claude", "grep", "-r"]` is not counted as a Claude Code session
+- [ ] `swift build && swift test` passes
+
+### T-117: Fix sessions with same cwd mis-paired to wrong session card
+> ProcessScanner pairs CLI processes to sessions by cwd only; parallel Claude Code instances in the same directory all map to one session card instead of distinct ones.
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `8fca042` (v1.0.40, Oct 23, 2026)
+#### Criteria
+- [ ] Read `~/.claude/sessions/<pid>.json` pid-file to pair each Claude Code process to its exact session ID; fall back to cwd-based matching only when no pid-file exists (older Claude Code versions)
+- [ ] In `ProcessScanner.swift`, update `findClaudeSessions()` to read pid-files first, use cwd as secondary key
+- [ ] Port tests: two processes with same cwd but different pid-files → two distinct sessions
+- [ ] `swift build && swift test` passes
+
+### T-118: Fix approval queue reliability cluster (burst dedup, stale rotation, stuck card, orphan drain)
+> Four approval queue bugs: burst arrivals collapse to one chime, already-answered requests resurface at queue head, card stays open after all sessions drain, and orphaned items not cleared on session end (T-065 upstream fix).
+- **priority**: high
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `6b4163a` (T-065 fix), `7d81031`, `2d760ad`, `8605df0` (v1.0.40, Oct 23, 2026)
+#### Criteria
+- [ ] Port `6b4163a`: drain all pending queue items for a session in the `.removeSession` side-effect handler — this is the T-065 upstream fix; implement T-065 and T-118 together
+- [ ] Port `7d81031`: play at most one sound chime when multiple approval requests arrive within 200ms (debounce timer in `RequestQueueService`)
+- [ ] Port `2d760ad`: skip already-answered items when rotating queue head (check `isAnswered` flag before calling `showCard()`)
+- [ ] Port `8605df0`: when queue becomes empty and no active card session exists, collapse approval bar unconditionally
+- [ ] `swift build && swift test` passes
+
+### T-119: Restrict ~/.codeisland directory and sessions.json file permissions to owner-only
+> ~/.codeisland directory is world-readable by default; sessions.json written with a plain file write. Private session data (cwd, CLI args, PIDs) should be owner-only.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `0468a40` (v1.0.40, Oct 23, 2026)
+#### Criteria
+- [ ] Create `~/.codeisland` directory with permissions 0700; if it already exists with looser permissions, tighten them on next write
+- [ ] Write `sessions.json` atomically: write to a temp file, set 0600 permissions, then `rename()` into place
+- [ ] `swift build && swift test` passes
+
+### T-120: Fix reducer safety: SIGTERM crash on bad ppid, out-of-order tool events, brief idle flash
+> Three reducer edge cases: (1) crash sending SIGTERM to PID 0/invalid when ppid lookup fails; (2) PostToolUse arriving before its PreToolUse in burst scenarios; (3) brief idle status flash when one tool completes but another is already active.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commits `bce932c`, `1e34b39`, `43eb0f3` (v1.0.40, Oct 23, 2026)
+#### Criteria
+- [ ] Port `bce932c`: in the SIGTERM orphan-cleanup path of `AppState.swift`, guard `ppid > 1` before calling `kill(ppid, SIGTERM)` — PID 0 sends to entire process group; PID 1 is launchd
+- [ ] Port `1e34b39`: in reducer's `PostToolUse` branch, if no matching `PreToolUse` record exists for the `tool_use_id`, insert a synthetic PreToolUse before processing completion
+- [ ] Port `43eb0f3`: in reducer's tool-completion path, only transition to `.idle` status if `activeToolCount` reaches 0 after decrement (not just when current tool finishes)
+- [ ] `swift build && swift test` passes
+
+### T-121: Extract AttentionPolicy — centralise sound/push/reminder decision logic
+> Sound, push notification, and reminder decisions are scattered across AppState, RequestQueueService, and CompletionQueueService. Upstream v1.0.40 extracts them into a single AttentionPolicy struct; prerequisite for T-102 (push), T-103 (reminders), T-104 (away mute).
+- **priority**: medium
+- **effort**: L
+- **source**: wxtsky/CodeIsland refactor commits `c756079` + related (v1.0.40, Oct 23, 2026)
+#### Criteria
+- [ ] Create `Sources/CodeIslandCore/AttentionPolicy.swift`: pure struct with `shouldPlaySound(for:)`, `shouldSendPush(for:)`, `shouldScheduleReminder(for:)` — all logic extracted from AppState/RequestQueueService/CompletionQueueService
+- [ ] `AttentionPolicy` takes `SessionSnapshot?`, `Settings`, and optional mute/reminder state as inputs; returns typed decisions
+- [ ] Replace scattered sound/push/reminder checks in services with single `AttentionPolicy` call per decision point
+- [ ] All existing sound-path tests pass through the new policy
+- [ ] `swift build && swift test` passes
+
+### T-122: Hook server NWListener reliability hardening (error recovery, socket cleanup, sleep/wake)
+> NWListener can enter error state without recovering; stale socket file prevents rebind after crash/restart; server doesn't reconnect after system sleep/wake — results in silent hook event loss.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland v1.0.40 batch (10+ HookServer.swift reliability commits, Oct 23, 2026)
+#### Criteria
+- [ ] Port NWListener error recovery: on `.failed` state, wait 1s then `cancel()` + recreate listener (currently only logged)
+- [ ] Port socket cleanup: delete existing socket file before binding — handles stale socket from crash/restart without manual cleanup
+- [ ] Port sleep/wake recovery: observe `NSWorkspace.willSleepNotification` + `didWakeNotification`; stop listener before sleep, restart after wake with 2s delay
+- [ ] Verify: kill and restart CodeIsland; hook events received by new instance within 5s
+- [ ] Verify: suspend and resume macOS; hook server re-attaches and events flow
+- [ ] `swift build && swift test` passes
+
+### T-123: Prevent ConfigInstaller from rewriting settings.json when content is unchanged
+> ConfigInstaller rewrites ~/.claude/settings.json on every hook install/repair even when nothing changed. Upstream `5836218` adds compare-before-write. Implement as part of T-034 (same file/commit scope).
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `5836218` (v1.0.40, Oct 23, 2026); implement as part of T-034
+#### Criteria
+- [ ] Implement alongside T-034: after porting `JSONMinimalEditor.swift`, add `isSameJSONDocument(existing:proposed:) -> Bool` static method from `5836218`
+- [ ] In `ConfigInstaller.swift` `setTopLevelValue()`, call `isSameJSONDocument()` before writing; skip write when content is structurally equivalent
+- [ ] Test: call `setTopLevelValue()` on an already-correct `settings.json`; confirm file mtime is unchanged (write was skipped)
+- [ ] `swift build && swift test` passes
+
+### T-124: Resolve Claude Code terminal metadata from process environment for multiplexer sessions
+> When CodeIsland attaches to a Claude Code session that started before the app launched, hook events don't carry TERM_PROGRAM/TMUX/TMUX_PANE. Upstream b31282b adds AppState+ClaudeTerminalMetadata.swift that reads those env vars from the running process, enabling jump-to-terminal for pre-existing sessions.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commit `b31282b` (v1.0.39, Oct 22, 2026); extends T-055
+#### Criteria
+- [ ] Port `AppState+ClaudeTerminalMetadata.swift` (63 lines): `resolveTerminalMetadata(pid:)` reads process environment via `proc_pidinfo(PROC_PIDENVINFO)` on macOS and returns `(termProgram: String?, tmux: String?, tmuxPane: String?)`
+- [ ] In `SessionDiscoveryService`, after discovering a session via pid-file, call `resolveTerminalMetadata(pid:)` and merge non-nil fields into the session's `EventMetadata`
+- [ ] Apply on top of T-055 (multiplexer env vars captured in bridge)
+- [ ] Test: discover a running Claude Code process manually and verify `resolveTerminalMetadata` returns correct `TERM_PROGRAM` value
 - [ ] `swift build && swift test` passes
 
 ## Doing
