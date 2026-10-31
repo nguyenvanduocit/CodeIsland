@@ -1,5 +1,5 @@
 # Kanban Board
-<!-- Updated: 2026-10-11 -->
+<!-- Updated: 2026-10-31 -->
 
 ## Backlog
 
@@ -1468,6 +1468,94 @@
 - [ ] In `SessionDiscoveryService`, after discovering a session via pid-file, call `resolveTerminalMetadata(pid:)` and merge non-nil fields into the session's `EventMetadata`
 - [ ] Apply on top of T-055 (multiplexer env vars captured in bridge)
 - [ ] Test: discover a running Claude Code process manually and verify `resolveTerminalMetadata` returns correct `TERM_PROGRAM` value
+- [ ] `swift build && swift test` passes
+
+### T-125: Fix "Always allow this session" not applying to sub-agents
+> When "Always allow this session" is clicked, the rule should hold for all agents within that session, not just the main agent.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `a2d4850` (v1.0.41, 2026-10-28)
+#### Criteria
+- [ ] `AppState.swift` `autoApprovedTools` lookup: remove `agent_id` gate — session-scoped Always-Allow entries must be checked by `session_id` alone, regardless of which sub-agent fires the request
+- [ ] `HookServer.swift` auto-approve path: same fix — when checking `autoApprovedTools[sessionId]`, do not also require an `agent_id` match
+- [ ] `swift build && swift test` passes
+
+### T-126: Fix multi-display panel issues — identity, fullscreen, auto mode, display rebuild
+> Four display-handling bugs that cause the island to appear on the wrong screen, misbehave in fullscreen, or use the wrong Retina scale after moving between displays.
+- **priority**: high
+- **effort**: M
+- **source**: wxtsky/CodeIsland commits `81c7e7a`, `cacf949`, `7e71015`, `9dac3a2` (v1.0.41, 2026-10-28); extends T-056
+#### Criteria
+- [ ] `PanelWindowController.swift`: Auto mode — enumerate all screens (not just primary) to find the frontmost window's display (`81c7e7a`)
+- [ ] `PanelWindowController.swift`: Hide in Fullscreen — check only the island's own display's fullscreen state, not any display (`cacf949`)
+- [ ] `ScreenDetector.swift` / Settings: store pinned display by `CGDirectDisplayID` instead of positional index; on app launch, match stored ID to current screen list and fall back gracefully (`7e71015`)
+- [ ] `PanelWindowController.swift`: when the target display changes, rebuild the panel window for that display (tear down + recreate) instead of repositioning the existing window to avoid wrong backing scale / Retina artifacts (`9dac3a2`)
+- [ ] `swift build && swift test` passes
+
+### T-127: Fix half-typed question answer lost when island moves to another display
+> If the user is typing a reply in a question card and the island moves displays, the typed text is discarded. Fix preserves the in-progress answer.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `d5949b4` (v1.0.41, 2026-10-28)
+#### Criteria
+- [ ] `QuestionBarView.swift` / `AppState.swift`: persist the in-progress answer text to a stable backing store (e.g. `@State` anchored on the question's `requestId`, not on the view instance) so it survives view teardown when the panel is rebuilt for another display
+- [ ] Verify: type partial text in a question field → trigger display change → typed text reappears in the rebuilt panel
+- [ ] `swift build && swift test` passes
+
+### T-128: Perf: move island, badges, and sleeping mascot onto a shared 20fps clock
+> The island currently re-layouts on every display frame for animations that only need 20fps. Three fixes gate the most expensive paths behind a shared timer.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `c360cfd`, `8146525`, `c22e907` (v1.0.41, 2026-10-28); extends T-033
+#### Criteria
+- [ ] `NotchPanelView.swift` / `PanelWindowController.swift`: drive all island position / width animations from a single 20fps `Timer.publish` instead of `withAnimation` blocks that fire on every `View.body` evaluation (`c360cfd`)
+- [ ] `NotchPanelView.swift`: the "waiting" badge pulse animation — switch from per-frame `@State` toggle to the shared 20fps clock so it does not force a full layout pass on every display frame (`8146525`)
+- [ ] `SpriteMascotView.swift` / sleeping mascot: the sleeping mascot's Zzz layout path no longer participates in the island's main layout cycle when not animating (`c22e907`)
+- [ ] Verify Energy Impact remains ≤1% while idle (consistent with T-033 `14b75be` upstream target)
+- [ ] `swift build && swift test` passes
+
+### T-129: Feature: remove all idle cards from the session list in one click
+> Add a dismissal banner that lets the user clear all idle/stopped session cards at once; highlight which cards would be removed before committing.
+- **priority**: medium
+- **effort**: S
+- **source**: wxtsky/CodeIsland commits `2bbdd13` + `0d8995c` + `5367be1` (v1.0.41, 2026-10-28)
+#### Criteria
+- [ ] `SessionListView.swift` / `NotchPanelView.swift`: when ≥1 session is idle or stopped, show a "Remove N idle sessions" banner at the bottom of the list (`2bbdd13`)
+- [ ] Banner hover/tap preview: highlight the cards that would be removed before the user confirms (`0d8995c`)
+- [ ] `AppState.swift` reducer: `removeIdleSessions()` action removes all sessions whose status is `.idle` or `.stopped`; if any of those sessions had pending approval/question queue entries, drain them first
+- [ ] `5367be1` fix: if a session card was already removed by this banner and a background compaction event subsequently arrives for it, do not re-add it (guard the reducer's session-creation path)
+- [ ] Settings: no new toggle required (action is explicit, not automatic)
+- [ ] `swift build && swift test` passes
+
+### T-130: Fix: background compaction must not change a finished session card
+> Claude Code's background compaction fires PreToolUse/PostToolUse events that cause a finished session to transition back to `.working`, making the completion card disappear.
+- **priority**: high
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `6bfcb46` (v1.0.41, 2026-10-28), PR #388
+#### Criteria
+- [ ] `Sources/CodeIslandCore/SessionSnapshot.swift` `reduceEvent()`: when a `PreToolUse` or `PostToolUse` event carries the compaction tool name (e.g. `"compact"` — verify actual tool name from a real Claude Code transcript), skip the working-status transition if the session is already in `.done` or `.stopped`
+- [ ] Verify: run a session to completion, wait for Claude Code to auto-compact in the background, confirm the completion card stays visible
+- [ ] `swift build && swift test` passes
+
+### T-131: Fix: PermissionRequest answered in Claude Desktop App clears island card
+> When a user answers a PermissionRequest from within the Claude app UI (not the island), the island's pending approval card should automatically disappear when the tool call finishes.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `e130971` (v1.0.41, 2026-10-28), PR #389
+#### Criteria
+- [ ] `RequestQueueService.swift` / `AppState.swift`: on `PostToolUse` for a tool whose `tool_use_id` matches a queued PermissionRequest entry, drain that entry from the queue (the tool ran to completion, meaning the permission was granted somewhere)
+- [ ] This is complementary to T-083's session-routing fix — the trigger here is PostToolUse completion, not a user click
+- [ ] Depends on T-070 (Claude Desktop session support) being implemented first, or guard on `session.source == .claudeApp`
+- [ ] `swift build && swift test` passes
+
+### T-132: Fix: click-to-jump brings forward the correct running copy of the terminal
+> When multiple instances of the same terminal app are running, clicking a session card should raise the specific instance running that session rather than any/new instance.
+- **priority**: medium
+- **effort**: XS
+- **source**: wxtsky/CodeIsland commit `a5036e0` (v1.0.41, 2026-10-28)
+#### Criteria
+- [ ] `TerminalActivator.swift` `activate()` top-level entry: before falling back to `NSWorkspace.open(bundleID:)` (which may launch a new instance), check `NSRunningApplication.runningApplications(withBundleIdentifier:)` for running copies; if found, call `app.activate(options: [.activateIgnoringOtherApps])` on the specific instance matched by the existing PID/tty logic
+- [ ] Verify: two iTerm2 windows open in different projects → click session card for each → correct window activates
 - [ ] `swift build && swift test` passes
 
 ## Doing

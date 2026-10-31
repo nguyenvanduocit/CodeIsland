@@ -1488,6 +1488,34 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Nine new tasks added (T-116 through T-124). T-065, T-034, T-055 criteria updated.**
 
+**Scouted (October 31, 2026) — v1.0.41 activity:**
+- v1.0.41 released 2026-10-28 — batch of 26 commits
+- **`a2d4850`** (v1.0.41): "fix(approval): 'Always allow … this session' holds for every agent" — Always-Allow dict keyed by session_id was also gated on agent_id match; sub-agents with a different agent_id were re-prompted even after the user clicked "Always allow"; fix removes agent_id gate from lookup → **T-125** (new, high priority, XS)
+- **`81c7e7a`** (v1.0.41): "fix(display): Auto finds the window in front on any display arrangement" — Auto mode only checked primary display for the frontmost window; fix enumerates all screens → batch with T-126
+- **`cacf949`** (v1.0.41): "fix(display): Hide in Fullscreen looks only at the island's own display" — used wrong display's fullscreen state; fix scopes check to the island's own screen → batch with T-126
+- **`7e71015`** (v1.0.41): "fix(display): a pinned display is remembered by its identity, not its place" — stored positional index; fix uses `CGDirectDisplayID` → batch with T-126
+- **`9dac3a2`** (v1.0.41): "fix(panel): the island changes display only through a rebuild for that display" — repositioning the window produced wrong backing scale on HiDPI transitions; fix rebuilds the panel for the new display → **T-126** (new, high priority, M; all four display fixes batched)
+- **`d5949b4`** (v1.0.41): "fix(question): a half-typed answer survives the island moving to another display" — typed text lost on display change; fix anchors `@State` on question's `requestId` not view instance → **T-127** (new, medium priority, XS)
+- **`c360cfd`** (v1.0.41): "perf(island): the island moves on one 20 fps clock, not on every display frame" — all island position/width animations driven per-frame; fix consolidates onto 20fps timer → batch with T-128
+- **`8146525`** (v1.0.41): "perf(island): a waiting badge pulses on the clock, not on every display frame" — badge pulse forced full layout per frame; fix shares 20fps clock → batch with T-128
+- **`c22e907`** (v1.0.41): "perf(mascots): a sleeping mascot's z's no longer lay out the island" — sleeping Zzz animation participated in island layout cycle; fix excludes it → **T-128** (new, medium priority, S; three perf fixes batched; extends T-033)
+- **`2bbdd13`** (v1.0.41, PR #385): "feat(sessions): remove idle cards from the session list in one click" — banner to bulk-remove idle/stopped cards → batch with T-129
+- **`0d8995c`** (v1.0.41): "feat(sessions): the remove-idle banner marks the cards it would take" — hover preview highlights cards before removal → batch with T-129
+- **`5367be1`** (v1.0.41): "fix(sessions): a background compaction leaves a removed card removed" — removed session card re-appeared if compaction event arrived after manual removal → **T-129** (new, medium priority, S; batch with remove-idle banner)
+- **`6bfcb46`** (v1.0.41, PR #388): "fix(claude): a background compaction leaves a finished card as it was" — Claude Code's background compaction fired PreToolUse/PostToolUse that reset the finished session card to `.working`; fix guards transition in reducer when session is in terminal state → **T-130** (new, high priority, XS)
+- **`e130971`** (v1.0.41, PR #389): "fix(permission): a request answered in the Claude app goes when its call finishes" — PermissionRequest card lingered after user answered in-app; fix drains queue entry on matching PostToolUse completion → **T-131** (new, medium priority, XS; depends on T-070)
+- **`a5036e0`** (v1.0.41): "fix(jump): bring forward the copy of an app that is running" — click-to-jump could launch a new terminal instance when one already ran; fix prefers existing running copy → **T-132** (new, medium priority, XS)
+- `87cb949` (v1.0.41): fix(approval): Codex "Always" holds for session — Codex-specific; skip
+- `e234bb3`, `3f4830b` (v1.0.41): fix(omp/pi): turn rings once — OMP/Pi non-Claude CLIs; skip
+- `a5f64e8` (v1.0.41): fix(list): Grok/DSH sections — non-Claude CLIs; skip
+- `b964954` (v1.0.41): fix(jump): Codex Desktop thread — Codex-specific; skip
+- `3da88f2` (v1.0.41): feat(mascot): DeepSeek Harness whale — non-Claude CLI; skip
+- `e8ca016` (v1.0.41): perf(settings): behaviour previews on island clock — settings preview perf; low value; skip
+- `afa69c6` (v1.0.41): fix(shortcuts): shortcut brings island to user first — global shortcuts unsynced since v1.0.7; skip
+- vibeislandapp/vibe-island: no new commits since Sep 2 (`fc691d0`) — upstream quiet for 60 days; nothing actionable
+- ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
+- **Eight new tasks added (T-125 through T-132).**
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
