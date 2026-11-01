@@ -1516,6 +1516,20 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Eight new tasks added (T-125 through T-132).**
 
+**Scouted (November 1, 2026) — post-v1.0.41 activity:**
+- No new commits or releases since v1.0.41 (Oct 28); upstream HEAD remains `03c77e9` — upstream quiet for 4 days
+- wxtsky/CodeIsland new issues/PRs since Oct 28:
+  - **Issue #395** (open, Oct 29): "Codex session card exceeds the expanded panel width" — Codex-specific layout overflow; skip
+  - **Issue #394** (open, Oct 29): SSH remote connection stuck at "connecting" — SSH remote feature; skip
+  - **Issue #393** (open, Oct 29): Remote Codex auto-review still triggers manual approval — Codex/remote; skip
+  - **PR #396** (open, Oct 30): "feat(buddy): eight more agents get a mascot slot of their own" — ESP32/BLE hardware companion mascots; skip
+  - **PR #392** (open, Oct 28): "feat(jump): raise DeepSeek Harness from a dsh card" — DSH non-Claude CLI; skip
+  - **PR #391** (closed without merging, Oct 28): "feat: add 'animate mascots while expanded' setting (fixes hover lag)" — upstream owner rejected this PR (not merged); skip
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — upstream quiet for 61 days; nothing actionable
+- **Issue #247** (open, vibeislandapp/vibe-island, Oct 29): "[Bug] Effort always shown as 'max' for all Claude models (Claude Code desktop)" — vibe-island bug: their effort mapping reads the wrong transcript field and shows "max" for all sessions regardless of actual effort level (low/medium/high/extra high/max/ultracode). Not applicable to our fork yet (T-100 not implemented), but **note for T-100 implementation**: parse all six effort levels from JSONL transcript's `extra_metadata.reasoning_effort` field; do not default to "max"
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues (confirmed; tracker is enabled but empty)
+- **No new actionable items.** All open tasks (T-016 through T-132) remain as previously documented.
+
 We only support Claude Code (no Codex/OpenCode). Cherry-pick relevant changes instead of full merge.
 
 To check new upstream changes: `gh api repos/wxtsky/CodeIsland/compare/<last-synced-commit>...<new-tag> --jq '.commits[] | .sha[:7] + " " + (.commit.message | split("\n")[0])'`
