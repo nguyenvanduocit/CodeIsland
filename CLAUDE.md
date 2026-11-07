@@ -1516,6 +1516,12 @@ Unsynced from post-v1.0.15: menu bar icon, MorphText animation, BlurFade transit
 - ⚠️ GitHub Issues are **disabled** in `nguyenvanduocit/CodeIsland` (API returns 410) — all tracking via kanban board only
 - **Eight new tasks added (T-125 through T-132).**
 
+**Scouted (November 7, 2026) — post-v1.0.41 activity:**
+- No new commits or releases since v1.0.41 (Oct 28); upstream HEAD remains `03c77e9` — upstream quiet for 10 days
+- vibeislandapp/vibe-island: `fc691d0` (Sep 2) remains the latest commit — upstream quiet for 66 days; nothing actionable
+- `nguyenvanduocit/CodeIsland` issue tracker: 0 open issues
+- **No new actionable items.** All open tasks (T-016 through T-132) remain as previously documented.
+
 **Scouted (November 1, 2026) — post-v1.0.41 activity:**
 - No new commits or releases since v1.0.41 (Oct 28); upstream HEAD remains `03c77e9` — upstream quiet for 4 days
 - wxtsky/CodeIsland new issues/PRs since Oct 28:
